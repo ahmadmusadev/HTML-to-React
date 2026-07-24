@@ -35,7 +35,6 @@ function MainHeader({ theme, toggleTheme }) {
   };
 
   return (
-  return (
     <div className="card-header-top">
       <div className="header-main-flex">
         
