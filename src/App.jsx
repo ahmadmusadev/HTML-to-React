@@ -35,12 +35,13 @@ function MainHeader({ theme, toggleTheme }) {
   };
 
   return (
-    <div className="card-header-top" style={{ padding: '14px 20px 18px', borderBottom: '1px solid var(--border)', marginBottom: '18px', position: 'relative' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+  return (
+    <div className="card-header-top">
+      <div className="header-main-flex">
         
         {/* Right Section (in RTL): Active Madrasa Branding & Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', textAlign: 'right' }}>
-          <div className="madrasa-logo-wrapper" style={{ width: '54px', height: '54px', borderRadius: '12px', background: 'var(--card-inner, #f8fafc)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, boxShadow: 'var(--shadow-sm)' }}>
+        <div className="header-branding">
+          <div className="madrasa-logo-wrapper">
             {activeLogo ? (
               <img src={activeLogo} alt={activeMadrasa.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
             ) : (
@@ -54,19 +55,18 @@ function MainHeader({ theme, toggleTheme }) {
           </div>
 
           <div>
-            <h1 style={{ margin: '0 0 2px', fontSize: '1.55rem', fontWeight: 800 }}>{activeMadrasa.name || 'حفظ منیجر'}</h1>
-            <div style={{ color: 'var(--muted)', fontSize: '0.88rem', fontWeight: 500 }}>تعلیمی و حاضری ریکارڈ سسٹم</div>
+            <h1 className="madrasa-title">{activeMadrasa.name || 'حفظ منیجر'}</h1>
+            <div className="madrasa-subtitle">تعلیمی و حاضری ریکارڈ سسٹم</div>
           </div>
         </div>
 
-        {/* Controls Section: Branch Dropdown at top, Toggle on Left & 3 Buttons aligned Right below */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '320px' }}>
-          {/* Row 1: Branch Select Dropdown (same width & position) */}
+        {/* Controls Section: Branch Dropdown at top, Toggle on Left & Action Buttons aligned Right below */}
+        <div className="header-controls-container">
+          {/* Row 1: Branch Select Dropdown */}
           <select 
             value={activeMadrasaId} 
             onChange={(e) => switchMadrasa(e.target.value)}
             className="madrasa-select-dropdown"
-            style={{ width: '100%', padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
           >
             {madrasas.map(m => (
               <option key={m.id} value={m.id}>{m.name}</option>
@@ -74,10 +74,10 @@ function MainHeader({ theme, toggleTheme }) {
           </select>
 
           {/* Row 2: Directly below dropdown — Toggle Button on LEFT, Three Buttons aligned to RIGHT */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', width: '100%' }}>
+          <div className="header-actions-row">
             
             {/* Dark/Light Mode Toggle Button on Left */}
-            <button className="single-theme-toggle" id="singleThemeToggleBtn" onClick={toggleTheme} title={theme === 'dark' ? 'لائٹ موڈ' : 'ڈارک موڈ'} aria-label="Toggle Theme" style={{ flexShrink: 0 }}>
+            <button className="single-theme-toggle" id="singleThemeToggleBtn" onClick={toggleTheme} title={theme === 'dark' ? 'لائٹ موڈ' : 'ڈارک موڈ'} aria-label="Toggle Theme">
               <svg className="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="5" fill="currentColor" fillOpacity="0.15"></circle>
                 <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -95,12 +95,11 @@ function MainHeader({ theme, toggleTheme }) {
             </button>
 
             {/* Three Action Buttons aligned to Right */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="header-btn-group">
               <button 
                 type="button" 
                 onClick={handleAddBranch}
                 className="add-branch-header-btn"
-                style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 title="نئی شاخ شامل کریں"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -110,7 +109,7 @@ function MainHeader({ theme, toggleTheme }) {
                 <span>نئی شاخ</span>
               </button>
 
-              <label className="logo-upload-btn" htmlFor="madrasaHeaderLogoInput" style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <label className="logo-upload-btn" htmlFor="madrasaHeaderLogoInput">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="17 8 12 3 7 8"></polyline>
@@ -124,7 +123,7 @@ function MainHeader({ theme, toggleTheme }) {
                 <button 
                   type="button" 
                   onClick={() => removeLogo()} 
-                  style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  className="delete-logo-btn"
                   title="لوگو حذف کریں"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
