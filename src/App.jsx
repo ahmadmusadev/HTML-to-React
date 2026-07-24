@@ -185,7 +185,7 @@ function App() {
 
   return (
     <MadrasaProvider>
-      <Router>
+      <Router basename={import.meta.env.BASE_URL}>
         <div className="wrap" dir="rtl">
           <div className="card">
             <MainHeader theme={theme} toggleTheme={toggleTheme} />
