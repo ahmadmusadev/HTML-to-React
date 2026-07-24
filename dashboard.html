@@ -1,0 +1,39 @@
+
+        <div class="dashboard-hero">
+            <div class="dashboard-hero-top">
+                <div>
+                    <h2>ادارہ جاتی ڈیش بورڈ</h2>
+                    <p>مدرسہ یا ادارے کے تمام اہم اعدادوشمار، طلباء کی صورتحال، اور مجموعی پیش رفت ایک ہی نظر میں۔</p>
+                </div>
+                <div class="dashboard-badge">
+                  <span class="badge-label">آج کی تاریخ</span>
+                  <span class="badge-date" id="dashboardDate">لوڈ ہو رہا ہے...</span>
+                  <span class="badge-time" id="dashboardTime" style="display:block; font-size:1.1rem; font-weight:700; margin-top:4px; opacity:0.9;"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-container" id="dashboardMetrics">
+            <!-- Dashboard cards will be populated by JavaScript -->
+        </div>
+
+        <div class="dashboard-grid-secondary" style="grid-template-columns: 1fr;">
+            <div class="dashboard-panel">
+                <h3>اعداد و شمار اور جھلکیاں</h3>
+                <div class="mini-stat-grid" id="detailedStats" style="margin-top:14px;"></div>
+                <div class="mini-stat-grid" id="dashboardHighlights" style="margin-top:12px;"></div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid-secondary">
+            <div class="dashboard-panel">
+                <h3>کلاس وار تقسیم</h3>
+                <div id="dashboardClassOverview"></div>
+            </div>
+
+            <div class="dashboard-panel">
+                <h3>حالیہ داخلے</h3>
+                <div id="dashboardRecentAdmissions"></div>
+            </div>
+        </div>
+    

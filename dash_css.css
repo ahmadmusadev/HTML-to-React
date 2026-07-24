@@ -1,0 +1,72 @@
+.dashboard-hero-top { flex-direction: column; align-items: flex-start; }
+      .dashboard-badge { min-width: 100%; box-sizing: border-box; }
+      .card { padding: 16px; }
+    }
+    
+    @media (max-width: 480px) {
+      .wrap { padding: 8px; }
+      .months-grid { grid-template-columns: 1fr; }
+      .card-number { font-size: 2rem; }
+    }
+
+    /* AI Listening Tab Styles */
+    .mic-btn {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: white;
+        font-size: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 30px auto;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 4px 15px rgba(46, 125, 50, 0.4);
+        transition: all 0.3s ease;
+    }
+    .mic-btn.listening {
+        background: #ef5350;
+        animation: pulse 1.5s infinite;
+        box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.7);
+    }
+    @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(239, 83, 80, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 83, 80, 0); }
+    }
+    .transcript-box {
+        background: #f8f9fa;
+        border: 2px dashed var(--border);
+        border-radius: 8px;
+        min-height: 150px;
+        padding: 20px;
+        font-size: 1.5rem;
+        line-height: 2.5;
+        text-align: right;
+        margin-bottom: 20px;
+    }
+    .transcript-box span.error-word {
+        background-color: #ffebee;
+        color: #c62828;
+        padding: 2px 5px;
+        border-radius: 4px;
+        border-bottom: 2px solid #c62828;
+        cursor: pointer;
+    }
+    .ai-analysis-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border-left: 5px solid var(--accent);
+        display: none;
+    }
+    .ai-analysis-panel.error-mode {
+        border-left: 5px solid #c62828;
+    }
+    
+
+
+    

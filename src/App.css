@@ -1,0 +1,35 @@
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f0f4f8;
+  margin: 0;
+  padding: 0;
+}
+.app-container {
+  min-height: 100vh;
+}
+.tabs {
+  display: flex;
+  background-color: #fff;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 10px 20px 0;
+  gap: 10px;
+  overflow-x: auto;
+}
+.tab-button {
+  text-decoration: none;
+  color: #64748b;
+  padding: 10px 20px;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.tab-button:hover, .tab-button.active {
+  color: #0d3b66;
+  border-bottom-color: #0d3b66;
+}
+.tab-content {
+  background: #fff;
+  margin: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}

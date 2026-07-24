@@ -1,0 +1,643 @@
+/* ========== داخلہ جات ٹیب CSS ========== */
+
+    /* فارم سلیکٹر — بٹن گرڈ */
+    .adm-type-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .adm-type-btn {
+      padding: 14px 10px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      line-height: 1.4;
+    }
+    .adm-type-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #f0f6ff;
+      transform: translateY(-1px);
+    }
+    .adm-type-btn.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(13,59,102,0.22);
+    }
+    .adm-type-btn .btn-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+
+    /* سلائڈ ڈاؤن اینیمیشن */
+    .slide-down {
+      animation: slideDown 0.3s ease forwards;
+      overflow: hidden;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* سیکشن کارڈ */
+    .form-section-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 26px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .form-section-card:hover { box-shadow: var(--shadow-md); }
+
+    .form-section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 2px solid #f1f5f9;
+    }
+    .form-section-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .icon-blue  { background: #eef4ff; }
+    .icon-green { background: #edfaf3; }
+    .icon-pink  { background: var(--card)0f6; }
+    .icon-amber { background: var(--card)8e1; }
+    .icon-purple{ background: #f5f0ff; }
+
+    .form-section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .form-section-subtitle {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* کسٹم ریڈیو ٹوگل */
+    .radio-toggle-group {
+      display: flex;
+      gap: 0;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      width: fit-content;
+      margin-top: 10px;
+    }
+    .radio-toggle-group input[type="radio"] { display: none; }
+    .radio-toggle-group label {
+      padding: 10px 22px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: #f8fafc;
+      transition: all 0.2s;
+      margin: 0;
+      display: inline-block;
+    }
+    .radio-toggle-group label:not(:last-child) {
+      border-left: 1.5px solid var(--border);
+    }
+    .radio-toggle-group input[type="radio"]:checked + label {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    /* اخراج فارم */
+    .withdrawal-warning-banner {
+      background: linear-gradient(135deg, #fff5f5, #fff0f0);
+      border: 1.5px solid #f5c2c2;
+      border-right: 5px solid var(--danger);
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .withdrawal-warning-icon {
+      font-size: 1.8rem; flex-shrink: 0; margin-top: 2px;
+    }
+    .withdrawal-warning-text strong {
+      display: block; color: var(--danger);
+      font-size: 1rem; margin-bottom: 4px;
+    }
+    .withdrawal-warning-text p {
+      color: #8b4a4a; font-size: 0.88rem; margin: 0;
+    }
+
+    .withdrawal-form-area {
+      background: var(--card);
+      border: 1px solid #f5c2c2;
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 2px 10px rgba(198,40,40,0.06);
+    }
+
+    textarea {
+      width: 100%; padding: 12px 14px;
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      font-family: inherit; font-size: 1rem;
+      resize: vertical;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    textarea:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(13,59,102,0.1);
+    }
+
+    /* محفوظ کریں بٹن */
+    .save-admission-btn {
+      background: linear-gradient(135deg, #1b5e20, #2e7d32) !important;
+      font-size: 1.1rem !important;
+      padding: 15px 50px !important;
+      border-radius: 12px !important;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 16px rgba(27,94,32,0.28) !important;
+    }
+    .save-admission-btn:hover {
+      box-shadow: 0 6px 22px rgba(27,94,32,0.38) !important;
+    }
+
+    /* ========== پرنٹیبل داخلہ فارم ========== */
+    .printform-header {
+      text-align: center;
+      border-bottom: 2px solid #000;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .printform-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #000;
+    }
+    .printform-subtitle {
+      font-size: 0.9rem;
+      color: #444;
+      margin-top: 3px;
+    }
+    .printform-section-title {
+      background: #1a1a1a;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.78rem;
+      padding: 4px 8px;
+      margin: 8px 0 4px 0;
+    }
+    table.printform-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 4px;
+      table-layout: fixed;
+    }
+    table.printform-table td {
+      border: 1.5px solid #000;
+      padding: 3px 4px;
+      font-size: 0.72rem;
+      word-break: break-word;
+      overflow: hidden;
+    }
+    table.printform-table .pf-label {
+      background: #f0f0f0;
+      color: #000;
+      font-weight: 700;
+      font-size: 0.72rem;
+      white-space: normal;
+    }
+    table.printform-table .pf-label-sm {
+      background: #f0f0f0;
+      color: #000;
+      font-weight: 700;
+      font-size: 0.68rem;
+      white-space: normal;
+    }
+    table.printform-table .pf-blank {
+      min-width: 0;
+    }
+    .printform-signature-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .printform-sig-box {
+      flex: 1;
+      border-top: 1.5px solid #000;
+      text-align: center;
+      padding-top: 6px;
+      font-size: 0.82rem;
+      color: #333;
+    }
+
+    /* پرنٹیبل فارم — سکرین preview */
+    @media screen {
+      #printableAdmissionFormArea {
+        display: block;
+        background: var(--card);
+        border: 1.5px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-top: 20px;
+        box-shadow: var(--shadow-md);
+        max-width: 760px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+
+    @media print {
+      #printableAdmissionFormArea {
+        display: block !important;
+        position: fixed;
+        inset: 0;
+        padding: 7mm 7mm;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        width: 210mm;
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+    }
+
+
+    /* ========== ADMISSION WIZARD ========== */
+    .wizard-progress {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 28px;
+      gap: 0;
+      direction: ltr;
+    }
+    .wizard-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+    .wizard-step-circle {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 2.5px solid var(--border);
+      background: var(--card);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--muted);
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .wizard-step.active .wizard-step-circle {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(13,59,102,0.3);
+      transform: scale(1.1);
+    }
+    .wizard-step.done .wizard-step-circle {
+      background: #1a6b3c;
+      border-color: #1a6b3c;
+      color: #fff;
+    }
+    .wizard-step-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 6px;
+      text-align: center;
+      max-width: 70px;
+      line-height: 1.3;
+      font-weight: 600;
+    }
+    .wizard-step.active .wizard-step-label { color: var(--accent); }
+    .wizard-step.done  .wizard-step-label  { color: #1a6b3c; }
+
+    .wizard-connector {
+      height: 2.5px;
+      width: 60px;
+      background: var(--border);
+      margin-bottom: 22px;
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .wizard-connector.done { background: #1a6b3c; }
+
+    /* Wizard پینل */
+    .wizard-panel { display: none; animation: slideDown 0.28s ease; }
+    .wizard-panel.active { display: block; }
+
+    /* نیچے نیوی گیشن بٹن */
+    .wizard-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      gap: 12px;
+    }
+    .wizard-btn-prev {
+      background: var(--bg);
+      color: var(--accent);
+      border: 1.5px solid var(--border);
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .wizard-btn-prev:hover { background: #e2e8f0; }
+
+    .wizard-btn-next {
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      color: #fff;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 12px rgba(13,59,102,0.25);
+      transition: all 0.2s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .wizard-btn-next:hover {
+      box-shadow: 0 5px 18px rgba(13,59,102,0.32);
+      transform: translateY(-1px);
+    }
+
+    .wizard-step-counter {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    @media (max-width: 600px) {
+      .wizard-connector { width: 30px; }
+      .wizard-step-label { font-size: 0.68rem; max-width: 56px; }
+      .wizard-step-circle { width: 36px; height: 36px; font-size: 0.95rem; }
+    }
+
+
+    /* ========== WIZARD CSS ========== */
+    .wizard-progress-wrap {
+      margin-bottom: 28px;
+      padding: 18px 0;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    .wizard-steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+    .wizard-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 0 0 auto;
+      transition: all 0.3s;
+    }
+    .wizard-step-circle {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--muted);
+      transition: all 0.3s ease;
+    }
+    .wizard-step.active .wizard-step-circle {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(13,59,102,0.32);
+      transform: scale(1.15);
+    }
+    .wizard-step.done .wizard-step-circle {
+      background: var(--success);
+      border-color: #fff;
+      color: #fff;
+    }
+    .wizard-connector {
+      width: 48px;
+      height: 2px;
+      background: #d0d8e4;
+      margin: 0 4px;
+      margin-bottom: 0;
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .wizard-connector.done { background: var(--accent); }
+
+    /* Wizard پینل */
+    .wizard-panel { animation: slideDown 0.28s ease; }
+
+    /* نیچے نیوی بار */
+    .wizard-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid #f1f5f9;
+      gap: 12px;
+    }
+    .wizard-btn-next {
+      background: linear-gradient(135deg, var(--accent), var(--accent-light)) !important;
+      color: #fff !important;
+      padding: 12px 28px !important;
+      border-radius: 10px !important;
+      font-size: 1rem !important;
+      font-weight: 700 !important;
+      box-shadow: 0 3px 10px rgba(13,59,102,0.2) !important;
+      border: none !important;
+    }
+    .wizard-btn-next:hover { box-shadow: 0 5px 16px rgba(13,59,102,0.3) !important; }
+
+    .wizard-btn-back {
+      background: var(--bg) !important;
+      color: var(--muted) !important;
+      padding: 12px 22px !important;
+      border-radius: 10px !important;
+      font-size: 0.95rem !important;
+      font-weight: 600 !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: none !important;
+    }
+    .wizard-btn-back:hover {
+      background: #e2e8f0 !important;
+      color: var(--accent) !important;
+    }
+
+    /* جائزہ سیکشن */
+    .review-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f8fafc;
+    }
+    .review-label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      min-width: 160px;
+      flex-shrink: 0;
+    }
+    .review-value {
+      color: #1e293b;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .review-section-title {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1rem;
+      margin: 16px 0 8px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #eef4ff;
+    }
+
+    .wizard-sub-section {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px dashed var(--border);
+    }
+
+
+    /* صنف ٹوگل */
+    .gender-toggle-wrap {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .gender-toggle-wrap input[type="radio"] { display: none; }
+    .gender-opt {
+      flex: 1;
+      padding: 11px 10px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      margin: 0;
+      display: block;
+    }
+    .gender-opt:hover { border-color: var(--accent); background: #f0f6ff; }
+    .boy-opt:has(~ input:checked),
+    input#genderBoy:checked ~ .boy-opt { border-color:#1d4ed8; background:#eff6ff; color:#1d4ed8; }
+    input#genderGirl:checked + .girl-opt { border-color:#be185d; background:#fdf2f8; color:#be185d; }
+
+    .gender-toggle-wrap input#genderBoy:checked + .boy-opt {
+      border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8;
+      box-shadow: 0 2px 8px rgba(29,78,216,0.15);
+    }
+    .gender-toggle-wrap input#genderGirl:checked + .girl-opt {
+      border-color: #be185d; background: #fdf2f8; color: #be185d;
+      box-shadow: 0 2px 8px rgba(190,24,93,0.15);
+    }
+
+
+    
+
+/* ========== DARK MODE WIZARD OVERRIDES ========== */
+[data-theme="dark"] .wizard-step-circle {
+    background: var(--bg);
+    border-color: var(--border);
+    color: var(--muted);
+}
+[data-theme="dark"] .wizard-step.active .wizard-step-circle {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+}
+[data-theme="dark"] .wizard-step.done .wizard-step-circle {
+    background: var(--success);
+    border-color: var(--success);
+    color: var(--bg);
+}
+[data-theme="dark"] .wizard-connector {
+    background: var(--border);
+}
+[data-theme="dark"] .wizard-connector.done {
+    background: var(--success);
+}
+[data-theme="dark"] .wizard-btn-prev {
+    background: var(--bg);
+    color: var(--accent);
+    border-color: var(--border);
+}
+[data-theme="dark"] .wizard-btn-next {
+    background: var(--accent) !important;
+    color: var(--bg) !important;
+}
+[data-theme="dark"] .sub-tab-btn {
+    background: var(--card);
+    color: var(--muted);
+    border-color: var(--border);
+}
+[data-theme="dark"] .sub-tab-btn.active {
+    background: var(--accent) !important;
+    color: var(--bg) !important;
+    border-color: var(--accent) !important;
+}
+[data-theme="dark"] .admission-box {
+    background: var(--card);
+    border-color: var(--border);
+}
+[data-theme="dark"] .admission-box .section-title {
+    color: var(--accent);
+    border-color: var(--border);
+}
+[data-theme="dark"] .search-bar {
+    background: var(--card);
+    border-color: var(--border);
+}
+[data-theme="dark"] #printableAdmissionFormArea {
+    background: var(--card);
+    border-color: var(--border);
+    color: var(--accent);
+}
+[data-theme="dark"] .wizard-step-label {
+    color: var(--muted);
+}
+[data-theme="dark"] .wizard-step.active .wizard-step-label {
+    color: var(--accent);
+}
+[data-theme="dark"] .wizard-step.done .wizard-step-label {
+    color: var(--success);
+}
+[data-theme="dark"] .wizard-progress-wrap {
+    background: transparent;
+    border-color: var(--border);
+}
