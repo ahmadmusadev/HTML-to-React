@@ -75,14 +75,14 @@
 [data-theme="dark"] .single-theme-toggle {
   background: #18181b !important;
   border: 1.5px solid #3f3f46 !important;
-  color: #ffffff !important;
+  color: #fbbf24 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
 }
 
 [data-theme="dark"] .single-theme-toggle:hover {
   background: #27272a !important;
-  border-color: #ffffff !important;
-  color: #ffffff !important;
+  border-color: #fbbf24 !important;
+  color: #f59e0b !important;
 }
 
 [data-theme="dark"] .single-theme-toggle .sun-icon {
