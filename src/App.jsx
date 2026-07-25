@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { MadrasaProvider, useMadrasa } from './context/MadrasaContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css'; // Global CSS
 
 import Dashboard from './pages/Dashboard';
@@ -309,6 +310,7 @@ function MainLayout({ theme, toggleTheme }) {
             <Route path="/ai-listen" element={<ProtectedRoute><AiListen /></ProtectedRoute>} />
             <Route path="/fees" element={<ProtectedRoute><Fees /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </div>
@@ -359,9 +361,11 @@ function App() {
   return (
     <AuthProvider>
       <MadrasaProvider>
-        <Router basename={import.meta.env.BASE_URL}>
-          <MainLayout theme={theme} toggleTheme={toggleTheme} />
-        </Router>
+        <ErrorBoundary>
+          <Router basename={import.meta.env.BASE_URL}>
+            <MainLayout theme={theme} toggleTheme={toggleTheme} />
+          </Router>
+        </ErrorBoundary>
       </MadrasaProvider>
     </AuthProvider>
   );

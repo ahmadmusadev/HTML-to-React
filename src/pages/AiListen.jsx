@@ -428,7 +428,8 @@ ${missingWords.length > 0 ? `بھولے ہوئے الفاظ: ${missingWords.join
               {/* اے آئی فیڈ بیک */}
               <div style={{ marginBottom: "20px" }}>
                 <h4 style={{ color: "#1565c0", margin: "0 0 10px 0", borderBottom: "1px solid #eee", paddingBottom: "8px" }}>🧑‍استاد کا تبصرہ</h4>
-                <div id="aiFeedbackArea" style={{ background: "#e8f4fd", borderRadius: "8px", padding: "16px", fontSize: "1rem", lineHeight: "1.9", color: "#1a237e", borderRight: "4px solid #1565c0", direction: "rtl", textAlign: "right" }} dangerouslySetInnerHTML={{ __html: aiFeedback ? aiFeedback.replace(/\n/g, '<br>') : 'استاد کا تبصرہ آ رہا ہے...' }}>
+                <div id="aiFeedbackArea" style={{ background: "#e8f4fd", borderRadius: "8px", padding: "16px", fontSize: "1rem", lineHeight: "1.9", color: "#1a237e", borderRight: "4px solid #1565c0", direction: "rtl", textAlign: "right", whiteSpace: "pre-line" }}>
+                  {aiFeedback || 'استاد کا تبصرہ آ رہا ہے...'}
                 </div>
               </div>
 

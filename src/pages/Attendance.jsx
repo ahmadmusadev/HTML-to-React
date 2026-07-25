@@ -835,7 +835,7 @@ export default function Attendance() {
               )}
             </div>
           </div>
-          {indAttMsg && <div id="indAttMsg" style={{ marginTop: "10px", fontSize: "0.9rem" }} dangerouslySetInnerHTML={{__html: indAttMsg}}></div>}
+          {indAttMsg && <div id="indAttMsg" style={{ marginTop: "10px", fontSize: "0.9rem", whiteSpace: "pre-line" }}>{indAttMsg}</div>}
         </div>
       </div>
       )}
