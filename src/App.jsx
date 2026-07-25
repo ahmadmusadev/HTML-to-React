@@ -14,7 +14,32 @@ import Fees from './pages/Fees';
 import Attendance from './pages/Attendance';
 
 function MainHeader({ theme, toggleTheme }) {
-  const { madrasas, activeMadrasaId, activeMadrasa, activeLogo, uploadLogo, removeLogo, switchMadrasa, addMadrasa } = useMadrasa();
+  const { madrasas, activeMadrasaId, activeMadrasa, activeLogo, uploadLogo, removeLogo, switchMadrasa, addMadrasa, renameMadrasa } = useMadrasa();
+
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [targetBranchId, setTargetBranchId] = useState(activeMadrasaId);
+  const [newBranchName, setNewBranchName] = useState('');
+
+  const handleOpenRenameModal = () => {
+    setTargetBranchId(activeMadrasaId);
+    setNewBranchName(activeMadrasa?.name || '');
+    setIsRenameModalOpen(true);
+  };
+
+  const handleSelectBranchToRename = (e) => {
+    const selectedId = e.target.value;
+    setTargetBranchId(selectedId);
+    const targetMadrasa = madrasas.find(m => m.id === selectedId);
+    setNewBranchName(targetMadrasa?.name || '');
+  };
+
+  const handleSaveBranchName = (e) => {
+    e.preventDefault();
+    if (newBranchName && newBranchName.trim()) {
+      renameMadrasa(targetBranchId, newBranchName.trim());
+      setIsRenameModalOpen(false);
+    }
+  };
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -59,18 +84,33 @@ function MainHeader({ theme, toggleTheme }) {
           </div>
         </div>
 
-        {/* Controls Section: Branch Dropdown at top, Toggle on Left & Action Buttons aligned Right below */}
+        {/* Controls Section: Branch Dropdown with Edit Button at top */}
         <div className="header-controls-container">
-          {/* Row 1: Branch Select Dropdown */}
-          <select 
-            value={activeMadrasaId} 
-            onChange={(e) => switchMadrasa(e.target.value)}
-            className="madrasa-select-dropdown"
-          >
-            {madrasas.map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
+          {/* Row 1: Branch Select Dropdown & Small Edit Button */}
+          <div className="madrasa-select-wrapper">
+            <select 
+              value={activeMadrasaId} 
+              onChange={(e) => switchMadrasa(e.target.value)}
+              className="madrasa-select-dropdown"
+            >
+              {madrasas.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+
+            <button 
+              type="button" 
+              className="edit-branch-name-btn"
+              onClick={handleOpenRenameModal}
+              title="شاخ کا نام تبدیل کریں"
+              aria-label="شاخ کا نام تبدیل کریں"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+          </div>
 
           {/* Row 2: Directly below dropdown — Toggle Button on LEFT, Three Buttons aligned to RIGHT */}
           <div className="header-actions-row">
@@ -137,6 +177,59 @@ function MainHeader({ theme, toggleTheme }) {
         </div>
 
       </div>
+
+      {/* Rename Branch Modal */}
+      {isRenameModalOpen && (
+        <div className="branch-rename-modal-overlay" onClick={() => setIsRenameModalOpen(false)}>
+          <div className="branch-rename-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="branch-rename-modal-header">
+              <h3>شاخ کا نام تبدیل کریں</h3>
+              <button type="button" className="close-modal-btn" onClick={() => setIsRenameModalOpen(false)} aria-label="بند کریں">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBranchName}>
+              <div className="branch-rename-modal-body">
+                <div className="modal-form-group">
+                  <label className="modal-form-label">شاخ منتخب کریں:</label>
+                  <select
+                    value={targetBranchId}
+                    onChange={handleSelectBranchToRename}
+                    className="modal-select-input"
+                  >
+                    {madrasas.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="modal-form-group">
+                  <label className="modal-form-label">شاخ کا نیا نام:</label>
+                  <input
+                    type="text"
+                    value={newBranchName}
+                    onChange={(e) => setNewBranchName(e.target.value)}
+                    className="modal-text-input"
+                    placeholder="شاخ کا نیا نام درج کریں"
+                    autoFocus
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="branch-rename-modal-footer">
+                <button type="button" className="modal-btn-cancel" onClick={() => setIsRenameModalOpen(false)}>
+                  منسوخ کریں
+                </button>
+                <button type="submit" className="modal-btn-save" disabled={!newBranchName.trim()}>
+                  محفوظ کریں
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -101,6 +101,59 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   display: block !important;
 }
 
+/* --- Branch Rename Modal & Edit Button Dark Mode --- */
+[data-theme="dark"] .edit-branch-name-btn {
+  background: #18181b !important;
+  border-color: #3f3f46 !important;
+  color: #e4e4e7 !important;
+}
+
+[data-theme="dark"] .edit-branch-name-btn:hover {
+  background: #27272a !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .branch-rename-modal-content {
+  background: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] .branch-rename-modal-header,
+[data-theme="dark"] .branch-rename-modal-footer {
+  background: #09090b !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] .branch-rename-modal-header h3,
+[data-theme="dark"] .modal-form-label {
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .modal-select-input,
+[data-theme="dark"] .modal-text-input {
+  background: #09090b !important;
+  color: #ffffff !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme="dark"] .modal-select-input:focus,
+[data-theme="dark"] .modal-text-input:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+}
+
+[data-theme="dark"] .modal-btn-cancel {
+  background: #27272a !important;
+  color: #e4e4e7 !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme="dark"] .modal-btn-cancel:hover {
+  background: #3f3f46 !important;
+}
+
 /* --- Main Navigation Tabs & NavLinks --- */
 [data-theme="dark"] nav.tabs {
   background: #0f0f12 !important;

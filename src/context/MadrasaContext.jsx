@@ -170,6 +170,11 @@ export function MadrasaProvider({ children }) {
     });
   };
 
+  const renameMadrasa = (id, newName) => {
+    if (!id || !newName || !newName.trim()) return;
+    setMadrasas(prev => prev.map(m => m.id === id ? { ...m, name: newName.trim() } : m));
+  };
+
   return (
     <MadrasaContext.Provider value={{
       madrasas,
@@ -182,6 +187,7 @@ export function MadrasaProvider({ children }) {
       switchMadrasa,
       addMadrasa,
       deleteMadrasa,
+      renameMadrasa,
       getStorageKey,
       loadMadrasaData,
       saveMadrasaData
