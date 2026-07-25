@@ -435,3 +435,47 @@
   background: #3f3f46 !important;
   color: #71717a !important;
 }
+
+/* ==========================================================================
+   MOBILE RESPONSIVE DIALOG STYLES (CENTERED WITH EQUAL MARGINS & TOP SPACING)
+   ========================================================================== */
+@media (max-width: 640px) {
+  .ai-chatbot-root {
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+  }
+
+  .ai-chatbot-drawer {
+    left: 16px !important;
+    right: 16px !important;
+    top: 16px !important;
+    bottom: 16px !important;
+    width: auto !important;
+    max-width: calc(100vw - 32px) !important;
+    height: auto !important;
+    max-height: calc(100vh - 32px) !important;
+    margin: 0 auto !important;
+    border-radius: 20px !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  .ai-chatbot-header {
+    padding: 12px 14px;
+    border-top-left-radius: 19px;
+    border-top-right-radius: 19px;
+  }
+
+  .chat-bubble {
+    max-width: 90%;
+  }
+
+  .prompts-grid-container {
+    gap: 5px;
+  }
+
+  .prompt-chip {
+    font-size: 11px;
+    padding: 5px 9px;
+  }
+}

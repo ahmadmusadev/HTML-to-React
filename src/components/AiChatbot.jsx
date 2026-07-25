@@ -354,31 +354,26 @@ export default function AiChatbot() {
 
   return (
     <div className="ai-chatbot-root" dir="rtl">
-      {/* Floating Trigger Button */}
-      <button
-        type="button"
-        className={`ai-chatbot-trigger ${isOpen ? 'active' : ''}`}
-        onClick={handleToggle}
-        title="اے آئی رہنما"
-        aria-label="Toggle AI Rehnuma Assistant"
-      >
-        <span className="chatbot-icon-wrapper">
-          {isOpen ? (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          ) : (
+      {/* Floating Trigger Button (Only rendered when drawer is closed) */}
+      {!isOpen && (
+        <button
+          type="button"
+          className="ai-chatbot-trigger"
+          onClick={handleToggle}
+          title="اے آئی رہنما"
+          aria-label="Toggle AI Rehnuma Assistant"
+        >
+          <span className="chatbot-icon-wrapper">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10a9.96 9.96 0 0 1-4.587-1.11L2 22l1.11-5.413A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2z"></path>
               <circle cx="8.5" cy="11.5" r="1" fill="currentColor"></circle>
               <circle cx="12" cy="11.5" r="1" fill="currentColor"></circle>
               <circle cx="15.5" cy="11.5" r="1" fill="currentColor"></circle>
             </svg>
-          )}
-        </span>
-        {!isOpen && <span className="chatbot-badge">اے آئی رہنما</span>}
-      </button>
+          </span>
+          <span className="chatbot-badge">اے آئی رہنما</span>
+        </button>
+      )}
 
       {/* Slide-out Drawer Popup Modal */}
       {isOpen && (
