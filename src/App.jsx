@@ -1,9 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, NavLink, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { MadrasaProvider, useMadrasa } from './context/MadrasaContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import AiChatbot from './components/AiChatbot';
 import './index.css'; // Global CSS
 
 import Dashboard from './pages/Dashboard';
@@ -314,6 +315,7 @@ function MainLayout({ theme, toggleTheme }) {
           </Routes>
         </div>
       </div>
+      {!isLoginPage && <AiChatbot />}
     </div>
   );
 }
@@ -323,7 +325,8 @@ function App() {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('hifz-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const hasMatchMedia = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+    const prefersDark = hasMatchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     if (savedTheme) {
       setTheme(savedTheme);
@@ -333,14 +336,18 @@ function App() {
       setTheme('light');
     }
 
+    if (!hasMatchMedia) return;
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e) => {
       if (!localStorage.getItem('hifz-theme')) {
         setTheme(e.matches ? 'dark' : 'light');
       }
     };
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
   }, []);
 
   useEffect(() => {

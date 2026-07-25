@@ -182,6 +182,38 @@
   color: #0284c7;
 }
 
+/* Password Input Wrapper & Visibility Toggle */
+.login-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.login-password-input {
+  padding-left: 42px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  left: 8px;
+  background: transparent;
+  border: none;
+  color: var(--muted, #64748b);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.password-toggle-btn:hover {
+  color: var(--text, #1e293b);
+  background-color: var(--card-inner, #e2e8f0);
+}
+
 /* Dark Mode Overrides for Login */
 [data-theme="dark"] .login-card {
   background: #18181b !important;
@@ -210,6 +242,15 @@
 [data-theme="dark"] .login-input:focus {
   border-color: #38bdf8 !important;
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+}
+
+[data-theme="dark"] .password-toggle-btn {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .password-toggle-btn:hover {
+  color: #ffffff !important;
+  background-color: #27272a !important;
 }
 
 [data-theme="dark"] .login-demo-btn {
