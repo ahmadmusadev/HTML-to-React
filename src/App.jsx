@@ -1,6 +1,8 @@
-import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { MadrasaProvider, useMadrasa } from './context/MadrasaContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import './index.css'; // Global CSS
 
 import Dashboard from './pages/Dashboard';
@@ -12,9 +14,11 @@ import Exams from './pages/Exams';
 import AiListen from './pages/AiListen';
 import Fees from './pages/Fees';
 import Attendance from './pages/Attendance';
+import Login from './pages/Login';
 
 function MainHeader({ theme, toggleTheme }) {
   const { madrasas, activeMadrasaId, activeMadrasa, activeLogo, uploadLogo, removeLogo, switchMadrasa, addMadrasa, renameMadrasa } = useMadrasa();
+  const { user, profile, role, signOut } = useAuth();
 
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [targetBranchId, setTargetBranchId] = useState(activeMadrasaId);
@@ -59,6 +63,15 @@ function MainHeader({ theme, toggleTheme }) {
     }
   };
 
+  const getRoleLabel = (r) => {
+    switch (r) {
+      case 'super_admin': return 'سپر ایڈمن';
+      case 'admin': return 'مہتمم / ایڈمن';
+      case 'teacher': return 'استاد / ٹیچر';
+      default: return 'کاربر';
+    }
+  };
+
   return (
     <div className="card-header-top">
       <div className="header-main-flex">
@@ -84,7 +97,7 @@ function MainHeader({ theme, toggleTheme }) {
           </div>
         </div>
 
-        {/* Controls Section: Branch Dropdown with Edit Button at top */}
+        {/* Controls Section: Branch Dropdown with Edit Button & Profile/Logout */}
         <div className="header-controls-container">
           {/* Row 1: Branch Select Dropdown & Small Edit Button */}
           <div className="madrasa-select-wrapper">
@@ -112,10 +125,10 @@ function MainHeader({ theme, toggleTheme }) {
             </button>
           </div>
 
-          {/* Row 2: Directly below dropdown — Toggle Button on LEFT, Three Buttons aligned to RIGHT */}
+          {/* Row 2: Controls — Theme Toggle, User Profile/Logout & Action Buttons */}
           <div className="header-actions-row">
             
-            {/* Dark/Light Mode Toggle Button on Left */}
+            {/* Dark/Light Mode Toggle Button */}
             <button className="single-theme-toggle" id="singleThemeToggleBtn" onClick={toggleTheme} title={theme === 'dark' ? 'لائٹ موڈ' : 'ڈارک موڈ'} aria-label="Toggle Theme">
               <svg className="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="5" fill="currentColor" fillOpacity="0.15"></circle>
@@ -133,7 +146,33 @@ function MainHeader({ theme, toggleTheme }) {
               </svg>
             </button>
 
-            {/* Three Action Buttons aligned to Right */}
+            {/* Authenticated User Badge & Logout Button */}
+            {user ? (
+              <div className="user-profile-badge">
+                <div className="user-avatar-circle">
+                  {(profile?.full_name || user.email || 'U')[0].toUpperCase()}
+                </div>
+                <div className="user-info-text">
+                  <span className="user-name">{profile?.full_name || user.email.split('@')[0]}</span>
+                  <span className="user-role-badge">{getRoleLabel(role)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="logout-header-btn"
+                  title="سسٹم سے لاگ آؤٹ کریں"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                  <span>لاگ آؤٹ</span>
+                </button>
+              </div>
+            ) : null}
+
+            {/* Action Buttons */}
             <div className="header-btn-group">
               <button 
                 type="button" 
@@ -234,6 +273,49 @@ function MainHeader({ theme, toggleTheme }) {
   );
 }
 
+function MainLayout({ theme, toggleTheme }) {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
+  return (
+    <div className="wrap" dir="rtl">
+      <div className="card">
+        {!isLoginPage && <MainHeader theme={theme} toggleTheme={toggleTheme} />}
+
+        {!isLoginPage && (
+          <nav className="tabs">
+            <NavLink to="/" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>ڈیش بورڈ</NavLink>
+            <NavLink to="/admissions" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>داخلہ جات</NavLink>
+            <NavLink to="/fees" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>فیس ریکارڈ</NavLink>
+            <NavLink to="/entry" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>جائزہ جات</NavLink>
+            <NavLink to="/attendance" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>حاضری</NavLink>
+            <NavLink to="/exams" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>امتحانات</NavLink>
+            <NavLink to="/records" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تعلیمی ریکارڈز</NavLink>
+            <NavLink to="/staff" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اسٹاف</NavLink>
+            <NavLink to="/ai-listen" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
+          </nav>
+        )}
+        
+        <div className="tab-content">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/admissions" element={<ProtectedRoute><Admissions /></ProtectedRoute>} />
+            <Route path="/entry" element={<ProtectedRoute><Entry /></ProtectedRoute>} />
+            <Route path="/records" element={<ProtectedRoute><Records /></ProtectedRoute>} />
+            <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
+            <Route path="/exams" element={<ProtectedRoute><Exams /></ProtectedRoute>} />
+            <Route path="/ai-listen" element={<ProtectedRoute><AiListen /></ProtectedRoute>} />
+            <Route path="/fees" element={<ProtectedRoute><Fees /></ProtectedRoute>} />
+            <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+          </Routes>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [theme, setTheme] = useState('light');
 
@@ -275,41 +357,13 @@ function App() {
   };
 
   return (
-    <MadrasaProvider>
-      <Router basename={import.meta.env.BASE_URL}>
-        <div className="wrap" dir="rtl">
-          <div className="card">
-            <MainHeader theme={theme} toggleTheme={toggleTheme} />
-
-            <nav className="tabs">
-              <NavLink to="/" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>ڈیش بورڈ</NavLink>
-              <NavLink to="/admissions" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>داخلہ جات</NavLink>
-              <NavLink to="/fees" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>فیس ریکارڈ</NavLink>
-              <NavLink to="/entry" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>جائزہ جات</NavLink>
-              <NavLink to="/attendance" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>حاضری</NavLink>
-              <NavLink to="/exams" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>امتحانات</NavLink>
-              <NavLink to="/records" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تعلیمی ریکارڈز</NavLink>
-              <NavLink to="/staff" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اسٹاف</NavLink>
-              <NavLink to="/ai-listen" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
-            </nav>
-            
-            <div className="tab-content">
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/admissions" element={<Admissions />} />
-                <Route path="/entry" element={<Entry />} />
-                <Route path="/records" element={<Records />} />
-                <Route path="/staff" element={<Staff />} />
-                <Route path="/exams" element={<Exams />} />
-                <Route path="/ai-listen" element={<AiListen />} />
-                <Route path="/fees" element={<Fees />} />
-                <Route path="/attendance" element={<Attendance />} />
-              </Routes>
-            </div>
-          </div>
-        </div>
-      </Router>
-    </MadrasaProvider>
+    <AuthProvider>
+      <MadrasaProvider>
+        <Router basename={import.meta.env.BASE_URL}>
+          <MainLayout theme={theme} toggleTheme={toggleTheme} />
+        </Router>
+      </MadrasaProvider>
+    </AuthProvider>
   );
 }
 

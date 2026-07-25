@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 const MadrasaContext = createContext();
 
@@ -175,6 +176,56 @@ export function MadrasaProvider({ children }) {
     setMadrasas(prev => prev.map(m => m.id === id ? { ...m, name: newName.trim() } : m));
   };
 
+  // --- SUPABASE LIVE DATA FETCHERS WITH FALLBACK ---
+  const fetchStudentsFromSupabase = async (madrasaId = activeMadrasaId) => {
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*, classes(class_name)')
+        .eq('madrasa_id', madrasaId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.warn('Supabase students fetch fallback to localStorage:', e.message);
+      const local = loadMadrasaData('hf_records_v1', madrasaId);
+      return local?.records || [];
+    }
+  };
+
+  const fetchHifzRecordsFromSupabase = async (madrasaId = activeMadrasaId) => {
+    try {
+      const { data, error } = await supabase
+        .from('hifz_records')
+        .select('*, students(name, roll_number)')
+        .eq('madrasa_id', madrasaId)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.warn('Supabase Hifz records fetch fallback to localStorage:', e.message);
+      const local = loadMadrasaData('hf_records_v1', madrasaId);
+      return local?.monthlyExams || [];
+    }
+  };
+
+  const fetchFeesFromSupabase = async (madrasaId = activeMadrasaId) => {
+    try {
+      const { data, error } = await supabase
+        .from('fees')
+        .select('*, students(name, roll_number)')
+        .eq('madrasa_id', madrasaId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.warn('Supabase fees fetch fallback to localStorage:', e.message);
+      const local = loadMadrasaData('hf_fees_v1', madrasaId);
+      return local?.fees || [];
+    }
+  };
+
   return (
     <MadrasaContext.Provider value={{
       madrasas,
@@ -190,7 +241,10 @@ export function MadrasaProvider({ children }) {
       renameMadrasa,
       getStorageKey,
       loadMadrasaData,
-      saveMadrasaData
+      saveMadrasaData,
+      fetchStudentsFromSupabase,
+      fetchHifzRecordsFromSupabase,
+      fetchFeesFromSupabase
     }}>
       {children}
     </MadrasaContext.Provider>
@@ -204,4 +258,3 @@ export function useMadrasa() {
   }
   return context;
 }
-
