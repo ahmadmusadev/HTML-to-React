@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebaseClient';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { useMadrasa } from '../context/MadrasaContext';
 import './Admissions.css';
 
@@ -170,18 +168,12 @@ export default function Admissions() {
           saveToLocal(newRecords);
           alert("ریکارڈ مقامی طور پر اپ ڈیٹ ہو گیا۔");
       }
-      if (db) {
-          try { await updateDoc(doc(db, "students", editingStudentId), profile); } catch(e) {}
-      }
       setEditingStudentId(null);
       setFormData(initialFormData);
       handleTabChange('all');
     } else {
       newRecords.push(profile);
       saveToLocal(newRecords);
-      if (db) {
-         try { await addDoc(collection(db, "students"), profile); } catch(e) { }
-      }
       alert("داخلہ محفوظ ہوچکا ہے۔");
       setFormData(initialFormData);
       handleTabChange('all');
