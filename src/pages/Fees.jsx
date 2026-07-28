@@ -14,7 +14,7 @@ export default function Fees() {
   useEffect(() => {
     const storedData = loadMadrasaData('hf_records_v1') || {};
     setRecords(storedData.records || []);
-  }, [activeView, reportType, activeMadrasaId]); // reload on tab or madrasa switch
+  }, [activeMadrasaId]); // reload only on madrasa switch
 
   // --- View 1: Fee Record Payment ---
   const [feeSearchId, setFeeSearchId] = useState('');
@@ -84,15 +84,14 @@ export default function Fees() {
     setPrintData(feeRecord);
     
     setTimeout(() => {
-        alert("Record Saved! Please wait for the print dialog...");
+        alert("فیس ریکارڈ محفوظ ہو گیا۔ پرنٹ ڈائیلاگ کھل رہا ہے...");
         window.print();
         
         setTimeout(() => {
-            alert(`🔔 [SYSTEM ALERT]\nA digital payment receipt for Rs. ${totalPaid} has been sent successfully to the parent's WhatsApp/SMS via system gateway.`);
             setFeeSearchId('');
             setCurrentFeeStudent(null);
             setPrintData(null);
-        }, 1500);
+        }, 500);
     }, 100);
   };
 

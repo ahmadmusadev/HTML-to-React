@@ -26,17 +26,19 @@ export default function AiListen() {
   const qariAudioRef = useRef(null);
   const analysisPanelRef = useRef(null);
 
-  // Auto load target Ayah on mount
+  const debounceRef = useRef(null);
+
   useEffect(() => {
     loadTargetAyah(currentSurah, currentAyah);
+    return () => clearTimeout(debounceRef.current);
   }, []);
 
   // Debounced load on Ayah input change
   const handleAyahInputChange = (val) => {
     const num = parseInt(val) || 1;
     setCurrentAyah(num);
-    clearTimeout(window._ayahDebounce);
-    window._ayahDebounce = setTimeout(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
       loadTargetAyah(currentSurah, num);
     }, 600);
   };

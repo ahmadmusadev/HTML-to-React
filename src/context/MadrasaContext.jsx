@@ -82,7 +82,10 @@ export function MadrasaProvider({ children }) {
       if (madrasaId === 'madrasa_1') {
         localStorage.setItem(baseKey, JSON.stringify(data));
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Failed to save data to localStorage (possible quota exceeded):', e);
+      alert('⚠️ ڈیٹا محفوظ نہیں ہو سکا — براؤزر اسٹوریج بھر چکا ہے یا پرائیویٹ موڈ میں ہے۔');
+    }
   };
 
   // Save madrasa list to local storage

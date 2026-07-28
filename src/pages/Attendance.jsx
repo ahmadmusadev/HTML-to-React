@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { DEFAULT_CLASSES } from '../constants/defaults';
 import './Entry.css';
 
 export default function Attendance() {
@@ -20,27 +21,19 @@ export default function Attendance() {
   const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
-    const defaultClasses = [
-        { id: 'cls-1', name: 'حفظِ قرآن — ناظرہ', teacher: 'مولانا عبدالرحمن' },
-        { id: 'cls-2', name: 'حفظِ قرآن — سال اول', teacher: 'مولانا محمد اسحاق' },
-        { id: 'cls-3', name: 'حفظِ قرآن — سال دوم', teacher: 'مولانا یوسف' },
-        { id: 'cls-4', name: 'حفظِ قرآن — سال سوم', teacher: 'مولانا ابراہیم' },
-        { id: 'cls-5', name: 'حفظِ قرآن — سال چہارم', teacher: 'مولانا عبداللہ' }
-    ];
-
     const d = loadMadrasaData('hf_records_v1') || {};
     setRecords(d.records || []);
     if (d.classes && d.classes.length > 0) {
         setClassesList(d.classes);
     } else {
-        setClassesList(defaultClasses);
+        setClassesList(DEFAULT_CLASSES);
     }
     setDailyAttendance(d.dailyAttendance || {});
     setAttendance(d.attendance || {});
     setStaffProfiles(d.staffProfiles || []);
     setStaffAttendance(d.staffAttendance || {});
     setStaffFlow(d.staffAttendanceFlow || {});
-  }, [activeView, activeMadrasaId]); 
+  }, [activeMadrasaId]); 
 
   const updateLocalStorage = (updates) => {
     const d = loadMadrasaData('hf_records_v1') || {};
@@ -72,7 +65,7 @@ export default function Attendance() {
   const [studentAttClass, setStudentAttClass] = useState('');
   const [studentAttFormData, setStudentAttFormData] = useState(null);
 
-  const studentsInClass = records.filter(r => r.isAdmissionProfile && r.classId === studentAttClass && r.status !== 'withdrawn');
+  const studentsInClass = records.filter(r => r.isAdmissionProfile && r.admClass === studentAttClass && !r.isWithdrawn);
 
   useEffect(() => {
       if (activeView === 'class' && studentAttDate && studentAttClass) {

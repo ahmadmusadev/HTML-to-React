@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { getCurrentAcademicYearStart, formatAcademicYear, getAcademicYearOptions } from '../utils/academicYear';
+import { DEFAULT_CLASSES } from '../constants/defaults';
 import './Entry.css';
 
 // Constants from edit.html
@@ -32,23 +33,15 @@ export default function Entry() {
   const [monthlyExams, setMonthlyExams] = useState([]);
 
   useEffect(() => {
-    const defaultClasses = [
-        { id: 'cls-1', name: 'حفظِ قرآن — ناظرہ', teacher: 'مولانا عبدالرحمن' },
-        { id: 'cls-2', name: 'حفظِ قرآن — سال اول', teacher: 'مولانا محمد اسحاق' },
-        { id: 'cls-3', name: 'حفظِ قرآن — سال دوم', teacher: 'مولانا یوسف' },
-        { id: 'cls-4', name: 'حفظِ قرآن — سال سوم', teacher: 'مولانا ابراہیم' },
-        { id: 'cls-5', name: 'حفظِ قرآن — سال چہارم', teacher: 'مولانا عبداللہ' }
-    ];
-
     const storedData = loadMadrasaData('hf_records_v1') || {};
     setRecords(storedData.records || []);
     if (storedData.classes && storedData.classes.length > 0) {
         setClassesList(storedData.classes);
     } else {
-        setClassesList(defaultClasses);
+        setClassesList(DEFAULT_CLASSES);
     }
     setMonthlyExams(storedData.monthlyExams || []);
-  }, [activeTab, activeMadrasaId]);
+  }, [activeMadrasaId]);
 
   const saveToLocal = (newMonthlyExams) => {
     let storedData = loadMadrasaData('hf_records_v1') || { monthlyExams: [] };

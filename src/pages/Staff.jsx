@@ -171,7 +171,7 @@ export default function Staff() {
     return n.charAt(0).toUpperCase();
   };
 
-  const filteredStaff = staffProfiles
+  const filteredStaff = [...staffProfiles]
     .sort((a, b) => Number(a.staffCode || 0) - Number(b.staffCode || 0))
     .filter(s => {
       if (!searchQuery.trim()) return true;

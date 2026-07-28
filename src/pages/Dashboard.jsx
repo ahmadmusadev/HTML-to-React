@@ -110,7 +110,7 @@ export default function Dashboard() {
   const avgStudentsPerClass = classCount > 0 ? (totalStudents / classCount).toFixed(1) : '0.0';
 
   return (
-    <div className="tab-content">
+    <div className="dashboard-wrapper">
       
         <div className="dashboard-hero">
             <div className="dashboard-hero-top">

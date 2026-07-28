@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { DEFAULT_CLASSES } from '../constants/defaults';
 import './Admissions.css';
 
 export default function Admissions() {
@@ -30,22 +31,14 @@ export default function Admissions() {
   const [profileModal, setProfileModal] = useState(null);
 
   useEffect(() => {
-    const defaultClasses = [
-        { id: 'cls-1', name: 'حفظِ قرآن — ناظرہ', teacher: 'مولانا عبدالرحمن' },
-        { id: 'cls-2', name: 'حفظِ قرآن — سال اول', teacher: 'مولانا محمد اسحاق' },
-        { id: 'cls-3', name: 'حفظِ قرآن — سال دوم', teacher: 'مولانا یوسف' },
-        { id: 'cls-4', name: 'حفظِ قرآن — سال سوم', teacher: 'مولانا ابراہیم' },
-        { id: 'cls-5', name: 'حفظِ قرآن — سال چہارم', teacher: 'مولانا عبداللہ' }
-    ];
-
     const storedData = loadMadrasaData('hf_records_v1') || {};
     setRecords(storedData.records || []);
     if (storedData.classes && storedData.classes.length > 0) {
         setClassesList(storedData.classes);
     } else {
-        setClassesList(defaultClasses);
+        setClassesList(DEFAULT_CLASSES);
     }
-  }, [activeTab, activeMadrasaId]);
+  }, [activeMadrasaId]);
 
   const saveToLocal = (newRecords) => {
     let storedData = loadMadrasaData('hf_records_v1') || { records: [], classes: classesList };

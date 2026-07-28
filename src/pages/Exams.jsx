@@ -21,7 +21,7 @@ export default function Exams() {
 
   useEffect(() => {
     loadLocalData();
-  }, [activeTab, activeMadrasaId]);
+  }, [activeMadrasaId]);
 
   const saveToLocalData = (newMiqdar, newResults) => {
     let storedData = loadMadrasaData('hf_records_v1') || { records: [], classes: [], examMiqdar: [], examResults: [] };
@@ -94,7 +94,7 @@ export default function Exams() {
     if (!students.length) { alert('اس کلاس میں کوئی طالب علم نہیں'); setMqClassStudents(null); return; }
     
     const cls = classesList.find(c => c.id === mqClassSelect);
-    const existing = examMiqdar.filter(m => m.classId === mqClassSelect && m.term === mqTermSelect && m.year == mqYear);
+    const existing = examMiqdar.filter(m => m.classId === mqClassSelect && m.term === mqTermSelect && String(m.year) === String(mqYear));
     
     const loadedStudents = students.map(s => {
       const prev = existing.find(m => m.regNo === s.admRegNo) || {};

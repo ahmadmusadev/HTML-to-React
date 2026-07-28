@@ -113,10 +113,10 @@ export default function Records() {
                   const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
                   const attWork = r.attendance ? r.attendance.working : '-';
-                  const attAbsent = r.attendance ? r.attendance.absent : 0;
-                  const attLeave = r.attendance ? r.attendance.leave : 0;
+                  const attAbsent = r.attendance ? (r.attendance.absent || 0) : 0;
+                  const attLeave = r.attendance ? (r.attendance.leave || 0) : 0;
                   const attTotalOff = attAbsent + attLeave;
-                  const attPct = r.attendance ? r.attendance.pct + '%' : '-';
+                  const attPct = r.attendance && r.attendance.pct != null ? r.attendance.pct + '%' : '-';
 
                   return (
                     <tr key={(r.ts || '') + (r.name || '') + i}>

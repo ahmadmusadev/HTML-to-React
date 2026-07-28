@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    // 1. Get initial session
+    // 1. Get initial session — Supabase is the sole source of truth
     const initAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -46,31 +46,10 @@ export function AuthProvider({ children }) {
           setSession(currentSession);
           setUser(currentSession.user);
           await fetchUserProfile(currentSession.user.id);
-        } else {
-          // Check local stored session fallback
-          const storedUser = localStorage.getItem('hf_auth_user_v1');
-          const storedProfile = localStorage.getItem('hf_auth_profile_v1');
-          if (storedUser && storedProfile) {
-            const parsedUser = JSON.parse(storedUser);
-            const parsedProfile = JSON.parse(storedProfile);
-            setUser(parsedUser);
-            setProfile(parsedProfile);
-            setSession({ user: parsedUser });
-          }
         }
+        // No localStorage fallback — if no valid Supabase session, user must log in
       } catch (err) {
-        console.warn('Auth initialization error, checking local storage session:', err);
-        const storedUser = localStorage.getItem('hf_auth_user_v1');
-        const storedProfile = localStorage.getItem('hf_auth_profile_v1');
-        if (storedUser && storedProfile) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            const parsedProfile = JSON.parse(storedProfile);
-            setUser(parsedUser);
-            setProfile(parsedProfile);
-            setSession({ user: parsedUser });
-          } catch (e) {}
-        }
+        console.warn('Auth initialization error:', err);
       } finally {
         setLoading(false);
       }
@@ -78,12 +57,17 @@ export function AuthProvider({ children }) {
 
     initAuth();
 
-    // 2. Listen to Auth state changes
+    // 2. Listen to Auth state changes (including sign-out and token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (newSession?.user) {
         setSession(newSession);
         setUser(newSession.user);
         await fetchUserProfile(newSession.user.id);
+      } else {
+        // Session expired or user signed out — clear all auth state
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       }
       setLoading(false);
     });
@@ -93,13 +77,13 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Sign In helper with seed credential fallback
+  // Sign In helper
   const signIn = async (email, password) => {
     setLoading(true);
     const cleanEmail = (email || '').trim().toLowerCase();
     
     try {
-      // First attempt Supabase Cloud Auth
+      // Attempt Supabase Cloud Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
@@ -115,40 +99,32 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.warn('Supabase auth attempt failed or unreachable:', err);
 
-      // Seed account verification fallback
-      if (cleanEmail === 'admin@madrasa.com' && password === 'AdminPass123!') {
-        const adminUser = { id: '22222222-2222-2222-2222-222222222222', email: 'admin@madrasa.com' };
-        const adminProfile = {
-          id: '22222222-2222-2222-2222-222222222222',
-          madrasa_id: 'madrasa_1',
-          full_name: 'مولانا احمد مدنی (مہتمم)',
-          role: 'admin'
-        };
-        setUser(adminUser);
-        setProfile(adminProfile);
-        setSession({ user: adminUser });
-        localStorage.setItem('hf_auth_user_v1', JSON.stringify(adminUser));
-        localStorage.setItem('hf_auth_profile_v1', JSON.stringify(adminProfile));
-        return { user: adminUser, session: { user: adminUser } };
+      // DEV-ONLY: Seed account fallback for local development when Supabase is unreachable
+      if (import.meta.env.DEV) {
+        const seedAccounts = [
+          {
+            email: 'admin@madrasa.com', password: 'AdminPass123!',
+            user: { id: '22222222-2222-2222-2222-222222222222', email: 'admin@madrasa.com' },
+            profile: { id: '22222222-2222-2222-2222-222222222222', madrasa_id: 'madrasa_1', full_name: 'مولانا احمد مدنی (مہتمم)', role: 'admin' }
+          },
+          {
+            email: 'teacher@madrasa.com', password: 'TeacherPass123!',
+            user: { id: '33333333-3333-3333-3333-333333333333', email: 'teacher@madrasa.com' },
+            profile: { id: '33333333-3333-3333-3333-333333333333', madrasa_id: 'madrasa_1', full_name: 'استاد محمد یوسف', role: 'teacher' }
+          }
+        ];
+
+        const match = seedAccounts.find(a => a.email === cleanEmail && a.password === password);
+        if (match) {
+          console.warn('[DEV MODE] Using seed account fallback — this is disabled in production builds.');
+          setUser(match.user);
+          setProfile(match.profile);
+          setSession({ user: match.user });
+          return { user: match.user, session: { user: match.user } };
+        }
       }
 
-      if (cleanEmail === 'teacher@madrasa.com' && password === 'TeacherPass123!') {
-        const teacherUser = { id: '33333333-3333-3333-3333-333333333333', email: 'teacher@madrasa.com' };
-        const teacherProfile = {
-          id: '33333333-3333-3333-3333-333333333333',
-          madrasa_id: 'madrasa_1',
-          full_name: 'استاد محمد یوسف',
-          role: 'teacher'
-        };
-        setUser(teacherUser);
-        setProfile(teacherProfile);
-        setSession({ user: teacherUser });
-        localStorage.setItem('hf_auth_user_v1', JSON.stringify(teacherUser));
-        localStorage.setItem('hf_auth_profile_v1', JSON.stringify(teacherProfile));
-        return { user: teacherUser, session: { user: teacherUser } };
-      }
-
-      // If credentials do not match seed accounts, rethrow or throw clean invalid credentials error
+      // Re-throw with a clean error message
       if (err?.message && err.message !== '{}') {
         throw err;
       } else {
@@ -167,8 +143,6 @@ export function AuthProvider({ children }) {
       setUser(null);
       setSession(null);
       setProfile(null);
-      localStorage.removeItem('hf_auth_user_v1');
-      localStorage.removeItem('hf_auth_profile_v1');
     } finally {
       setLoading(false);
     }
