@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    // 1. Get initial session — Supabase is the sole source of truth
+    // 1. Get initial session
     const initAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -46,8 +46,20 @@ export function AuthProvider({ children }) {
           setSession(currentSession);
           setUser(currentSession.user);
           await fetchUserProfile(currentSession.user.id);
+        } else {
+          // Check session storage demo session fallback
+          try {
+            const storedUser = sessionStorage.getItem('hf_demo_user_v1');
+            const storedProfile = sessionStorage.getItem('hf_demo_profile_v1');
+            if (storedUser && storedProfile) {
+              const parsedUser = JSON.parse(storedUser);
+              const parsedProfile = JSON.parse(storedProfile);
+              setUser(parsedUser);
+              setProfile(parsedProfile);
+              setSession({ user: parsedUser });
+            }
+          } catch (e) {}
         }
-        // No localStorage fallback — if no valid Supabase session, user must log in
       } catch (err) {
         console.warn('Auth initialization error:', err);
       } finally {
@@ -64,10 +76,13 @@ export function AuthProvider({ children }) {
         setUser(newSession.user);
         await fetchUserProfile(newSession.user.id);
       } else {
-        // Session expired or user signed out — clear all auth state
-        setSession(null);
-        setUser(null);
-        setProfile(null);
+        // Clear auth state if no demo session active
+        const storedUser = sessionStorage.getItem('hf_demo_user_v1');
+        if (!storedUser) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+        }
       }
       setLoading(false);
     });
@@ -90,6 +105,8 @@ export function AuthProvider({ children }) {
       });
 
       if (!error && data?.user) {
+        sessionStorage.removeItem('hf_demo_user_v1');
+        sessionStorage.removeItem('hf_demo_profile_v1');
         setUser(data.user);
         setSession(data.session);
         await fetchUserProfile(data.user.id);
@@ -99,32 +116,33 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.warn('Supabase auth attempt failed or unreachable:', err);
 
-      // DEV-ONLY: Seed account fallback for local development when Supabase is unreachable
-      if (import.meta.env.DEV) {
-        const seedAccounts = [
-          {
-            email: 'admin@madrasa.com', password: 'AdminPass123!',
-            user: { id: '22222222-2222-2222-2222-222222222222', email: 'admin@madrasa.com' },
-            profile: { id: '22222222-2222-2222-2222-222222222222', madrasa_id: 'madrasa_1', full_name: 'مولانا احمد مدنی (مہتمم)', role: 'admin' }
-          },
-          {
-            email: 'teacher@madrasa.com', password: 'TeacherPass123!',
-            user: { id: '33333333-3333-3333-3333-333333333333', email: 'teacher@madrasa.com' },
-            profile: { id: '33333333-3333-3333-3333-333333333333', madrasa_id: 'madrasa_1', full_name: 'استاد محمد یوسف', role: 'teacher' }
-          }
-        ];
-
-        const match = seedAccounts.find(a => a.email === cleanEmail && a.password === password);
-        if (match) {
-          console.warn('[DEV MODE] Using seed account fallback — this is disabled in production builds.');
-          setUser(match.user);
-          setProfile(match.profile);
-          setSession({ user: match.user });
-          return { user: match.user, session: { user: match.user } };
+      // Seed/Demo accounts fallback (works when Supabase is unreachable or demo credentials are used)
+      const seedAccounts = [
+        {
+          email: 'admin@madrasa.com', password: 'AdminPass123!',
+          user: { id: '22222222-2222-2222-2222-222222222222', email: 'admin@madrasa.com' },
+          profile: { id: '22222222-2222-2222-2222-222222222222', madrasa_id: 'madrasa_1', full_name: 'مولانا احمد مدنی (مہتمم)', role: 'admin' }
+        },
+        {
+          email: 'teacher@madrasa.com', password: 'TeacherPass123!',
+          user: { id: '33333333-3333-3333-3333-333333333333', email: 'teacher@madrasa.com' },
+          profile: { id: '33333333-3333-3333-3333-333333333333', madrasa_id: 'madrasa_1', full_name: 'استاد محمد یوسف', role: 'teacher' }
         }
+      ];
+
+      const match = seedAccounts.find(a => a.email === cleanEmail && a.password === password);
+      if (match) {
+        setUser(match.user);
+        setProfile(match.profile);
+        setSession({ user: match.user });
+        try {
+          sessionStorage.setItem('hf_demo_user_v1', JSON.stringify(match.user));
+          sessionStorage.setItem('hf_demo_profile_v1', JSON.stringify(match.profile));
+        } catch (e) {}
+        return { user: match.user, session: { user: match.user } };
       }
 
-      // Re-throw with a clean error message
+      // Re-throw with clean user-friendly error message
       if (err?.message && err.message !== '{}') {
         throw err;
       } else {
@@ -140,6 +158,8 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       await supabase.auth.signOut().catch(() => {});
+      sessionStorage.removeItem('hf_demo_user_v1');
+      sessionStorage.removeItem('hf_demo_profile_v1');
       setUser(null);
       setSession(null);
       setProfile(null);
