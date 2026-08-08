@@ -576,11 +576,18 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 }
 
 /* --- Admissions & Wizard Steps --- */
-[data-theme="dark"] .admission-box,
-[data-theme="dark"] #printableAdmissionFormArea {
+[data-theme="dark"] .admission-box {
   background: #141417 !important;
   border: 1px solid #27272a !important;
   color: #ffffff !important;
+}
+
+@media screen {
+  [data-theme="dark"] #printableAdmissionFormArea {
+    background: #141417 !important;
+    border: 1px solid #27272a !important;
+    color: #ffffff !important;
+  }
 }
 
 [data-theme="dark"] .wizard-step-circle {

@@ -660,7 +660,7 @@
     }
 
     @media print {
-      body > *:not(#printableReceiptArea):not(#printableAdmissionFormArea):not(#studentAttReportPrint):not(#classAttReportPrint):not(#classExamResultPrint):not(#individualExamResultPrint) { display: none !important; }
+      body > *:not(#root):not(#printableReceiptArea):not(#printableAdmissionFormArea):not(#studentAttReportPrint):not(#classAttReportPrint):not(#classExamResultPrint):not(#individualExamResultPrint) { display: none !important; }
       #printableReceiptArea {
         display: block !important;
         position: fixed; inset: 0;
@@ -938,20 +938,7 @@
       }
     }
 
-    @media print {
-      #printableAdmissionFormArea {
-        display: block !important;
-        position: fixed;
-        inset: 0;
-        padding: 7mm 7mm;
-        border: none !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
-        width: 210mm;
-        box-sizing: border-box;
-        overflow: hidden;
-      }
-    }
+
 
 
     /* ========== ADMISSION WIZARD ========== */

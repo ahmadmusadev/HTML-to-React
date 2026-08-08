@@ -29,6 +29,30 @@ export default function Admissions() {
   const [withdrawReason, setWithdrawReason] = useState('');
 
   const [profileModal, setProfileModal] = useState(null);
+  const [printStudentId, setPrintStudentId] = useState('');
+
+  const selectedPrintStudent = records.find(r => r.isAdmissionProfile && r.admRegNo === printStudentId) || null;
+
+  const getClassName = (clsId) => {
+    if (!clsId) return '';
+    const cls = classesList.find(c => c.id === clsId);
+    return cls ? (cls.name || cls.className || clsId) : clsId;
+  };
+
+  const getAgeParts = (student) => {
+    if (!student || !student.admAge) return { day: '', month: '', year: '' };
+    const ageStr = student.admAge;
+    const yearMatch = ageStr.match(/(\d+)\s*سال/);
+    const monthMatch = ageStr.match(/(\d+)\s*ماہ/);
+    const dayMatch = ageStr.match(/(\d+)\s*دن/);
+    return {
+      year: yearMatch ? yearMatch[1] : '',
+      month: monthMatch ? monthMatch[1] : '',
+      day: dayMatch ? dayMatch[1] : ''
+    };
+  };
+
+  const printAgeParts = getAgeParts(selectedPrintStudent);
 
   useEffect(() => {
     const storedData = loadMadrasaData('hf_records_v1') || {};
@@ -296,7 +320,7 @@ export default function Admissions() {
                   <div><label>نام</label><input type="text" id="admName" value={formData.admName} onChange={handleInputChange} /></div>
                   <div><label>والد کا نام</label><input type="text" id="admFatherName" value={formData.admFatherName} onChange={handleInputChange} /></div>
                 </div>
-                <div className="grid-row">
+                <div className="grid-row">  
                   <div>
                     <label>کلاس</label>
                     <select id="admClass" value={formData.admClass} onChange={handleInputChange}>
@@ -545,96 +569,210 @@ export default function Admissions() {
           <div className="form-section-card no-print">
             <div className="form-section-header">
               <div className="form-section-icon icon-blue"></div>
-              <div><div className="form-section-title">پرنٹیبل داخلہ فارم</div><div className="form-section-subtitle">طالب علم کا انتخاب کریں یا خالی فارم پرنٹ کریں</div></div>
+              <div>
+                <div className="form-section-title">پرنٹیبل داخلہ فارم</div>
+                <div className="form-section-subtitle">طالب علم کا انتخاب کر کے فارم پرنٹ کریں یا خالی فارم پرنٹ کریں</div>
+              </div>
             </div>
-            <div style={{ marginTop: '15px', color: 'var(--muted)', fontSize: '0.9rem' }}>
-                یہ خالی فارم پرنٹ کے لیے ہے۔ پرنٹ بٹن پر کلک کریں اور ہاتھ سے پر کریں۔
-            </div>
-            <div className="btn-container" style={{ marginTop: '15px' }}>
-              <button onClick={() => window.print()} style={{ background: 'linear-gradient(135deg,var(--accent),var(--surface))', padding: '13px 40px', borderRadius: '10px' }}>فارم پرنٹ کریں</button>
+            
+            <div className="grid-row" style={{ marginTop: '16px', alignItems: 'center' }}>
+              <div>
+                <label style={{ fontWeight: '700', marginBottom: '6px', display: 'block' }}>طالب علم منتخب کریں (ڈیٹا بھرنے کے لیے):</label>
+                <select
+                  value={printStudentId}
+                  onChange={(e) => setPrintStudentId(e.target.value)}
+                  className="adm-student-select"
+                >
+                  <option value="">-- خالی فارم (دستخطی اندراج کے لیے) --</option>
+                  {records.filter(r => r.isAdmissionProfile && !r.isWithdrawn).map(s => (
+                    <option key={s.admRegNo} value={s.admRegNo}>
+                      {s.admRegNo} — {s.name} ({s.admFatherName || 'ولدیت نہیں'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <button
+                  onClick={() => window.print()}
+                  style={{
+                    background: 'linear-gradient(135deg, var(--accent), var(--accent-light))',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '12px 36px',
+                    borderRadius: '10px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(13,59,102,0.25)',
+                    width: '100%'
+                  }}
+                >
+                  🖨️ فارم پرنٹ کریں
+                </button>
+              </div>
             </div>
           </div>
 
-          <div id="printableAdmissionFormArea" style={{ display: 'block', marginTop: '20px', border: '1px solid var(--border)', borderRadius: '10px', padding: '24px', background: '#fff', position: 'relative', overflow: 'hidden' }}>
-            {activeLogo && (
-              <div className="form-watermark-logo" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.05, pointerEvents: 'none', zIndex: 0 }}>
-                <img src={activeLogo} alt="" style={{ width: '320px', height: '320px', objectFit: 'contain' }} />
+          {/* ===== REDESIGNED A4 ADMISSION FORM ===== */}
+          <div id="printableAdmissionFormArea" className="a4-admission-form">
+            <div className="a4-form-outer-border">
+              <div className="a4-form-inner-border">
+                
+                {/* Header */}
+                <div className="a4-header-grid">
+                  <div className="a4-header-center">
+                    <div className="a4-crescent-star">☪</div>
+                    <div className="a4-title-box">
+                      <h1 className="a4-title-text">داخلہ فارم</h1>
+                    </div>
+                    <div className="a4-subtitle-text">Admission Form — داخلہ فارم</div>
+                  </div>
+                  <div className="a4-photo-box">
+                    <span>تصویر</span>
+                  </div>
+                </div>
+
+                {/* Section 1: Student Information */}
+                <div className="a4-table-container">
+                  <table className="a4-table">
+                    <colgroup>
+                      <col style={{ width: '22%' }} />
+                      <col style={{ width: '28%' }} />
+                      <col style={{ width: '22%' }} />
+                      <col style={{ width: '28%' }} />
+                    </colgroup>
+                    <tbody>
+                      <tr>
+                        <td className="a4-label">رجسٹریشن نمبر</td>
+                        <td className="a4-value">{selectedPrintStudent?.admRegNo || ''}</td>
+                        <td className="a4-label">تاریخ داخلہ</td>
+                        <td className="a4-value">{selectedPrintStudent?.admDate || (selectedPrintStudent ? '' : '____ / ____ / ______')}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">نام طالب علم</td>
+                        <td colSpan="3" className="a4-value">{selectedPrintStudent?.name || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">ولدیت</td>
+                        <td colSpan="3" className="a4-value">{selectedPrintStudent?.admFatherName || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">کلاس</td>
+                        <td className="a4-value">{getClassName(selectedPrintStudent?.admClass)}</td>
+                        <td className="a4-label">تاریخ پیدائش</td>
+                        <td className="a4-value">{selectedPrintStudent?.admDOB || selectedPrintStudent?.admDobFull || (selectedPrintStudent ? '' : '____ / ____ / ______')}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">عمر</td>
+                        <td colSpan="3" className="a4-value">
+                          <div className="a4-age-container">
+                            <div className="a4-age-item">
+                              <span className="a4-age-label">دن:</span>
+                              <span className="a4-blank-line">{printAgeParts.day}</span>
+                            </div>
+                            <div className="a4-age-item">
+                              <span className="a4-age-label">ماہ:</span>
+                              <span className="a4-blank-line">{printAgeParts.month}</span>
+                            </div>
+                            <div className="a4-age-item">
+                              <span className="a4-age-label">سال:</span>
+                              <span className="a4-blank-line">{printAgeParts.year}</span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">رہائشی پتہ</td>
+                        <td colSpan="3" className="a4-value">{selectedPrintStudent?.admAddress || ''}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Section 2: Father's Information */}
+                <div className="a4-section-divider">
+                  <span>•━━━━━ والد کی معلومات ━━━━━•</span>
+                </div>
+                <div className="a4-table-container">
+                  <table className="a4-table">
+                    <colgroup>
+                      <col style={{ width: '25%' }} />
+                      <col style={{ width: '75%' }} />
+                    </colgroup>
+                    <tbody>
+                      <tr>
+                        <td className="a4-label">نام</td>
+                        <td className="a4-value">{selectedPrintStudent?.fatherName || selectedPrintStudent?.admFatherName || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">ولدیت / CNIC</td>
+                        <td className="a4-value">{selectedPrintStudent?.fatherCnic || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">موبائل نمبر</td>
+                        <td className="a4-value">{selectedPrintStudent?.fatherMobile || selectedPrintStudent?.contactPhone1 || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">واٹس ایپ نمبر</td>
+                        <td className="a4-value">{selectedPrintStudent?.fatherWhatsapp || selectedPrintStudent?.contactWhatsapp1 || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">پیشہ</td>
+                        <td className="a4-value">{selectedPrintStudent?.fatherOcc || ''}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Section 3: Mother's Information */}
+                <div className="a4-section-divider">
+                  <span>•━━━━━ والدہ کی معلومات ━━━━━•</span>
+                </div>
+                <div className="a4-table-container">
+                  <table className="a4-table">
+                    <colgroup>
+                      <col style={{ width: '25%' }} />
+                      <col style={{ width: '75%' }} />
+                    </colgroup>
+                    <tbody>
+                      <tr>
+                        <td className="a4-label">نام</td>
+                        <td className="a4-value">{selectedPrintStudent?.motherName || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">ولدیت / CNIC</td>
+                        <td className="a4-value">{selectedPrintStudent?.motherCnic || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">موبائل نمبر</td>
+                        <td className="a4-value">{selectedPrintStudent?.motherMobile || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">واٹس ایپ نمبر</td>
+                        <td className="a4-value">{selectedPrintStudent?.motherWhatsapp || ''}</td>
+                      </tr>
+                      <tr>
+                        <td className="a4-label">پیشہ</td>
+                        <td className="a4-value">{selectedPrintStudent?.motherOcc || ''}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Section 4: Signatures */}
+                <div className="a4-signatures-flex">
+                  <div className="a4-sig-block">
+                    <div className="a4-sig-line"></div>
+                    <div className="a4-sig-title-ur">دستخط سرپرست</div>
+                    <div className="a4-sig-title-en">Guardian Signature</div>
+                  </div>
+                  <div className="a4-sig-block">
+                    <div className="a4-sig-line"></div>
+                    <div className="a4-sig-title-ur">دستخط ادارہ</div>
+                    <div className="a4-sig-title-en">Institute Signature</div>
+                  </div>
+                </div>
+
               </div>
-            )}
-            <div className="printform-header" style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '2px solid #ccc', paddingBottom: '12px', position: 'relative', zIndex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '6px' }}>
-                {activeLogo ? (
-                  <img src={activeLogo} alt={activeMadrasa.name} style={{ maxHeight: '54px', maxWidth: '140px', objectFit: 'contain' }} />
-                ) : (
-                  <span style={{ fontSize: '2rem', lineHeight: 1 }}>☪</span>
-                )}
-                <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#1e293b' }}>{activeMadrasa.name}</h2>
-              </div>
-              <h3 style={{ margin: '4px 0 0', fontSize: '16px', color: '#475569', fontWeight: 600 }}>داخلہ فارم — Admission Form</h3>
-            </div>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
-              <colgroup><col style={{ width: '20%' }} /><col style={{ width: '30%' }} /><col style={{ width: '20%' }} /><col style={{ width: '30%' }} /></colgroup>
-              <tbody>
-                <tr>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>رجسٹریشن نمبر</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.admRegNo || ''}</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>تاریخ داخلہ</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.admDate || ''}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>نام طالب علم</td>
-                  <td colSpan="3" style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.name || ''}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>والد کا نام</td>
-                  <td colSpan="3" style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.admFatherName || ''}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>کلاس</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.admClass || ''}</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>صنف</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.admGender || ''}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>تاریخ پیدائش</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.admDobFull || ''}</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>عمر</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.admAge || ''}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>ب فارم نمبر</td>
-                  <td colSpan="3" style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.admBForm || ''}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>موجودہ رہائشی پتہ</td>
-                  <td colSpan="3" style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.admAddress || ''}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <h3 style={{ margin: '15px 0 5px 0', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>والد کی معلومات</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
-              <colgroup><col style={{ width: '20%' }} /><col style={{ width: '30%' }} /><col style={{ width: '20%' }} /><col style={{ width: '30%' }} /></colgroup>
-              <tbody>
-                <tr>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>شناختی کارڈ نمبر</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.fatherCnic || ''}</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>موبائل نمبر</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.fatherMobile || ''}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>پیشہ</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.fatherOcc || ''}</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>واٹس ایپ نمبر</td>
-                  <td style={{ padding: '8px', border: '1px solid #ddd' }}>{printStudentObj.fatherWhatsapp || ''}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '60px' }}>
-              <div style={{ width: '200px', borderTop: '1px solid #000', textAlign: 'center', paddingTop: '5px' }}>دستخط سرپرست<br />Guardian Signature</div>
-              <div style={{ width: '200px', borderTop: '1px solid #000', textAlign: 'center', paddingTop: '5px' }}>دستخط ادارہ<br />Institute Signature</div>
             </div>
           </div>
         </div>

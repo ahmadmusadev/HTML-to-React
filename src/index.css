@@ -58,6 +58,35 @@
     }
     .card:hover { box-shadow: var(--shadow-lg); }
 
+    /* Global Select Dropdown Styling (Light Mode & Base) */
+    select {
+      background-color: #ffffff;
+      color: #0f172a;
+      border: 1.5px solid #cbd5e1;
+      border-radius: var(--radius, 10px);
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      cursor: pointer;
+    }
+    select:hover {
+      border-color: var(--accent, #0d3b66);
+      background-color: #f8fafc;
+    }
+    select:focus {
+      border-color: var(--accent, #0d3b66);
+      box-shadow: 0 0 0 3px rgba(13,59,102,0.15);
+    }
+    select option {
+      background-color: #ffffff;
+      color: #0f172a;
+      font-weight: 600;
+      padding: 10px;
+    }
+
     /* بہتر Heading */
     h1 {
       text-align: center; color: var(--accent);
