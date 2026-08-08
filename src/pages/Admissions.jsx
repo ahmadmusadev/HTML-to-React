@@ -4,7 +4,7 @@ import { DEFAULT_CLASSES } from '../constants/defaults';
 import './Admissions.css';
 
 export default function Admissions() {
-  const { activeMadrasa, activeLogo, activeMadrasaId, loadMadrasaData, saveMadrasaData } = useMadrasa();
+  const { activeMadrasaId, loadMadrasaData, saveMadrasaData } = useMadrasa();
   const [activeTab, setActiveTab] = useState('new');
   const [records, setRecords] = useState([]);
   const [classesList, setClassesList] = useState([]);
@@ -280,8 +280,6 @@ export default function Admissions() {
       </td>
     </tr>
   ));
-
-  const printStudentObj = {}; // Blank form per original specification
 
   return (
     <div className="tab-content">
