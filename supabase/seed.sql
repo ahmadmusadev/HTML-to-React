@@ -1,4 +1,8 @@
 -- ==============================================================================
+-- ⚠️ WARNING: LOCAL DEVELOPMENT ONLY ⚠️
+-- THIS FILE IS STRICTLY FOR LOCAL DEVELOPMENT AND TESTING ENVIRONMENTS.
+-- DO NOT EXECUTE THIS SCRIPT AGAINST A PRODUCTION SUPABASE PROJECT OR DATABASE.
+-- ==============================================================================
 -- INITIAL SEED DATA SCRIPT FOR MADRASA SAAS
 -- Seeds 1 Madrasa, 1 Admin, 1 Teacher, 2 Classes, 5 Students, Records & Fees
 -- ==============================================================================

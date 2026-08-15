@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    // 1. Get initial session
+    // 1. Get initial session from Supabase SDK
     const initAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -47,21 +47,15 @@ export function AuthProvider({ children }) {
           setUser(currentSession.user);
           await fetchUserProfile(currentSession.user.id);
         } else {
-          // Check session storage demo session fallback
-          try {
-            const storedUser = sessionStorage.getItem('hf_demo_user_v1');
-            const storedProfile = sessionStorage.getItem('hf_demo_profile_v1');
-            if (storedUser && storedProfile) {
-              const parsedUser = JSON.parse(storedUser);
-              const parsedProfile = JSON.parse(storedProfile);
-              setUser(parsedUser);
-              setProfile(parsedProfile);
-              setSession({ user: parsedUser });
-            }
-          } catch (e) {}
+          setSession(null);
+          setUser(null);
+          setProfile(null);
         }
       } catch (err) {
         console.warn('Auth initialization error:', err);
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
@@ -69,20 +63,16 @@ export function AuthProvider({ children }) {
 
     initAuth();
 
-    // 2. Listen to Auth state changes (including sign-out and token refresh)
+    // 2. Listen to Auth state changes (including sign-out and token refresh) via Supabase SDK
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (newSession?.user) {
         setSession(newSession);
         setUser(newSession.user);
         await fetchUserProfile(newSession.user.id);
       } else {
-        // Clear auth state if no demo session active
-        const storedUser = sessionStorage.getItem('hf_demo_user_v1');
-        if (!storedUser) {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-        }
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       }
       setLoading(false);
     });
@@ -92,74 +82,37 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Sign In helper
+  // Sign In helper — authenticated strictly via Supabase Auth API
   const signIn = async (email, password) => {
     setLoading(true);
     const cleanEmail = (email || '').trim().toLowerCase();
     
     try {
-      // Attempt Supabase Cloud Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
       });
 
-      if (!error && data?.user) {
-        sessionStorage.removeItem('hf_demo_user_v1');
-        sessionStorage.removeItem('hf_demo_profile_v1');
+      if (error) throw error;
+
+      if (data?.user) {
         setUser(data.user);
         setSession(data.session);
         await fetchUserProfile(data.user.id);
         return data;
       }
-      if (error) throw error;
-    } catch (err) {
-      console.warn('Supabase auth attempt failed or unreachable:', err);
-
-      // Seed/Demo accounts fallback (works when Supabase is unreachable or demo credentials are used)
-      const seedAccounts = [
-        {
-          email: 'admin@madrasa.com', password: 'AdminPass123!',
-          user: { id: '22222222-2222-2222-2222-222222222222', email: 'admin@madrasa.com' },
-          profile: { id: '22222222-2222-2222-2222-222222222222', madrasa_id: 'madrasa_1', full_name: 'مولانا احمد مدنی (مہتمم)', role: 'admin' }
-        },
-        {
-          email: 'teacher@madrasa.com', password: 'TeacherPass123!',
-          user: { id: '33333333-3333-3333-3333-333333333333', email: 'teacher@madrasa.com' },
-          profile: { id: '33333333-3333-3333-3333-333333333333', madrasa_id: 'madrasa_1', full_name: 'استاد محمد یوسف', role: 'teacher' }
-        }
-      ];
-
-      const match = seedAccounts.find(a => a.email === cleanEmail && a.password === password);
-      if (match) {
-        setUser(match.user);
-        setProfile(match.profile);
-        setSession({ user: match.user });
-        try {
-          sessionStorage.setItem('hf_demo_user_v1', JSON.stringify(match.user));
-          sessionStorage.setItem('hf_demo_profile_v1', JSON.stringify(match.profile));
-        } catch (e) {}
-        return { user: match.user, session: { user: match.user } };
-      }
-
-      // Re-throw with clean user-friendly error message
-      if (err?.message && err.message !== '{}') {
-        throw err;
-      } else {
-        throw new Error('Invalid login credentials');
-      }
+      
+      throw new Error('Invalid login credentials');
     } finally {
       setLoading(false);
     }
   };
 
-  // Sign Out helper
+  // Sign Out helper — clears Supabase session
   const signOut = async () => {
     setLoading(true);
     try {
       await supabase.auth.signOut().catch(() => {});
-      sessionStorage.removeItem('hf_demo_user_v1');
-      sessionStorage.removeItem('hf_demo_profile_v1');
       setUser(null);
       setSession(null);
       setProfile(null);
@@ -168,11 +121,14 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const isAuthenticated = !!user && !!session;
+
   const value = {
     user,
     session,
     profile,
     loading,
+    isAuthenticated,
     role: profile?.role || 'guest',
     madrasaId: profile?.madrasa_id || null,
     signIn,

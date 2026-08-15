@@ -51,12 +51,6 @@ export default function Login() {
     }
   };
 
-  const fillDemoCreds = (demoEmail, demoPass) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMsg('');
-  };
-
   return (
     <div className="login-page-container">
       <div className="login-card">
@@ -146,27 +140,6 @@ export default function Login() {
             )}
           </button>
         </form>
-
-        {/* Quick Demo Credentials Assistant */}
-        <div className="login-demo-section">
-          <p className="login-demo-title">ٹیسٹ ڈیفالٹ اکاؤنٹس (Quick Fill):</p>
-          <div className="login-demo-btns">
-            <button
-              type="button"
-              className="login-demo-btn"
-              onClick={() => fillDemoCreds('admin@madrasa.com', 'AdminPass123!')}
-            >
-              مہتمم / ایڈمن لاگ ان
-            </button>
-            <button
-              type="button"
-              className="login-demo-btn"
-              onClick={() => fillDemoCreds('teacher@madrasa.com', 'TeacherPass123!')}
-            >
-              استاد / ٹیچر لاگ ان
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

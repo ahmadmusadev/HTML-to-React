@@ -179,7 +179,9 @@ export function MadrasaProvider({ children }) {
     setMadrasas(prev => prev.map(m => m.id === id ? { ...m, name: newName.trim() } : m));
   };
 
-  // --- SUPABASE LIVE DATA FETCHERS WITH FALLBACK ---
+  // --- SUPABASE LIVE DATA FETCHERS ---
+  const FETCH_ERROR_URDU = 'سرور سے رابطہ نہ ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ کنکشن چیک کریں یا دوبارہ کوشش کریں۔';
+
   const fetchStudentsFromSupabase = async (madrasaId = activeMadrasaId) => {
     try {
       const { data, error } = await supabase
@@ -190,9 +192,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase students fetch fallback to localStorage:', e.message);
-      const local = loadMadrasaData('hf_records_v1', madrasaId);
-      return local?.records || [];
+      console.error('Supabase students fetch error:', e.message || e);
+      throw new Error(FETCH_ERROR_URDU);
     }
   };
 
@@ -207,9 +208,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase Hifz records fetch fallback to localStorage:', e.message);
-      const local = loadMadrasaData('hf_records_v1', madrasaId);
-      return local?.monthlyExams || [];
+      console.error('Supabase Hifz records fetch error:', e.message || e);
+      throw new Error(FETCH_ERROR_URDU);
     }
   };
 
@@ -223,9 +223,86 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase fees fetch fallback to localStorage:', e.message);
-      const local = loadMadrasaData('hf_fees_v1', madrasaId);
-      return local?.fees || [];
+      console.error('Supabase fees fetch error:', e.message || e);
+      throw new Error(FETCH_ERROR_URDU);
+    }
+  };
+
+  const fetchClassesFromSupabase = async (madrasaId = activeMadrasaId) => {
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('madrasa_id', madrasaId);
+
+      if (error) throw error;
+      return (data || []).map(c => ({
+        id: c.id,
+        name: c.class_name || c.name || '',
+        class_name: c.class_name || c.name || ''
+      }));
+    } catch (e) {
+      console.error('Supabase classes fetch error:', e.message || e);
+      throw new Error(FETCH_ERROR_URDU);
+    }
+  };
+
+  const addStudentToSupabase = async (studentData, madrasaId = activeMadrasaId) => {
+    try {
+      const payload = {
+        ...studentData,
+        madrasa_id: madrasaId
+      };
+      const { data, error } = await supabase
+        .from('students')
+        .insert([payload])
+        .select('*, classes(class_name)')
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      console.error('Supabase add student error:', e.message || e);
+      throw new Error(e.message || FETCH_ERROR_URDU);
+    }
+  };
+
+  const updateStudentInSupabase = async (id, studentData) => {
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .update(studentData)
+        .eq('id', id)
+        .select('*, classes(class_name)')
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      console.error('Supabase update student error:', e.message || e);
+      throw new Error(e.message || FETCH_ERROR_URDU);
+    }
+  };
+
+  const withdrawStudentInSupabase = async (id, withdrawalDate, withdrawalReason) => {
+    try {
+      const payload = {
+        status: 'left',
+        withdrawal_date: withdrawalDate || null,
+        withdrawal_reason: withdrawalReason || null
+      };
+      const { data, error } = await supabase
+        .from('students')
+        .update(payload)
+        .eq('id', id)
+        .select('*, classes(class_name)')
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      console.error('Supabase withdraw student error:', e.message || e);
+      throw new Error(e.message || FETCH_ERROR_URDU);
     }
   };
 
@@ -247,7 +324,11 @@ export function MadrasaProvider({ children }) {
       saveMadrasaData,
       fetchStudentsFromSupabase,
       fetchHifzRecordsFromSupabase,
-      fetchFeesFromSupabase
+      fetchFeesFromSupabase,
+      fetchClassesFromSupabase,
+      addStudentToSupabase,
+      updateStudentInSupabase,
+      withdrawStudentInSupabase
     }}>
       {children}
     </MadrasaContext.Provider>

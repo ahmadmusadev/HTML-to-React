@@ -3,11 +3,192 @@ import { useMadrasa } from '../context/MadrasaContext';
 import { DEFAULT_CLASSES } from '../constants/defaults';
 import './Admissions.css';
 
+export const calculateAge = (dVal, mVal, yVal, admVal) => {
+  dVal = parseInt(dVal, 10); mVal = parseInt(mVal, 10); yVal = parseInt(yVal, 10);
+  if (!dVal || !mVal || !yVal || !admVal || isNaN(dVal) || isNaN(mVal) || isNaN(yVal)) return '';
+  if (mVal < 1 || mVal > 12 || dVal < 1 || dVal > 31 || yVal < 1900) return 'غلط تاریخ';
+  const dob = new Date(yVal, mVal - 1, dVal);
+  if (dob.getDate() !== dVal || dob.getMonth() !== (mVal - 1)) return 'غلط تاریخ';
+  const adm = new Date(admVal);
+  if (adm < dob) return 'غلط تاریخ';
+
+  let years = adm.getFullYear() - dob.getFullYear();
+  let months = adm.getMonth() - dob.getMonth();
+  let days = adm.getDate() - dob.getDate();
+
+  if (days < 0) { months--; const prevMonth = new Date(adm.getFullYear(), adm.getMonth(), 0); days += prevMonth.getDate(); }
+  if (months < 0) { years--; months += 12; }
+
+  let ageStr = [];
+  if (years > 0) ageStr.push(`${years} سال`);
+  if (months > 0) ageStr.push(`${months} ماہ`);
+  if (days > 0) ageStr.push(`${days} دن`);
+  return ageStr.length > 0 ? ageStr.join('، ') : '0 دن';
+};
+
+export const parseDobString = (dobStr) => {
+  if (!dobStr || typeof dobStr !== 'string') return null;
+  const trimmed = dobStr.trim();
+  if (!trimmed) return null;
+
+  const parts = trimmed.split(/[-/.\s]+/);
+  if (parts.length !== 3) return null;
+
+  let y = '', m = '', d = '';
+  if (parts[0].length === 4 && !isNaN(parts[0])) {
+    y = parts[0];
+    m = parts[1].padStart(2, '0');
+    d = parts[2].padStart(2, '0');
+  } else if (parts[2].length === 4 && !isNaN(parts[2])) {
+    d = parts[0].padStart(2, '0');
+    m = parts[1].padStart(2, '0');
+    y = parts[2];
+  } else {
+    return null;
+  }
+
+  const yNum = parseInt(y, 10);
+  const mNum = parseInt(m, 10);
+  const dNum = parseInt(d, 10);
+
+  if (yNum >= 1900 && yNum <= 2100 && mNum >= 1 && mNum <= 12 && dNum >= 1 && dNum <= 31) {
+    return { year: y, month: m, day: d, formatted: `${y}-${m}-${d}` };
+  }
+  return null;
+};
+
+export const mapSupabaseToUi = (row) => {
+  let dobYear = '', dobMonth = '', dobDay = '';
+  if (row.date_of_birth) {
+    const parts = row.date_of_birth.split('-');
+    if (parts.length === 3) {
+      dobYear = parts[0];
+      dobMonth = parts[1];
+      dobDay = parts[2];
+    }
+  }
+  const fatherNameVal = row.father_name || '';
+  const computedAge = (dobDay && dobMonth && dobYear && row.admission_date)
+    ? calculateAge(dobDay, dobMonth, dobYear, row.admission_date)
+    : '';
+
+  return {
+    id: row.id,
+    isAdmissionProfile: true,
+    admRegNo: row.roll_number || '',
+    admDate: row.admission_date || '',
+    name: row.name || '',
+    admFatherName: fatherNameVal,
+    fatherName: fatherNameVal,
+    admClass: row.class_id || '',
+    admGender: row.gender || 'لڑکا',
+    admDobFull: row.date_of_birth || '',
+    admDobDay: dobDay,
+    admDobMonth: dobMonth,
+    admDobYear: dobYear,
+    admAge: computedAge,
+    admBForm: row.b_form_number || '',
+    admAddress: row.address || '',
+    fatherCnic: row.father_cnic || '',
+    fatherEdu: row.father_education || '',
+    fatherOcc: row.father_occupation || '',
+    fatherMobile: row.father_mobile || '',
+    fatherWhatsapp: row.father_whatsapp || '',
+    fatherEmail: row.father_email || '',
+    fatherIncome: row.father_income || '',
+    isFatherGuardian: row.is_father_guardian === false ? 'no' : 'yes',
+    motherName: row.mother_name || '',
+    motherCnic: row.mother_cnic || '',
+    motherEdu: row.mother_education || '',
+    motherOcc: row.mother_occupation || '',
+    motherMobile: row.mother_mobile || '',
+    motherWhatsapp: row.mother_whatsapp || '',
+    motherIncome: row.mother_income || '',
+    guardianName: row.guardian_name || '',
+    guardianRel: row.guardian_relation || '',
+    guardianCnic: row.guardian_cnic || '',
+    guardianEdu: row.guardian_education || '',
+    guardianOcc: row.guardian_occupation || '',
+    guardianIncome: row.guardian_income || '',
+    guardianMobile: row.guardian_mobile || '',
+    guardianWhatsapp: row.guardian_whatsapp || '',
+    isWithdrawn: row.status === 'left',
+    status: row.status || 'active',
+    withdrawDate: row.withdrawal_date || '',
+    withdrawReason: row.withdrawal_reason || ''
+  };
+};
+
+export const mapUiToSupabase = (data) => {
+  let date_of_birth = null;
+
+  if (data.admDobFull && typeof data.admDobFull === 'string' && data.admDobFull.trim()) {
+    const parsed = parseDobString(data.admDobFull);
+    if (parsed) date_of_birth = parsed.formatted;
+  }
+
+  if (!date_of_birth && data.admDobYear && data.admDobMonth && data.admDobDay) {
+    const y = String(data.admDobYear).padStart(4, '0');
+    const m = String(data.admDobMonth).padStart(2, '0');
+    const d = String(data.admDobDay).padStart(2, '0');
+    date_of_birth = `${y}-${m}-${d}`;
+  }
+
+  const father_name = (data.admFatherName || data.fatherName || '').trim();
+
+  return {
+    roll_number: data.admRegNo || null,
+    admission_date: data.admDate || null,
+    name: (data.admName || data.name || '').trim(),
+    father_name: father_name,
+    class_id: data.admClass || null,
+    gender: data.admGender || 'لڑکا',
+    date_of_birth: date_of_birth,
+    b_form_number: data.admBForm || null,
+    address: data.admAddress || null,
+    father_cnic: data.fatherCnic || null,
+    father_education: data.fatherEdu || null,
+    father_occupation: data.fatherOcc || null,
+    father_mobile: data.fatherMobile || null,
+    father_whatsapp: data.fatherWhatsapp || null,
+    father_email: data.fatherEmail || null,
+    father_income: data.fatherIncome || null,
+    is_father_guardian: data.isFatherGuardian === 'yes',
+    mother_name: data.motherName || null,
+    mother_cnic: data.motherCnic || null,
+    mother_education: data.motherEdu || null,
+    mother_occupation: data.motherOcc || null,
+    mother_mobile: data.motherMobile || null,
+    mother_whatsapp: data.motherWhatsapp || null,
+    mother_income: data.motherIncome || null,
+    guardian_name: data.guardianName || null,
+    guardian_relation: data.guardianRel || null,
+    guardian_cnic: data.guardianCnic || null,
+    guardian_education: data.guardianEdu || null,
+    guardian_occupation: data.guardianOcc || null,
+    guardian_income: data.guardianIncome || null,
+    guardian_mobile: data.guardianMobile || null,
+    guardian_whatsapp: data.guardianWhatsapp || null,
+    guardian_phone: data.fatherMobile || data.guardianMobile || null,
+    status: data.isWithdrawn ? 'left' : (data.status || 'active'),
+    withdrawal_date: data.withdrawDate || null,
+    withdrawal_reason: data.withdrawReason || null
+  };
+};
+
 export default function Admissions() {
-  const { activeMadrasaId, loadMadrasaData, saveMadrasaData } = useMadrasa();
+  const {
+    activeMadrasaId,
+    fetchClassesFromSupabase,
+    fetchStudentsFromSupabase,
+    addStudentToSupabase,
+    updateStudentInSupabase,
+    withdrawStudentInSupabase
+  } = useMadrasa();
   const [activeTab, setActiveTab] = useState('new');
   const [records, setRecords] = useState([]);
   const [classesList, setClassesList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [wizardStep, setWizardStep] = useState(1);
   const [editingStudentId, setEditingStudentId] = useState(null);
 
@@ -54,22 +235,70 @@ export default function Admissions() {
 
   const printAgeParts = getAgeParts(selectedPrintStudent);
 
-  useEffect(() => {
-    const storedData = loadMadrasaData('hf_records_v1') || {};
-    setRecords(storedData.records || []);
-    if (storedData.classes && storedData.classes.length > 0) {
-        setClassesList(storedData.classes);
-    } else {
-        setClassesList(DEFAULT_CLASSES);
-    }
-  }, [activeMadrasaId]);
-
-  const saveToLocal = (newRecords) => {
-    let storedData = loadMadrasaData('hf_records_v1') || { records: [], classes: classesList };
-    storedData.records = newRecords;
-    saveMadrasaData('hf_records_v1', storedData);
-    setRecords(newRecords);
+  const generateNewAdmissionId = (currentRecords = records) => {
+    let maxId = 0;
+    currentRecords.forEach(r => {
+      if (r.admRegNo && !isNaN(r.admRegNo)) maxId = Math.max(maxId, parseInt(r.admRegNo, 10));
+    });
+    const nextRegNo = (maxId + 1).toString().padStart(2, '0');
+    setFormData(prev => ({ ...prev, admRegNo: nextRegNo }));
   };
+
+  const [fetchError, setFetchError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadData = async () => {
+      setLoading(true);
+      setFetchError(null);
+      try {
+        let hasError = false;
+        const [clsData, stdData] = await Promise.all([
+          fetchClassesFromSupabase(activeMadrasaId).catch(err => {
+            console.error('Classes fetch error:', err);
+            hasError = true;
+            return null;
+          }),
+          fetchStudentsFromSupabase(activeMadrasaId).catch(err => {
+            console.error('Students fetch error:', err);
+            hasError = true;
+            return null;
+          })
+        ]);
+
+        if (!isMounted) return;
+
+        if (clsData && clsData.length > 0) {
+          setClassesList(clsData);
+        } else {
+          setClassesList(prev => (prev && prev.length > 0 ? prev : DEFAULT_CLASSES));
+        }
+
+        if (stdData) {
+          const mapped = stdData.map(mapSupabaseToUi);
+          setRecords(mapped);
+          generateNewAdmissionId(mapped);
+        }
+
+        if (hasError) {
+          setFetchError('سرور سے ڈیٹا حاصل کرنے میں دشواری پیش آئی ہے۔ براہ کرم صفحہ ریفریش کریں یا اپنا انٹرنیٹ کنکشن چیک کریں۔');
+        }
+      } catch (err) {
+        console.error('Data loading error:', err);
+        if (isMounted) {
+          setFetchError('سرور سے ڈیٹا حاصل کرنے میں دشواری پیش آئی ہے۔ براہ کرم صفحہ ریفریش کریں۔');
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadData();
+    const today = new Date().toISOString().split('T')[0];
+    setFormData(prev => ({ ...prev, admDate: prev.admDate || today }));
+
+    return () => { isMounted = false; };
+  }, [activeMadrasaId]);
 
   const formatBForm = (val) => {
     let clean = (val || '').replace(/\D/g, ''); 
@@ -86,29 +315,6 @@ export default function Admissions() {
     let formatted = clean;
     if (clean.length > 4) formatted = clean.substring(0, 4) + '-' + clean.substring(4);
     return formatted;
-  };
-
-  const calculateAge = (dVal, mVal, yVal, admVal) => {
-    dVal = parseInt(dVal, 10); mVal = parseInt(mVal, 10); yVal = parseInt(yVal, 10);
-    if (!dVal || !mVal || !yVal || !admVal || isNaN(dVal) || isNaN(mVal) || isNaN(yVal)) return '';
-    if (mVal < 1 || mVal > 12 || dVal < 1 || dVal > 31 || yVal < 1900) return 'غلط تاریخ';
-    const dob = new Date(yVal, mVal - 1, dVal);
-    if (dob.getDate() !== dVal || dob.getMonth() !== (mVal - 1)) return 'غلط تاریخ';
-    const adm = new Date(admVal);
-    if (adm < dob) return 'غلط تاریخ';
-
-    let years = adm.getFullYear() - dob.getFullYear();
-    let months = adm.getMonth() - dob.getMonth();
-    let days = adm.getDate() - dob.getDate();
-
-    if (days < 0) { months--; const prevMonth = new Date(adm.getFullYear(), adm.getMonth(), 0); days += prevMonth.getDate(); }
-    if (months < 0) { years--; months += 12; }
-
-    let ageStr = [];
-    if (years > 0) ageStr.push(`${years} سال`);
-    if (months > 0) ageStr.push(`${months} ماہ`);
-    if (days > 0) ageStr.push(`${days} دن`);
-    return ageStr.length > 0 ? ageStr.join('، ') : '0 دن';
   };
 
   const handleInputChange = (e) => {
@@ -128,23 +334,13 @@ export default function Admissions() {
     });
   };
 
-  const generateNewAdmissionId = () => {
-    let maxId = 0;
-    records.forEach(r => {
-        if (r.admRegNo && !isNaN(r.admRegNo)) maxId = Math.max(maxId, parseInt(r.admRegNo, 10));
-    });
-    setFormData(prev => ({ ...prev, admRegNo: (maxId + 1).toString().padStart(2, '0') }));
-  };
-
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab === 'new') {
       setWizardStep(1);
-      if (!editingStudentId) {
-         generateNewAdmissionId();
-         const today = new Date().toISOString().split('T')[0];
-         setFormData(prev => ({ ...prev, admDate: prev.admDate || today }));
-      }
+      generateNewAdmissionId(records);
+      const today = new Date().toISOString().split('T')[0];
+      setFormData(prev => ({ ...prev, admDate: prev.admDate || today }));
     } else if (tab === 'withdraw') {
       setWithdrawSearchId('');
       setWithdrawStudent(null);
@@ -167,33 +363,18 @@ export default function Admissions() {
   const saveAdmission = async () => {
     if(!formData.admName.trim() || !formData.admRegNo) { alert("براہ کرم طالب علم کا نام درج کریں۔"); return; }
     
-    const profile = {
-        isAdmissionProfile: true,
-        admRegNo: formData.admRegNo, name: formData.admName.trim(), admClass: formData.admClass, admFatherName: formData.admFatherName.trim(),
-        admDobFull: `${formData.admDobYear}-${formData.admDobMonth}-${formData.admDobDay}`, admAge: formData.admAge, admBForm: formData.admBForm, admGender: formData.admGender, admAddress: formData.admAddress, admDate: formData.admDate,
-        fatherName: formData.fatherName, fatherCnic: formData.fatherCnic, fatherEdu: formData.fatherEdu, fatherOcc: formData.fatherOcc, fatherMobile: formData.fatherMobile, fatherWhatsapp: formData.fatherWhatsapp, fatherEmail: formData.fatherEmail, fatherIncome: formData.fatherIncome, isFatherGuardian: formData.isFatherGuardian,
-        motherName: formData.motherName, motherCnic: formData.motherCnic, motherEdu: formData.motherEdu, motherOcc: formData.motherOcc, motherMobile: formData.motherMobile, motherWhatsapp: formData.motherWhatsapp, motherIncome: formData.motherIncome,
-        guardianName: formData.guardianName, guardianRel: formData.guardianRel, guardianCnic: formData.guardianCnic, guardianEdu: formData.guardianEdu, guardianOcc: formData.guardianOcc, guardianIncome: formData.guardianIncome, guardianMobile: formData.guardianMobile, guardianWhatsapp: formData.guardianWhatsapp,
-        ts: new Date().toISOString()
-    };
-    
-    let newRecords = [...records];
-    if (editingStudentId) {
-      const idx = newRecords.findIndex(r => r.admRegNo === editingStudentId);
-      if(idx !== -1) {
-          newRecords[idx] = { ...newRecords[idx], ...profile };
-          saveToLocal(newRecords);
-          alert("ریکارڈ مقامی طور پر اپ ڈیٹ ہو گیا۔");
-      }
-      setEditingStudentId(null);
+    try {
+      const payload = mapUiToSupabase(formData);
+      const insertedRow = await addStudentToSupabase(payload, activeMadrasaId);
+      const newUiRecord = mapSupabaseToUi(insertedRow);
+      
+      setRecords(prev => [...prev, newUiRecord]);
+      alert("داخلہ کامیابی سے محفوظ ہو چکا ہے۔");
       setFormData(initialFormData);
       handleTabChange('all');
-    } else {
-      newRecords.push(profile);
-      saveToLocal(newRecords);
-      alert("داخلہ محفوظ ہوچکا ہے۔");
-      setFormData(initialFormData);
-      handleTabChange('all');
+    } catch (err) {
+      console.error('Save admission error:', err);
+      alert(`⚠️ داخلہ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
     }
   };
 
@@ -202,19 +383,51 @@ export default function Admissions() {
     let val = value;
     if (['admBForm', 'fatherCnic', 'motherCnic', 'guardianCnic'].includes(name)) val = formatBForm(value);
     else if (['fatherMobile', 'fatherWhatsapp', 'motherMobile', 'motherWhatsapp', 'guardianMobile', 'guardianWhatsapp'].includes(name)) val = formatPhoneNumber(value);
-    setProfileModal(prev => ({ ...prev, [name]: val }));
+
+    setProfileModal(prev => {
+      const next = { ...prev, [name]: val };
+
+      if (name === 'admDobFull') {
+        const parsed = parseDobString(val);
+        if (parsed) {
+          next.admDobYear = parsed.year;
+          next.admDobMonth = parsed.month;
+          next.admDobDay = parsed.day;
+          if (next.admDate) {
+            next.admAge = calculateAge(parsed.day, parsed.month, parsed.year, next.admDate);
+          }
+        } else {
+          next.admDobYear = '';
+          next.admDobMonth = '';
+          next.admDobDay = '';
+          next.admAge = '';
+        }
+      } else if (name === 'admDate' && next.admDobYear && next.admDobMonth && next.admDobDay) {
+        next.admAge = calculateAge(next.admDobDay, next.admDobMonth, next.admDobYear, val);
+      }
+
+      return next;
+    });
   };
 
   const saveStudentProfile = async () => {
-    if(!profileModal) return;
-    let newRecords = [...records];
-    const idx = newRecords.findIndex(r => r.admRegNo === profileModal.admRegNo);
-    if(idx !== -1) {
-        newRecords[idx] = { ...newRecords[idx], ...profileModal };
-        saveToLocal(newRecords);
-        alert("پروفائل محفوظ ہو گیا");
+    if (!profileModal || !profileModal.id) {
+      alert("طالب علم کے شناختی نمبر (ID) کی کمی ہے۔");
+      return;
     }
-    setProfileModal(null);
+    
+    try {
+      const payload = mapUiToSupabase(profileModal);
+      const updatedRow = await updateStudentInSupabase(profileModal.id, payload);
+      const updatedRecord = mapSupabaseToUi(updatedRow);
+
+      setRecords(prev => prev.map(r => r.id === updatedRecord.id ? updatedRecord : r));
+      alert("پروفائل کامیابی سے محفوظ ہو گئی۔");
+      setProfileModal(null);
+    } catch (err) {
+      console.error('Save profile error:', err);
+      alert(`⚠️ پروفائل محفوظ نہیں ہو سکی!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
+    }
   };
 
   const getRegistrationSortValue = (regNo) => {
@@ -249,15 +462,23 @@ export default function Admissions() {
     setWithdrawReason('');
   };
 
-  const processWithdrawal = () => {
-    if (!withdrawStudent) return;
+  const processWithdrawal = async () => {
+    if (!withdrawStudent || !withdrawStudent.id) return;
     if (!withdrawDate || !withdrawReason) { alert("براہ کرم تاریخ اخراج اور وجہ اخراج دونوں درج کریں۔"); return; }
     if (!window.confirm("کیا آپ واقعی اس طالب علم کا اخراج محفوظ کرنا چاہتے ہیں؟ یہ عمل ناقابل واپسی ہے۔")) return;
-    const newRecords = records.map(r => r.admRegNo === withdrawStudent.admRegNo ? { ...r, isWithdrawn: true, withdrawDate, withdrawReason } : r);
-    saveToLocal(newRecords);
-    alert("طالب علم کا ریکارڈ کامیابی سے خارج کر دیا گیا ہے۔");
-    setWithdrawSearchId('');
-    setWithdrawStudent(null);
+
+    try {
+      const updatedRow = await withdrawStudentInSupabase(withdrawStudent.id, withdrawDate, withdrawReason);
+      const updatedRecord = mapSupabaseToUi(updatedRow);
+
+      setRecords(prev => prev.map(r => r.id === updatedRecord.id ? updatedRecord : r));
+      alert("طالب علم کا ریکارڈ کامیابی سے خارج کر دیا گیا ہے۔");
+      setWithdrawSearchId('');
+      setWithdrawStudent(null);
+    } catch (err) {
+      console.error('Withdrawal error:', err);
+      alert(`⚠️ اخراج محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
+    }
   };
 
   const renderTableRows = (list) => list.map((r, i) => (
@@ -289,6 +510,13 @@ export default function Admissions() {
             return <button key={t} className={`adm-type-btn ${activeTab === t ? 'active' : ''}`} onClick={() => handleTabChange(t)}>{labels[idx]}</button>;
         })}
       </div>
+
+      {fetchError && (
+        <div className="no-print" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>⚠️ {fetchError}</span>
+          <button onClick={() => setFetchError(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#856404' }}>✕</button>
+        </div>
+      )}
 
       {activeTab === 'new' && (
         <div id="newAdmissionFormContainer" className="no-print">
