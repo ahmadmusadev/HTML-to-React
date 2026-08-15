@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, isValidUUID } from '../lib/supabaseClient';
+import { DEFAULT_CLASSES } from '../constants/defaults';
 
 const MadrasaContext = createContext();
 
@@ -179,10 +180,15 @@ export function MadrasaProvider({ children }) {
     setMadrasas(prev => prev.map(m => m.id === id ? { ...m, name: newName.trim() } : m));
   };
 
-  // --- SUPABASE LIVE DATA FETCHERS ---
+  // --- SUPABASE LIVE DATA FETCHERS WITH RESILIENT LOCAL FALLBACK ---
   const FETCH_ERROR_URDU = 'سرور سے رابطہ نہ ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ کنکشن چیک کریں یا دوبارہ کوشش کریں۔';
 
   const fetchStudentsFromSupabase = async (madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId)) {
+      const local = loadMadrasaData('hf_records_v1', madrasaId);
+      return local?.records || [];
+    }
+
     try {
       const { data, error } = await supabase
         .from('students')
@@ -192,12 +198,19 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.error('Supabase students fetch error:', e.message || e);
+      console.warn('Supabase students fetch failed, falling back to local:', e.message || e);
+      const local = loadMadrasaData('hf_records_v1', madrasaId);
+      if (local?.records) return local.records;
       throw new Error(FETCH_ERROR_URDU);
     }
   };
 
   const fetchHifzRecordsFromSupabase = async (madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId)) {
+      const local = loadMadrasaData('hf_records_v1', madrasaId);
+      return local?.monthlyExams || [];
+    }
+
     try {
       const { data, error } = await supabase
         .from('hifz_records')
@@ -208,12 +221,19 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.error('Supabase Hifz records fetch error:', e.message || e);
+      console.warn('Supabase Hifz records fetch failed, falling back to local:', e.message || e);
+      const local = loadMadrasaData('hf_records_v1', madrasaId);
+      if (local?.monthlyExams) return local.monthlyExams;
       throw new Error(FETCH_ERROR_URDU);
     }
   };
 
   const fetchFeesFromSupabase = async (madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId)) {
+      const local = loadMadrasaData('hf_fees_v1', madrasaId);
+      return local?.fees || [];
+    }
+
     try {
       const { data, error } = await supabase
         .from('fees')
@@ -223,12 +243,22 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.error('Supabase fees fetch error:', e.message || e);
+      console.warn('Supabase fees fetch failed, falling back to local:', e.message || e);
+      const local = loadMadrasaData('hf_fees_v1', madrasaId);
+      if (local?.fees) return local.fees;
       throw new Error(FETCH_ERROR_URDU);
     }
   };
 
   const fetchClassesFromSupabase = async (madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId)) {
+      return (DEFAULT_CLASSES || []).map(c => ({
+        id: c.id,
+        name: c.name || '',
+        class_name: c.name || ''
+      }));
+    }
+
     try {
       const { data, error } = await supabase
         .from('classes')
@@ -236,73 +266,129 @@ export function MadrasaProvider({ children }) {
         .eq('madrasa_id', madrasaId);
 
       if (error) throw error;
-      return (data || []).map(c => ({
-        id: c.id,
-        name: c.class_name || c.name || '',
-        class_name: c.class_name || c.name || ''
-      }));
+      if (data && data.length > 0) {
+        return data.map(c => ({
+          id: c.id,
+          name: c.class_name || c.name || '',
+          class_name: c.class_name || c.name || ''
+        }));
+      }
+      return DEFAULT_CLASSES;
     } catch (e) {
-      console.error('Supabase classes fetch error:', e.message || e);
-      throw new Error(FETCH_ERROR_URDU);
+      console.warn('Supabase classes fetch failed, falling back to defaults:', e.message || e);
+      return DEFAULT_CLASSES;
     }
   };
 
   const addStudentToSupabase = async (studentData, madrasaId = activeMadrasaId) => {
-    try {
-      const payload = {
-        ...studentData,
-        madrasa_id: madrasaId
-      };
-      const { data, error } = await supabase
-        .from('students')
-        .insert([payload])
-        .select('*, classes(class_name)')
-        .single();
+    const isRemote = isValidUUID(madrasaId);
 
-      if (error) throw error;
-      return data;
-    } catch (e) {
-      console.error('Supabase add student error:', e.message || e);
-      throw new Error(e.message || FETCH_ERROR_URDU);
+    if (isRemote) {
+      try {
+        const payload = {
+          ...studentData,
+          madrasa_id: madrasaId,
+          class_id: isValidUUID(studentData.class_id) ? studentData.class_id : null
+        };
+        const { data, error } = await supabase
+          .from('students')
+          .insert([payload])
+          .select('*, classes(class_name)')
+          .single();
+
+        if (error) throw error;
+
+        // Also sync to local storage cache
+        try {
+          const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+          localData.records = [...(localData.records || []), data];
+          saveMadrasaData('hf_records_v1', localData, madrasaId);
+        } catch (syncErr) {
+          console.warn('Failed to sync to local cache:', syncErr);
+        }
+
+        return data;
+      } catch (e) {
+        console.error('Supabase add student error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    } else {
+      // Local storage fallback for offline / mock madrasa
+      const localId = `std_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const localRecord = {
+        id: localId,
+        ...studentData,
+        madrasa_id: madrasaId,
+        created_at: new Date().toISOString()
+      };
+      const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+      localData.records = [...(localData.records || []), localRecord];
+      saveMadrasaData('hf_records_v1', localData, madrasaId);
+      return localRecord;
     }
   };
 
   const updateStudentInSupabase = async (id, studentData) => {
-    try {
-      const { data, error } = await supabase
-        .from('students')
-        .update(studentData)
-        .eq('id', id)
-        .select('*, classes(class_name)')
-        .single();
+    const isRemote = isValidUUID(id);
 
-      if (error) throw error;
-      return data;
-    } catch (e) {
-      console.error('Supabase update student error:', e.message || e);
-      throw new Error(e.message || FETCH_ERROR_URDU);
+    if (isRemote) {
+      try {
+        const payload = {
+          ...studentData,
+          class_id: isValidUUID(studentData.class_id) ? studentData.class_id : null
+        };
+        const { data, error } = await supabase
+          .from('students')
+          .update(payload)
+          .eq('id', id)
+          .select('*, classes(class_name)')
+          .single();
+
+        if (error) throw error;
+        return data;
+      } catch (e) {
+        console.error('Supabase update student error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    } else {
+      // Update in local storage
+      const localData = loadMadrasaData('hf_records_v1', activeMadrasaId) || { records: [] };
+      localData.records = (localData.records || []).map(r => r.id === id ? { ...r, ...studentData } : r);
+      saveMadrasaData('hf_records_v1', localData, activeMadrasaId);
+      return { id, ...studentData };
     }
   };
 
   const withdrawStudentInSupabase = async (id, withdrawalDate, withdrawalReason) => {
-    try {
-      const payload = {
-        status: 'left',
-        withdrawal_date: withdrawalDate || null,
-        withdrawal_reason: withdrawalReason || null
-      };
-      const { data, error } = await supabase
-        .from('students')
-        .update(payload)
-        .eq('id', id)
-        .select('*, classes(class_name)')
-        .single();
+    const isRemote = isValidUUID(id);
 
-      if (error) throw error;
-      return data;
-    } catch (e) {
-      console.error('Supabase withdraw student error:', e.message || e);
-      throw new Error(e.message || FETCH_ERROR_URDU);
+    if (isRemote) {
+      try {
+        const payload = {
+          status: 'left',
+          withdrawal_date: withdrawalDate || null,
+          withdrawal_reason: withdrawalReason || null
+        };
+        const { data, error } = await supabase
+          .from('students')
+          .update(payload)
+          .eq('id', id)
+          .select('*, classes(class_name)')
+          .single();
+
+        if (error) throw error;
+        return data;
+      } catch (e) {
+        console.error('Supabase withdraw student error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    } else {
+      const localData = loadMadrasaData('hf_records_v1', activeMadrasaId) || { records: [] };
+      localData.records = (localData.records || []).map(r =>
+        r.id === id ? { ...r, status: 'left', withdrawal_date: withdrawalDate, withdrawal_reason: withdrawalReason } : r
+      );
+      saveMadrasaData('hf_records_v1', localData, activeMadrasaId);
+      return { id, status: 'left', withdrawal_date: withdrawalDate, withdrawal_reason: withdrawalReason };
     }
   };
 

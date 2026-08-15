@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { DEFAULT_CLASSES } from '../constants/defaults';
+import { isValidUUID } from '../lib/supabaseClient';
 import './Admissions.css';
 
 export const calculateAge = (dVal, mVal, yVal, admVal) => {
@@ -58,6 +59,9 @@ export const parseDobString = (dobStr) => {
 };
 
 export const mapSupabaseToUi = (row) => {
+  if (!row) return null;
+  if (row.isAdmissionProfile) return row;
+
   let dobYear = '', dobMonth = '', dobDay = '';
   if (row.date_of_birth) {
     const parts = row.date_of_birth.split('-');
@@ -141,7 +145,7 @@ export const mapUiToSupabase = (data) => {
     admission_date: data.admDate || null,
     name: (data.admName || data.name || '').trim(),
     father_name: father_name,
-    class_id: data.admClass || null,
+    class_id: isValidUUID(data.admClass) ? data.admClass : null,
     gender: data.admGender || 'لڑکا',
     date_of_birth: date_of_birth,
     b_form_number: data.admBForm || null,
@@ -275,7 +279,7 @@ export default function Admissions() {
         }
 
         if (stdData) {
-          const mapped = stdData.map(mapSupabaseToUi);
+          const mapped = stdData.map(mapSupabaseToUi).filter(Boolean);
           setRecords(mapped);
           generateNewAdmissionId(mapped);
         }

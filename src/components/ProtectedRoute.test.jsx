@@ -13,6 +13,7 @@ describe('ProtectedRoute Component', () => {
   it('renders loading spinner when auth is loading', () => {
     vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
       user: null,
+      isAuthenticated: false,
       loading: true,
       role: 'guest',
     });
@@ -31,6 +32,7 @@ describe('ProtectedRoute Component', () => {
   it('redirects to /login when user is not authenticated', () => {
     vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
       user: null,
+      isAuthenticated: false,
       loading: false,
       role: 'guest',
     });
@@ -57,6 +59,7 @@ describe('ProtectedRoute Component', () => {
   it('renders children content when user is authenticated', () => {
     vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
       user: { id: 'test-user' },
+      isAuthenticated: true,
       loading: false,
       role: 'admin',
     });
@@ -77,5 +80,32 @@ describe('ProtectedRoute Component', () => {
     );
 
     expect(screen.getByText('Protected Dashboard Content')).toBeInTheDocument();
+  });
+
+  it('renders unauthorized message when role is not in allowedRoles', () => {
+    vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
+      user: { id: 'test-teacher' },
+      isAuthenticated: true,
+      loading: false,
+      role: 'teacher',
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin-only']}>
+        <Routes>
+          <Route
+            path="/admin-only"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <div>Admin Only Content</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/رسائی غیر مجاز/i)).toBeInTheDocument();
+    expect(screen.queryByText('Admin Only Content')).not.toBeInTheDocument();
   });
 });
