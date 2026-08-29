@@ -231,14 +231,17 @@ export function MadrasaProvider({ children }) {
   const fetchFeesFromSupabase = async (madrasaId = activeMadrasaId) => {
     if (!isValidUUID(madrasaId)) {
       const local = loadMadrasaData('hf_fees_v1', madrasaId);
-      return local?.fees || [];
+      if (local?.fees) return local.fees;
+      const legacy = loadMadrasaData('hf_records_v1', madrasaId);
+      return (legacy?.records || []).filter(r => r.isFeeRecord);
     }
 
     try {
       const { data, error } = await supabase
         .from('fees')
-        .select('*, students(name, roll_number)')
-        .eq('madrasa_id', madrasaId);
+        .select('*, students(id, name, roll_number, father_name)')
+        .eq('madrasa_id', madrasaId)
+        .order('paid_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -246,7 +249,72 @@ export function MadrasaProvider({ children }) {
       console.warn('Supabase fees fetch failed, falling back to local:', e.message || e);
       const local = loadMadrasaData('hf_fees_v1', madrasaId);
       if (local?.fees) return local.fees;
+      const legacy = loadMadrasaData('hf_records_v1', madrasaId);
+      if (legacy?.records) return legacy.records.filter(r => r.isFeeRecord);
       throw new Error(FETCH_ERROR_URDU);
+    }
+  };
+
+  const addFeeToSupabase = async (feeData, madrasaId = activeMadrasaId) => {
+    const isRemote = isValidUUID(madrasaId);
+
+    if (isRemote) {
+      try {
+        const payload = {
+          student_id: feeData.student_id,
+          madrasa_id: madrasaId,
+          invoice_id: feeData.invoice_id,
+          amount: Number(feeData.amount) || 0,
+          arrears: Number(feeData.arrears) || 0,
+          payment_method: feeData.payment_method || 'Cash',
+          month_year: feeData.month_year,
+          status: feeData.status || 'paid',
+          paid_at: feeData.paid_at || new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+          .from('fees')
+          .insert([payload])
+          .select('*, students(id, name, roll_number, father_name)')
+          .single();
+
+        if (error) throw error;
+
+        // Also sync to local storage cache
+        try {
+          const localData = loadMadrasaData('hf_fees_v1', madrasaId) || { fees: [] };
+          localData.fees = [data, ...(localData.fees || [])];
+          saveMadrasaData('hf_fees_v1', localData, madrasaId);
+        } catch (syncErr) {
+          console.warn('Failed to sync fee to local cache:', syncErr);
+        }
+
+        return data;
+      } catch (e) {
+        console.error('Supabase add fee error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    } else {
+      // Local storage fallback for offline / mock madrasa
+      const localId = `fee_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const localRecord = {
+        id: localId,
+        student_id: feeData.student_id,
+        madrasa_id: madrasaId,
+        invoice_id: feeData.invoice_id,
+        amount: Number(feeData.amount) || 0,
+        arrears: Number(feeData.arrears) || 0,
+        payment_method: feeData.payment_method || 'Cash',
+        month_year: feeData.month_year,
+        status: feeData.status || 'paid',
+        paid_at: feeData.paid_at || new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        students: feeData.students || null
+      };
+      const localData = loadMadrasaData('hf_fees_v1', madrasaId) || { fees: [] };
+      localData.fees = [localRecord, ...(localData.fees || [])];
+      saveMadrasaData('hf_fees_v1', localData, madrasaId);
+      return localRecord;
     }
   };
 
@@ -392,6 +460,321 @@ export function MadrasaProvider({ children }) {
     }
   };
 
+  const fetchHifzHalfYearRecordsFromSupabase = async (madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId)) {
+      const local = loadMadrasaData('hf_records_v1', madrasaId);
+      return (local?.records || []).filter(r => r && r.name && !r.isAdmissionProfile && !r.isFeeRecord);
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('hifz_half_year_records')
+        .select('*, students(id, name, roll_number, father_name, hifz_start_date)')
+        .eq('madrasa_id', madrasaId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.warn('Supabase hifz half-year records fetch failed, falling back to local:', e.message || e);
+      const local = loadMadrasaData('hf_records_v1', madrasaId);
+      if (local?.records) {
+        return local.records.filter(r => r && r.name && !r.isAdmissionProfile && !r.isFeeRecord);
+      }
+      throw new Error(FETCH_ERROR_URDU);
+    }
+  };
+
+  const saveHifzHalfYearRecordToSupabase = async (recordData, madrasaId = activeMadrasaId) => {
+    const isRemote = isValidUUID(madrasaId) && isValidUUID(recordData.student_id);
+
+    if (isRemote) {
+      try {
+        const payload = {
+          madrasa_id: madrasaId,
+          student_id: recordData.student_id,
+          hifz_year: Number(recordData.hifz_year),
+          half_year: Number(recordData.half_year),
+          total_pages: Number(recordData.total_pages) || 0,
+          pao: Number(recordData.pao) || 0,
+          juz: Number(recordData.juz) || 0,
+          pct: Number(recordData.pct) || 0,
+          score: Number(recordData.score) || 0,
+          total_working: Number(recordData.total_working) || 0,
+          total_present: Number(recordData.total_present) || 0,
+          total_absent: Number(recordData.total_absent) || 0,
+          total_leave: Number(recordData.total_leave) || 0,
+          attendance_pct: Number(recordData.attendance_pct) || 0,
+          monthly_academic_details: recordData.monthly_academic_details || {},
+          monthly_attendance_details: recordData.monthly_attendance_details || {},
+          updated_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+          .from('hifz_half_year_records')
+          .upsert(payload, { onConflict: 'student_id,hifz_year,half_year' })
+          .select('*, students(id, name, roll_number, father_name, hifz_start_date)')
+          .single();
+
+        if (error) throw error;
+
+        // Also sync to local cache
+        try {
+          const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+          const recs = localData.records || [];
+          const idx = recs.findIndex(r =>
+            r.isAdmissionProfile !== true &&
+            (r.student_id === recordData.student_id || r.id === data.id) &&
+            Number(r.year || r.hifz_year) === Number(recordData.hifz_year) &&
+            Number(r.halfYear || r.half_year) === Number(recordData.half_year)
+          );
+          const cachedRec = {
+            id: data.id,
+            student_id: data.student_id,
+            name: data.students?.name || recordData.student_name,
+            year: data.hifz_year,
+            hifz_year: data.hifz_year,
+            halfYear: data.half_year,
+            half_year: data.half_year,
+            pages: data.total_pages,
+            total_pages: data.total_pages,
+            pao: data.pao,
+            juz: data.juz,
+            pct: data.pct,
+            score: data.score,
+            attendance: {
+              working: data.total_working,
+              present: data.total_present,
+              absent: data.total_absent,
+              leave: data.total_leave,
+              pct: data.attendance_pct,
+              monthlyDetails: data.monthly_attendance_details
+            },
+            monthlyAcademicDetails: data.monthly_academic_details,
+            ts: data.updated_at || data.created_at || new Date().toISOString()
+          };
+          if (idx > -1) recs[idx] = cachedRec;
+          else recs.unshift(cachedRec);
+          localData.records = recs;
+          saveMadrasaData('hf_records_v1', localData, madrasaId);
+        } catch (syncErr) {
+          console.warn('Local cache sync warning:', syncErr);
+        }
+
+        return data;
+      } catch (e) {
+        console.error('Supabase save Hifz half-year record error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    } else {
+      // Local storage fallback
+      const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+      const records = localData.records || [];
+      const studentName = recordData.student_name || recordData.name || '';
+      const existingIdx = records.findIndex(r =>
+        !r.isAdmissionProfile &&
+        Number(r.year || r.hifz_year) === Number(recordData.hifz_year) &&
+        Number(r.halfYear || r.half_year) === Number(recordData.half_year) &&
+        ((recordData.student_id && (r.student_id === recordData.student_id || r.id === recordData.student_id)) ||
+         (studentName && r.name === studentName))
+      );
+
+      const localRec = {
+        id: recordData.id || `rec_${Date.now()}`,
+        student_id: recordData.student_id,
+        name: studentName,
+        year: Number(recordData.hifz_year),
+        hifz_year: Number(recordData.hifz_year),
+        halfYear: Number(recordData.half_year),
+        half_year: Number(recordData.half_year),
+        pages: Number(recordData.total_pages) || 0,
+        total_pages: Number(recordData.total_pages) || 0,
+        pao: Number(recordData.pao) || 0,
+        juz: Number(recordData.juz) || 0,
+        pct: Number(recordData.pct) || 0,
+        score: Number(recordData.score) || 0,
+        attendance: {
+          working: Number(recordData.total_working) || 0,
+          present: Number(recordData.total_present) || 0,
+          absent: Number(recordData.total_absent) || 0,
+          leave: Number(recordData.total_leave) || 0,
+          pct: Number(recordData.attendance_pct) || 0,
+          monthlyDetails: recordData.monthly_attendance_details || {}
+        },
+        monthlyAcademicDetails: recordData.monthly_academic_details || {},
+        ts: new Date().toISOString()
+      };
+
+      if (existingIdx > -1) {
+        records[existingIdx] = { ...records[existingIdx], ...localRec };
+      } else {
+        records.unshift(localRec);
+      }
+      localData.records = records;
+      saveMadrasaData('hf_records_v1', localData, madrasaId);
+      return localRec;
+    }
+  };
+
+  const deleteHifzHalfYearRecordFromSupabase = async (id, madrasaId = activeMadrasaId) => {
+    const isRemote = isValidUUID(id);
+
+    if (isRemote) {
+      try {
+        const { error } = await supabase
+          .from('hifz_half_year_records')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+      } catch (e) {
+        console.error('Supabase delete Hifz half-year record error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    }
+
+    // Also update local cache
+    const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+    localData.records = (localData.records || []).filter(r => r.id !== id && r.ts !== id);
+    saveMadrasaData('hf_records_v1', localData, madrasaId);
+  };
+
+  const updateStudentHifzStartDate = async (studentId, hifzStartDate, madrasaId = activeMadrasaId) => {
+    if (!studentId) return;
+    const isRemote = isValidUUID(studentId);
+
+    if (isRemote) {
+      try {
+        const { data, error } = await supabase
+          .from('students')
+          .update({ hifz_start_date: hifzStartDate || null })
+          .eq('id', studentId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } catch (e) {
+        console.warn('Supabase update student hifz_start_date warning:', e.message || e);
+      }
+    } else {
+      const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+      localData.records = (localData.records || []).map(r =>
+        (r.id === studentId || r.admRegNo === studentId) ? { ...r, hifz_start_date: hifzStartDate, startDate: hifzStartDate } : r
+      );
+      saveMadrasaData('hf_records_v1', localData, madrasaId);
+    }
+  };
+
+  const fetchStudentAttendanceFromSupabase = async (filters = {}, madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId)) {
+      const localCustom = loadMadrasaData('hf_student_attendance_v1', madrasaId) || [];
+      return localCustom;
+    }
+
+    try {
+      let query = supabase
+        .from('student_attendance')
+        .select('*, students(id, name, roll_number, father_name, class_id)')
+        .eq('madrasa_id', madrasaId);
+
+      if (filters.date) {
+        query = query.eq('date', filters.date);
+      }
+      if (filters.studentId) {
+        query = query.eq('student_id', filters.studentId);
+      }
+      if (filters.startDate && filters.endDate) {
+        query = query.gte('date', filters.startDate).lte('date', filters.endDate);
+      } else if (filters.startDate) {
+        query = query.gte('date', filters.startDate);
+      } else if (filters.endDate) {
+        query = query.lte('date', filters.endDate);
+      }
+      if (filters.month) {
+        const start = `${filters.month}-01`;
+        const [y, m] = filters.month.split('-').map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        const end = `${filters.month}-${String(lastDay).padStart(2, '0')}`;
+        query = query.gte('date', start).lte('date', end);
+      }
+
+      query = query.order('date', { ascending: false });
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.warn('Supabase student attendance fetch failed, falling back to local:', e.message || e);
+      const localCustom = loadMadrasaData('hf_student_attendance_v1', madrasaId) || [];
+      return localCustom;
+    }
+  };
+
+  const saveStudentAttendanceToSupabase = async (recordsArray, madrasaId = activeMadrasaId) => {
+    const isRemote = isValidUUID(madrasaId);
+    const records = Array.isArray(recordsArray) ? recordsArray : [recordsArray];
+    if (!records.length) return [];
+
+    if (isRemote) {
+      try {
+        const payload = records.map(r => ({
+          madrasa_id: madrasaId,
+          student_id: r.student_id || r.studentUuid,
+          date: r.date,
+          status: r.status,
+          remarks: r.remarks || null,
+          updated_at: new Date().toISOString()
+        }));
+
+        const { data, error } = await supabase
+          .from('student_attendance')
+          .upsert(payload, { onConflict: 'student_id,date' })
+          .select('*, students(id, name, roll_number, father_name, class_id)');
+
+        if (error) throw error;
+
+        // Sync to local cache
+        try {
+          const cached = loadMadrasaData('hf_student_attendance_v1', madrasaId) || [];
+          const updatedMap = new Map();
+          cached.forEach(c => updatedMap.set(`${c.student_id}_${c.date}`, c));
+          (data || []).forEach(d => updatedMap.set(`${d.student_id}_${d.date}`, d));
+          saveMadrasaData('hf_student_attendance_v1', Array.from(updatedMap.values()), madrasaId);
+        } catch (syncErr) {
+          console.warn('Failed to sync attendance to local cache:', syncErr);
+        }
+
+        return data;
+      } catch (e) {
+        console.error('Supabase save student attendance error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    } else {
+      // Local fallback
+      const cached = loadMadrasaData('hf_student_attendance_v1', madrasaId) || [];
+      const updatedMap = new Map();
+      cached.forEach(c => updatedMap.set(`${c.student_id}_${c.date}`, c));
+
+      const newRows = records.map(r => ({
+        id: r.id || `att_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        madrasa_id: madrasaId,
+        student_id: r.student_id || r.studentUuid,
+        date: r.date,
+        status: r.status,
+        remarks: r.remarks || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        students: r.students || null
+      }));
+
+      newRows.forEach(row => updatedMap.set(`${row.student_id}_${row.date}`, row));
+      const finalArr = Array.from(updatedMap.values());
+      saveMadrasaData('hf_student_attendance_v1', finalArr, madrasaId);
+      return newRows;
+    }
+  };
+
   return (
     <MadrasaContext.Provider value={{
       madrasas,
@@ -411,10 +794,17 @@ export function MadrasaProvider({ children }) {
       fetchStudentsFromSupabase,
       fetchHifzRecordsFromSupabase,
       fetchFeesFromSupabase,
+      addFeeToSupabase,
       fetchClassesFromSupabase,
       addStudentToSupabase,
       updateStudentInSupabase,
-      withdrawStudentInSupabase
+      withdrawStudentInSupabase,
+      fetchHifzHalfYearRecordsFromSupabase,
+      saveHifzHalfYearRecordToSupabase,
+      deleteHifzHalfYearRecordFromSupabase,
+      updateStudentHifzStartDate,
+      fetchStudentAttendanceFromSupabase,
+      saveStudentAttendanceToSupabase
     }}>
       {children}
     </MadrasaContext.Provider>

@@ -28,3 +28,7 @@ dist-ssr
 
 # Scratch scripts
 scratch/
+
+# Supabase
+.temp/
+supabase/.temp/

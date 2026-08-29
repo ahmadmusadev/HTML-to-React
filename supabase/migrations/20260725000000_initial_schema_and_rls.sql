@@ -101,7 +101,10 @@ CREATE TABLE IF NOT EXISTS public.fees (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     madrasa_id UUID NOT NULL REFERENCES public.madrasas(id) ON DELETE CASCADE,
     student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+    invoice_id TEXT UNIQUE,
     amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
+    arrears NUMERIC NOT NULL DEFAULT 0 CHECK (arrears >= 0),
+    payment_method TEXT,
     month_year TEXT NOT NULL, -- Format: 'YYYY-MM'
     status TEXT DEFAULT 'pending' CHECK (status IN ('paid', 'pending')),
     paid_at TIMESTAMPTZ,
@@ -120,6 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_hifz_records_student_id ON public.hifz_records(st
 CREATE INDEX IF NOT EXISTS idx_hifz_records_date ON public.hifz_records(date);
 CREATE INDEX IF NOT EXISTS idx_fees_madrasa_id ON public.fees(madrasa_id);
 CREATE INDEX IF NOT EXISTS idx_fees_student_id ON public.fees(student_id);
+CREATE INDEX IF NOT EXISTS idx_fees_invoice_id ON public.fees(invoice_id);
 
 -- ------------------------------------------------------------------------------
 -- 3. HELPER FUNCTIONS FOR SECURITY & RLS (SECURITY DEFINER)

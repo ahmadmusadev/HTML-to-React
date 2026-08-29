@@ -1,15 +1,106 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { DEFAULT_CLASSES } from '../constants/defaults';
+import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import './Entry.css';
 
+// --- Normalization and Helper Functions ---
+export const normalizeAttendanceStatus = (status) => {
+  if (!status) return 'present';
+  const s = String(status).trim().toLowerCase();
+  if (s === 'present' || s === 'p' || s === 'حاضر') return 'present';
+  if (s === 'absent' || s === 'a' || s === 'غیر حاضر') return 'absent';
+  if (s === 'leave' || s === 'l' || s === 'e' || s === 'رخصت' || s === 'معذور') return 'leave';
+  if (s === 'late' || s === 'lt' || s === 'لیٹ') return 'late';
+  return 'present';
+};
+
+export const getStatusLabelUrdu = (status) => {
+  const norm = normalizeAttendanceStatus(status);
+  switch (norm) {
+    case 'present': return 'حاضر';
+    case 'absent': return 'غیر حاضر';
+    case 'leave': return 'رخصت';
+    case 'late': return 'لیٹ';
+    default: return 'حاضر';
+  }
+};
+
+export const getStatusShortCode = (status) => {
+  const norm = normalizeAttendanceStatus(status);
+  switch (norm) {
+    case 'present': return 'P';
+    case 'absent': return 'A';
+    case 'leave': return 'L';
+    case 'late': return 'LT';
+    default: return 'P';
+  }
+};
+
+export const getStatusBadgeStyle = (status) => {
+  const norm = normalizeAttendanceStatus(status);
+  switch (norm) {
+    case 'present': return { bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' };
+    case 'absent': return { bg: '#fff5f5', border: '#fecaca', color: '#dc2626' };
+    case 'leave': return { bg: '#f0f9ff', border: '#bae6fd', color: '#0284c7' };
+    case 'late': return { bg: '#fefce8', border: '#fde68a', color: '#b45309' };
+    default: return { bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' };
+  }
+};
+
+export const mapSupabaseToUi = (row, studentLookup = {}) => {
+  if (!row) return null;
+  const student = row.students || (row.student_id ? studentLookup[row.student_id] : null) || {};
+  const studentRollNo = student.roll_number || student.admRegNo || row.student_roll_no || '';
+  const studentName = student.name || row.student_name || '';
+  const studentFather = student.father_name || student.admFatherName || row.student_father || '';
+  const classId = student.class_id || student.admClass || row.class_id || '';
+  const status = normalizeAttendanceStatus(row.status);
+
+  return {
+    id: row.id,
+    studentId: studentRollNo || row.student_id || '',
+    studentUuid: row.student_id || '',
+    studentName: studentName,
+    studentFather: studentFather,
+    classId: classId,
+    date: row.date,
+    status: status,
+    statusUrdu: getStatusLabelUrdu(status),
+    shortCode: getStatusShortCode(status),
+    remarks: row.remarks || '',
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+};
+
+export const mapUiToSupabase = (data, madrasaId) => {
+  return {
+    madrasa_id: madrasaId || data.madrasa_id || null,
+    student_id: data.studentUuid || data.student_id || null,
+    date: data.date,
+    status: normalizeAttendanceStatus(data.status),
+    remarks: data.remarks || null
+  };
+};
+
 export default function Attendance() {
-  const { activeMadrasaId, loadMadrasaData, saveMadrasaData } = useMadrasa();
+  const {
+    activeMadrasaId,
+    loadMadrasaData,
+    saveMadrasaData,
+    fetchStudentsFromSupabase,
+    fetchClassesFromSupabase,
+    fetchStudentAttendanceFromSupabase,
+    saveStudentAttendanceToSupabase
+  } = useMadrasa();
+
   const [records, setRecords] = useState([]);
   const [classesList, setClassesList] = useState([]);
   
   const [dailyAttendance, setDailyAttendance] = useState({});
   const [attendance, setAttendance] = useState({});
+  const [studentAttendanceList, setStudentAttendanceList] = useState([]);
   
   const [staffProfiles, setStaffProfiles] = useState([]);
   const [staffAttendance, setStaffAttendance] = useState({});
@@ -20,20 +111,55 @@ export default function Attendance() {
   
   const [showHistory, setShowHistory] = useState(false);
 
+  // Initial load
   useEffect(() => {
-    const d = loadMadrasaData('hf_records_v1') || {};
-    setRecords(d.records || []);
-    if (d.classes && d.classes.length > 0) {
-        setClassesList(d.classes);
-    } else {
-        setClassesList(DEFAULT_CLASSES);
-    }
-    setDailyAttendance(d.dailyAttendance || {});
-    setAttendance(d.attendance || {});
-    setStaffProfiles(d.staffProfiles || []);
-    setStaffAttendance(d.staffAttendance || {});
-    setStaffFlow(d.staffAttendanceFlow || {});
-  }, [activeMadrasaId]); 
+    let isMounted = true;
+
+    const loadInitialData = async () => {
+      const d = loadMadrasaData('hf_records_v1') || {};
+      const localAttList = loadMadrasaData('hf_student_attendance_v1') || [];
+      
+      if (isMounted) {
+        setRecords(d.records || []);
+        if (d.classes && d.classes.length > 0) {
+          setClassesList(d.classes);
+        } else {
+          setClassesList(DEFAULT_CLASSES);
+        }
+        setDailyAttendance(d.dailyAttendance || {});
+        setAttendance(d.attendance || {});
+        setStudentAttendanceList(localAttList);
+        setStaffProfiles(d.staffProfiles || []);
+        setStaffAttendance(d.staffAttendance || {});
+        setStaffFlow(d.staffAttendanceFlow || {});
+      }
+
+      try {
+        const [stdData, clsData, attData] = await Promise.all([
+          fetchStudentsFromSupabase(activeMadrasaId).catch(() => null),
+          fetchClassesFromSupabase(activeMadrasaId).catch(() => null),
+          fetchStudentAttendanceFromSupabase({}, activeMadrasaId).catch(() => null)
+        ]);
+
+        if (isMounted) {
+          if (stdData && stdData.length > 0) {
+            setRecords(stdData.map(s => mapStudentToUi(s)));
+          }
+          if (clsData && clsData.length > 0) {
+            setClassesList(clsData);
+          }
+          if (attData && attData.length > 0) {
+            setStudentAttendanceList(attData);
+          }
+        }
+      } catch (err) {
+        console.warn('Initial data load warning:', err);
+      }
+    };
+
+    loadInitialData();
+    return () => { isMounted = false; };
+  }, [activeMadrasaId]);
 
   const updateLocalStorage = (updates) => {
     const d = loadMadrasaData('hf_records_v1') || {};
@@ -47,627 +173,987 @@ export default function Attendance() {
   };
 
   // Switch View
+  const [srFrom, setSrFrom] = useState('');
+  const [srTo, setSrTo] = useState('');
+  const [crMonth, setCrMonth] = useState('');
+  const [sumMonth, setSumMonth] = useState('');
+
   const switchView = (view) => {
     setActiveView(view);
     setShowHistory(false);
     
     const now = new Date();
     if (view === 'studentreport') {
-        if (!srFrom) setSrFrom(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10));
-        if (!srTo) setSrTo(now.toISOString().slice(0,10));
+      if (!srFrom) setSrFrom(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10));
+      if (!srTo) setSrTo(now.toISOString().slice(0, 10));
     }
-    if (view === 'classreport' && !crMonth) setCrMonth(now.toISOString().slice(0,7));
-    if (view === 'summary' && !sumMonth) setSumMonth(now.toISOString().slice(0,7));
+    if (view === 'classreport' && !crMonth) setCrMonth(now.toISOString().slice(0, 7));
+    if (view === 'summary' && !sumMonth) setSumMonth(now.toISOString().slice(0, 7));
   };
 
-  // --- View: class (student) ---
-  const [studentAttDate, setStudentAttDate] = useState(new Date().toISOString().slice(0,10));
+  // --- View: class (student bulk) ---
+  const [studentAttDate, setStudentAttDate] = useState(new Date().toISOString().slice(0, 10));
   const [studentAttClass, setStudentAttClass] = useState('');
   const [studentAttFormData, setStudentAttFormData] = useState(null);
+  const [isSavingBulk, setIsSavingBulk] = useState(false);
 
-  const studentsInClass = records.filter(r => r.isAdmissionProfile && r.admClass === studentAttClass && !r.isWithdrawn);
+  const studentsInClass = records.filter(r =>
+    (r.isAdmissionProfile || r.roll_number) &&
+    (r.admClass === studentAttClass || r.class_id === studentAttClass || r.classId === studentAttClass) &&
+    !r.isWithdrawn && r.status !== 'left'
+  );
 
   useEffect(() => {
-      if (activeView === 'class' && studentAttDate && studentAttClass) {
-          const savedData = (dailyAttendance[studentAttClass] && dailyAttendance[studentAttClass][studentAttDate]) || {};
-          const initialForm = {};
-          studentsInClass.forEach(s => {
-              initialForm[s.admRegNo] = {
-                  status: savedData[s.admRegNo]?.status || 'present',
-                  remarks: savedData[s.admRegNo]?.remarks || ''
-              };
-          });
-          setStudentAttFormData(initialForm);
-      } else {
-          setStudentAttFormData(null);
-      }
-  }, [activeView, studentAttDate, studentAttClass, dailyAttendance, records]);
+    let isMounted = true;
+    if (activeView === 'class' && studentAttDate && studentAttClass) {
+      const fetchClassDayAtt = async () => {
+        let dayRecords = [];
+        try {
+          dayRecords = await fetchStudentAttendanceFromSupabase({ date: studentAttDate }, activeMadrasaId);
+        } catch (e) {
+          dayRecords = studentAttendanceList.filter(a => a.date === studentAttDate);
+        }
 
-  const handleStudentAttChange = (regNo, field, value) => {
-      setStudentAttFormData(prev => ({
-          ...prev,
-          [regNo]: { ...prev[regNo], [field]: value }
-      }));
+        if (!isMounted) return;
+
+        const attMapByStudentId = {};
+        (dayRecords || []).forEach(row => {
+          if (row.student_id) {
+            attMapByStudentId[row.student_id] = row;
+          }
+        });
+
+        // Also check legacy dailyAttendance map
+        const legacyData = (dailyAttendance[studentAttClass] && dailyAttendance[studentAttClass][studentAttDate]) || {};
+
+        const initialForm = {};
+        studentsInClass.forEach(s => {
+          const sKey = s.id || s.admRegNo;
+          const matchedSupabase = attMapByStudentId[s.id];
+          const matchedLegacy = legacyData[s.admRegNo] || legacyData[s.id];
+
+          let status = 'present';
+          let remarks = '';
+
+          if (matchedSupabase) {
+            status = normalizeAttendanceStatus(matchedSupabase.status);
+            remarks = matchedSupabase.remarks || '';
+          } else if (matchedLegacy) {
+            status = normalizeAttendanceStatus(matchedLegacy.status || matchedLegacy);
+            remarks = matchedLegacy.remarks || '';
+          }
+
+          initialForm[sKey] = { status, remarks };
+        });
+
+        setStudentAttFormData(initialForm);
+      };
+
+      fetchClassDayAtt();
+    } else {
+      setStudentAttFormData(null);
+    }
+
+    return () => { isMounted = false; };
+  }, [activeView, studentAttDate, studentAttClass, records, dailyAttendance]);
+
+  const handleStudentAttChange = (studentKey, field, value) => {
+    setStudentAttFormData(prev => ({
+      ...prev,
+      [studentKey]: { ...prev[studentKey], [field]: value }
+    }));
   };
 
-  const saveStudentAttendance = () => {
-      if (!studentAttDate || !studentAttClass) return;
+  const saveStudentAttendance = async () => {
+    if (!studentAttDate || !studentAttClass) return;
+    if (!studentAttFormData || studentsInClass.length === 0) return;
+
+    setIsSavingBulk(true);
+    try {
+      const payloadToSave = studentsInClass.map(s => {
+        const sKey = s.id || s.admRegNo;
+        const form = studentAttFormData[sKey] || { status: 'present', remarks: '' };
+        return {
+          student_id: s.id,
+          studentUuid: s.id,
+          date: studentAttDate,
+          status: normalizeAttendanceStatus(form.status),
+          remarks: form.remarks || ''
+        };
+      });
+
+      const savedRows = await saveStudentAttendanceToSupabase(payloadToSave, activeMadrasaId);
+
+      // Update studentAttendanceList in state
+      setStudentAttendanceList(prev => {
+        const map = new Map();
+        prev.forEach(item => map.set(`${item.student_id}_${item.date}`, item));
+        (savedRows || []).forEach(item => map.set(`${item.student_id}_${item.date}`, item));
+        return Array.from(map.values());
+      });
+
+      // Update legacy dailyAttendance & attendance map for compatibility
       const updatedDailyAtt = JSON.parse(JSON.stringify(dailyAttendance));
       if (!updatedDailyAtt[studentAttClass]) updatedDailyAtt[studentAttClass] = {};
       updatedDailyAtt[studentAttClass][studentAttDate] = studentAttFormData;
-      
-      updateLocalStorage({ dailyAttendance: updatedDailyAtt });
+
+      const updatedAtt = JSON.parse(JSON.stringify(attendance));
+      if (!updatedAtt[studentAttDate]) updatedAtt[studentAttDate] = {};
+      studentsInClass.forEach(s => {
+        const sKey = s.id || s.admRegNo;
+        const st = studentAttFormData[sKey]?.status || 'present';
+        updatedAtt[studentAttDate][s.admRegNo || s.id] = getStatusShortCode(st);
+      });
+
+      updateLocalStorage({ dailyAttendance: updatedDailyAtt, attendance: updatedAtt });
+
       alert("حاضری کامیابی سے محفوظ ہو گئی۔");
       setShowHistory(true);
+    } catch (err) {
+      console.error('Error saving student attendance:', err);
+      alert('حاضری محفوظ کرتے ہوئے خرابی پیش آئی: ' + (err.message || 'سرور ایرر'));
+    } finally {
+      setIsSavingBulk(false);
+    }
   };
 
   // --- View: individual ---
-  const [indAttDate, setIndAttDate] = useState(new Date().toISOString().slice(0,10));
+  const [indAttDate, setIndAttDate] = useState(new Date().toISOString().slice(0, 10));
   const [indAttRegNo, setIndAttRegNo] = useState('');
-  const [indAttStatus, setIndAttStatus] = useState('P');
+  const [indAttStatus, setIndAttStatus] = useState('present');
+  const [indAttRemarks, setIndAttRemarks] = useState('');
   const [indAttStudent, setIndAttStudent] = useState(null);
   const [indAttMsg, setIndAttMsg] = useState('');
+  const [isSavingInd, setIsSavingInd] = useState(false);
 
   const searchIndividualStudent = () => {
-      const id = indAttRegNo.trim();
-      if (!id) { alert('رجسٹریشن نمبر درج کریں'); return; }
-      const s = records.find(r => r.isAdmissionProfile && r.admRegNo === id);
-      if (!s) { alert('کوئی طالب علم نہیں ملا'); setIndAttStudent(null); return; }
-      setIndAttStudent(s);
-      setIndAttMsg('');
-      if (!indAttDate) setIndAttDate(new Date().toISOString().slice(0,10));
+    const id = indAttRegNo.trim();
+    if (!id) { alert('رجسٹریشن نمبر درج کریں'); return; }
+    
+    const s = records.find(r =>
+      (r.isAdmissionProfile || r.roll_number) &&
+      (String(r.admRegNo).trim() === id || String(r.roll_number).trim() === id || String(r.id).trim() === id)
+    );
+
+    if (!s) {
+      alert('کوئی طالب علم نہیں ملا');
+      setIndAttStudent(null);
+      return;
+    }
+
+    setIndAttStudent(s);
+    setIndAttMsg('');
+    if (!indAttDate) setIndAttDate(new Date().toISOString().slice(0, 10));
+
+    // Check existing attendance on this date for this student
+    const existing = studentAttendanceList.find(a => a.student_id === s.id && a.date === indAttDate) ||
+      (attendance[indAttDate] ? { status: attendance[indAttDate][s.admRegNo || s.id] } : null);
+
+    if (existing) {
+      setIndAttStatus(normalizeAttendanceStatus(existing.status));
+      setIndAttRemarks(existing.remarks || '');
+    } else {
+      setIndAttStatus('present');
+      setIndAttRemarks('');
+    }
   };
 
-  const saveIndividualAttendance = () => {
-      if (!indAttRegNo.trim() || !indAttDate) { alert('تاریخ اور رجسٹریشن نمبر ضروری ہے'); return; }
+  const saveIndividualAttendance = async () => {
+    if (!indAttStudent || !indAttDate) {
+      alert('تاریخ اور طالب علم کا انتخاب ضروری ہے');
+      return;
+    }
+
+    setIsSavingInd(true);
+    try {
+      const rec = {
+        student_id: indAttStudent.id,
+        studentUuid: indAttStudent.id,
+        date: indAttDate,
+        status: normalizeAttendanceStatus(indAttStatus),
+        remarks: indAttRemarks || ''
+      };
+
+      const savedRows = await saveStudentAttendanceToSupabase([rec], activeMadrasaId);
+
+      setStudentAttendanceList(prev => {
+        const map = new Map();
+        prev.forEach(item => map.set(`${item.student_id}_${item.date}`, item));
+        (savedRows || []).forEach(item => map.set(`${item.student_id}_${item.date}`, item));
+        return Array.from(map.values());
+      });
+
+      // Update legacy attendance map
       const updatedAtt = JSON.parse(JSON.stringify(attendance));
       if (!updatedAtt[indAttDate]) updatedAtt[indAttDate] = {};
-      updatedAtt[indAttDate][indAttRegNo.trim()] = indAttStatus;
-      
+      updatedAtt[indAttDate][indAttStudent.admRegNo || indAttStudent.id] = getStatusShortCode(indAttStatus);
       updateLocalStorage({ attendance: updatedAtt });
-      setIndAttMsg(`محفوظ ہو گیا — ${indAttRegNo} کی حاضری ${indAttDate} کو "${indAttStatus}" درج ہوئی`);
+
+      const urduLabel = getStatusLabelUrdu(indAttStatus);
+      setIndAttMsg(`محفوظ ہو گیا — ${indAttStudent.name} (${indAttStudent.admRegNo || indAttStudent.roll_number || indAttStudent.id}) کی حاضری ${indAttDate} کو "${urduLabel}" درج ہوئی۔`);
+      setShowHistory(true);
+    } catch (err) {
+      console.error('Error saving individual attendance:', err);
+      alert('حاضری محفوظ کرتے ہوئے خرابی پیش آئی: ' + (err.message || 'سرور ایرر'));
+    } finally {
+      setIsSavingInd(false);
+    }
   };
 
   // --- View: studentreport ---
   const [srId, setSrId] = useState('');
-  const [srFrom, setSrFrom] = useState('');
-  const [srTo, setSrTo] = useState('');
   const [srResult, setSrResult] = useState(null);
+  const [loadingSr, setLoadingSr] = useState(false);
   
-  const renderStudentAttReport = () => {
-      const id = srId.trim();
-      if (!id || !srFrom || !srTo) { alert('تمام فیلڈز بھریں'); return null; }
-      const student = records.find(r => r.isAdmissionProfile && r.admRegNo === id);
-      if (!student) return <div className="empty-dashboard-state">طالب علم نہیں ملا</div>;
+  const handleGenerateStudentAttReport = async () => {
+    const id = srId.trim();
+    if (!id || !srFrom || !srTo) {
+      alert('تمام فیلڈز بھریں (رجسٹریشن نمبر، شروع تاریخ، اختتام تاریخ)');
+      return;
+    }
 
+    const student = records.find(r =>
+      (r.isAdmissionProfile || r.roll_number) &&
+      (String(r.admRegNo).trim() === id || String(r.roll_number).trim() === id || String(r.id).trim() === id)
+    );
+
+    if (!student) {
+      setSrResult(<div className="empty-dashboard-state">طالب علم نہیں ملا</div>);
+      return;
+    }
+
+    setLoadingSr(true);
+    try {
+      let attRows = [];
+      try {
+        attRows = await fetchStudentAttendanceFromSupabase({
+          studentId: student.id,
+          startDate: srFrom,
+          endDate: srTo
+        }, activeMadrasaId);
+      } catch (e) {
+        attRows = studentAttendanceList.filter(a =>
+          a.student_id === student.id && a.date >= srFrom && a.date <= srTo
+        );
+      }
+
+      // Build date mapping for quick lookup
+      const attByDate = {};
+      (attRows || []).forEach(row => {
+        attByDate[row.date] = row;
+      });
+
+      // Also merge legacy attendance data
       const fromD = new Date(srFrom);
       const toD = new Date(srTo);
-      let rows = [], P=0, A=0, L=0, E=0;
+      let rows = [], P = 0, A = 0, L = 0, Late = 0;
 
-      for (let d = new Date(fromD); d <= toD; d.setDate(d.getDate()+1)) {
-          const key = d.toISOString().slice(0,10);
-          if (attendance[key]) {
-              const st = attendance[key][id];
-              if (st) {
-                  rows.push({ date: key, status: st });
-                  if (st==='P') P++; else if (st==='A') A++; else if (st==='L') L++; else if (st==='E') E++;
-              }
-          }
+      for (let d = new Date(fromD); d <= toD; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().slice(0, 10);
+        let rowStatus = null;
+        let remarks = '';
+
+        if (attByDate[key]) {
+          rowStatus = normalizeAttendanceStatus(attByDate[key].status);
+          remarks = attByDate[key].remarks || '';
+        } else if (attendance[key] && (attendance[key][student.admRegNo] || attendance[key][student.id])) {
+          const raw = attendance[key][student.admRegNo] || attendance[key][student.id];
+          rowStatus = normalizeAttendanceStatus(raw);
+        }
+
+        if (rowStatus) {
+          rows.push({ date: key, status: rowStatus, remarks });
+          if (rowStatus === 'present') P++;
+          else if (rowStatus === 'absent') A++;
+          else if (rowStatus === 'leave') L++;
+          else if (rowStatus === 'late') Late++;
+        }
       }
-      const total = P+A+L+E;
-      const pct = total ? Math.round((P/total)*100) : 0;
 
-      return (
+      const total = P + A + L + Late;
+      const pct = total ? Math.round((P / total) * 100) : 0;
+
+      setSrResult(
         <div id="studentAttReportArea">
-            <div style={{background:"#fff", border:"1px solid var(--border)", borderRadius:"12px", padding:"20px", marginTop:"14px"}}>
-                <div style={{textAlign:"center", borderBottom:"2px solid var(--accent)", paddingBottom:"12px", marginBottom:"16px"}}>
-                    <div style={{fontSize:"1.3rem", fontWeight:800, color:"var(--accent)"}}>حاضری رپورٹ</div>
-                    <div style={{fontWeight:700}}>{student.name}</div>
-                    <div style={{fontSize:"0.85rem", color:"var(--muted)"}}>{srFrom} تا {srTo}</div>
-                </div>
-                <div style={{display:"flex", gap:"12px", flexWrap:"wrap", marginBottom:"16px", justifyContent:"center"}}>
-                    <div style={{background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:"8px", padding:"10px 16px", textAlign:"center", minWidth:"70px"}}>
-                        <div style={{fontSize:"1.4rem", fontWeight:800, color:"#15803d"}}>{P}</div>
-                        <div style={{fontSize:"0.8rem", color:"#15803d"}}>حاضر</div>
-                    </div>
-                    <div style={{background:"#fff5f5", border:"1px solid #fecaca", borderRadius:"8px", padding:"10px 16px", textAlign:"center", minWidth:"70px"}}>
-                        <div style={{fontSize:"1.4rem", fontWeight:800, color:"#dc2626"}}>{A}</div>
-                        <div style={{fontSize:"0.8rem", color:"#dc2626"}}>غیر حاضر</div>
-                    </div>
-                    <div style={{background:"#fefce8", border:"1px solid #fde68a", borderRadius:"8px", padding:"10px 16px", textAlign:"center", minWidth:"70px"}}>
-                        <div style={{fontSize:"1.4rem", fontWeight:800, color:"#b45309"}}>{L}</div>
-                        <div style={{fontSize:"0.8rem", color:"#b45309"}}>لیٹ</div>
-                    </div>
-                    <div style={{background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:"8px", padding:"10px 16px", textAlign:"center", minWidth:"70px"}}>
-                        <div style={{fontSize:"1.4rem", fontWeight:800, color:"#0369a1"}}>{pct}%</div>
-                        <div style={{fontSize:"0.8rem", color:"#0369a1"}}>حاضری</div>
-                    </div>
-                </div>
-                {rows.length > 0 ? (
-                    <table style={{width:"100%", borderCollapse:"collapse", fontSize:"0.88rem"}}>
-                        <thead>
-                            <tr style={{background:"var(--accent)", color:"#fff"}}>
-                                <th style={{padding:"8px"}}>تاریخ</th>
-                                <th style={{padding:"8px"}}>کیفیت</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map((r, i) => (
-                                <tr key={i} style={{borderBottom:"1px solid var(--border)"}}>
-                                    <td style={{padding:"8px", textAlign:"center"}}>{r.date}</td>
-                                    <td style={{padding:"8px", textAlign:"center", fontWeight:700, color: r.status==='P'?'#15803d':r.status==='A'?'#dc2626':r.status==='L'?'#b45309':'#0369a1'}}>{r.status}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                ) : <div className="empty-dashboard-state">اس مدت میں کوئی ریکارڈ نہیں</div>}
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "12px", padding: "20px", marginTop: "14px" }}>
+            <div style={{ textAlign: "center", borderBottom: "2px solid var(--accent)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--accent)" }}>حاضری رپورٹ</div>
+              <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>{student.name}</div>
+              <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+                والد: {student.admFatherName || student.father_name || '—'} | رجسٹریشن نمبر: {student.admRegNo || student.roll_number || student.id}
+              </div>
+              <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "4px" }}>{srFrom} تا {srTo}</div>
             </div>
+            
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "16px", justifyContent: "center" }}>
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "10px 16px", textAlign: "center", minWidth: "75px" }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#15803d" }}>{P}</div>
+                <div style={{ fontSize: "0.8rem", color: "#15803d", fontWeight: 700 }}>حاضر (P)</div>
+              </div>
+              <div style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: "8px", padding: "10px 16px", textAlign: "center", minWidth: "75px" }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#dc2626" }}>{A}</div>
+                <div style={{ fontSize: "0.8rem", color: "#dc2626", fontWeight: 700 }}>غیر حاضر (A)</div>
+              </div>
+              <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "8px", padding: "10px 16px", textAlign: "center", minWidth: "75px" }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#0284c7" }}>{L}</div>
+                <div style={{ fontSize: "0.8rem", color: "#0284c7", fontWeight: 700 }}>رخصت (L)</div>
+              </div>
+              <div style={{ background: "#fefce8", border: "1px solid #fde68a", borderRadius: "8px", padding: "10px 16px", textAlign: "center", minWidth: "75px" }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#b45309" }}>{Late}</div>
+                <div style={{ fontSize: "0.8rem", color: "#b45309", fontWeight: 700 }}>لیٹ (LT)</div>
+              </div>
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "10px 16px", textAlign: "center", minWidth: "75px" }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#334155" }}>{pct}%</div>
+                <div style={{ fontSize: "0.8rem", color: "#334155", fontWeight: 700 }}>حاضری فیصد</div>
+              </div>
+            </div>
+
+            {rows.length > 0 ? (
+              <div className="table-responsive">
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+                  <thead>
+                    <tr style={{ background: "var(--accent)", color: "#fff" }}>
+                      <th style={{ padding: "8px" }}>تاریخ</th>
+                      <th style={{ padding: "8px" }}>کیفیت (حاضری)</th>
+                      <th style={{ padding: "8px" }}>ریمارکس</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => {
+                      const badge = getStatusBadgeStyle(r.status);
+                      const label = getStatusLabelUrdu(r.status);
+                      return (
+                        <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                          <td style={{ padding: "8px", textAlign: "center" }}>{r.date}</td>
+                          <td style={{ padding: "8px", textAlign: "center" }}>
+                            <span style={{
+                              background: badge.bg,
+                              color: badge.color,
+                              border: `1px solid ${badge.border}`,
+                              borderRadius: "6px",
+                              padding: "3px 10px",
+                              fontWeight: 700,
+                              fontSize: "0.85rem"
+                            }}>
+                              {label}
+                            </span>
+                          </td>
+                          <td style={{ padding: "8px", textAlign: "center", color: "#666" }}>{r.remarks || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-dashboard-state">اس مدت میں کوئی ریکارڈ نہیں</div>
+            )}
+          </div>
         </div>
       );
+    } catch (err) {
+      console.error('Error generating student attendance report:', err);
+      setSrResult(<div className="empty-dashboard-state">رپورٹ لوڈ کرنے میں خرابی: {err.message}</div>);
+    } finally {
+      setLoadingSr(false);
+    }
   };
 
   // --- View: classreport ---
   const [crClass, setCrClass] = useState('');
-  const [crMonth, setCrMonth] = useState('');
   const [crResult, setCrResult] = useState(null);
+  const [loadingCr, setLoadingCr] = useState(false);
 
-  const renderClassAttReport = () => {
-      if (!crClass || !crMonth) return null;
-      const cls = classesList.find(c => c.id === crClass);
-      const students = records.filter(r => r.isAdmissionProfile && r.classId === crClass && r.status !== 'withdrawn');
+  const handleGenerateClassAttReport = async () => {
+    if (!crClass || !crMonth) {
+      alert('کلاس اور مہینہ منتخب کریں');
+      return;
+    }
+
+    const cls = classesList.find(c => c.id === crClass);
+    const students = records.filter(r =>
+      (r.isAdmissionProfile || r.roll_number) &&
+      (r.classId === crClass || r.class_id === crClass || r.admClass === crClass) &&
+      r.status !== 'left' && !r.isWithdrawn
+    );
+
+    if (!students.length) {
+      setCrResult(<div className="empty-dashboard-state">اس کلاس میں کوئی طالب علم نہیں</div>);
+      return;
+    }
+
+    setLoadingCr(true);
+    try {
       const [yr, mo] = crMonth.split('-').map(Number);
-      const days = new Date(yr, mo, 0).getDate();
+      const daysInMonth = new Date(yr, mo, 0).getDate();
 
-      if (!students.length) return <div className="empty-dashboard-state">اس کلاس میں کوئی طالب علم نہیں</div>;
+      let monthRecords = [];
+      try {
+        monthRecords = await fetchStudentAttendanceFromSupabase({ month: crMonth }, activeMadrasaId);
+      } catch (e) {
+        monthRecords = studentAttendanceList.filter(a => a.date && a.date.startsWith(crMonth));
+      }
 
-      const rows = students.map(s => {
-          let P=0, A=0, L=0;
-          for (let d=1; d<=days; d++) {
-              const key = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-              const st = attendance[key]?.[s.admRegNo];
-              if (st==='P') P++; else if (st==='A') A++; else if (st==='L') L++;
-          }
-          const total = P+A+L;
-          const pct = total ? Math.round((P/total)*100) : 0;
-          return { ...s, P, A, L, pct };
+      // Map: `${student_id}_${date}` -> record
+      const attMap = new Map();
+      (monthRecords || []).forEach(row => {
+        if (row.student_id && row.date) {
+          attMap.set(`${row.student_id}_${row.date}`, row);
+        }
       });
 
-      return (
+      const rows = students.map(s => {
+        let P = 0, A = 0, L = 0, Late = 0;
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dayStr = String(d).padStart(2, '0');
+          const dateKey = `${yr}-${String(mo).padStart(2, '0')}-${dayStr}`;
+
+          let st = null;
+          const supRec = attMap.get(`${s.id}_${dateKey}`);
+          if (supRec) {
+            st = normalizeAttendanceStatus(supRec.status);
+          } else if (attendance[dateKey] && (attendance[dateKey][s.admRegNo] || attendance[dateKey][s.id])) {
+            const raw = attendance[dateKey][s.admRegNo] || attendance[dateKey][s.id];
+            st = normalizeAttendanceStatus(raw);
+          }
+
+          if (st === 'present') P++;
+          else if (st === 'absent') A++;
+          else if (st === 'leave') L++;
+          else if (st === 'late') Late++;
+        }
+
+        const total = P + A + L + Late;
+        const pct = total ? Math.round((P / total) * 100) : 0;
+        return { ...s, P, A, L, Late, pct };
+      });
+
+      setCrResult(
         <div id="classAttReportArea">
-            <div style={{background:"#fff", border:"1px solid var(--border)", borderRadius:"12px", padding:"20px", marginTop:"14px"}}>
-                <div style={{textAlign:"center", borderBottom:"2px solid var(--accent)", paddingBottom:"12px", marginBottom:"16px"}}>
-                    <div style={{fontSize:"1.3rem", fontWeight:800, color:"var(--accent)"}}>کلاس حاضری رپورٹ</div>
-                    <div style={{fontSize:"1rem", color:"var(--muted)"}}>{cls?.name || cls?.className || cls?.id || ''} — {crMonth}</div>
-                </div>
-                <div style={{overflowX:"auto"}}>
-                    <table style={{width:"100%", borderCollapse:"collapse", fontSize:"0.88rem"}}>
-                        <thead>
-                            <tr style={{background:"var(--accent)", color:"#fff"}}>
-                                <th style={{padding:"8px"}}>نام</th>
-                                <th style={{padding:"8px"}}>ID</th>
-                                <th style={{padding:"8px", color:"#86efac"}}>P</th>
-                                <th style={{padding:"8px", color:"#fca5a5"}}>A</th>
-                                <th style={{padding:"8px", color:"#fde68a"}}>L</th>
-                                <th style={{padding:"8px"}}>%</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map(r => (
-                                <tr key={r.admRegNo} style={{borderBottom:"1px solid var(--border)"}}>
-                                    <td style={{padding:"8px", textAlign:"right", fontWeight:700}}>{r.name||'—'}</td>
-                                    <td style={{padding:"8px", textAlign:"center"}}>{r.admRegNo}</td>
-                                    <td style={{padding:"8px", textAlign:"center", color:"#15803d", fontWeight:700}}>{r.P}</td>
-                                    <td style={{padding:"8px", textAlign:"center", color:"#dc2626", fontWeight:700}}>{r.A}</td>
-                                    <td style={{padding:"8px", textAlign:"center", color:"#b45309", fontWeight:700}}>{r.L}</td>
-                                    <td style={{padding:"8px", textAlign:"center", fontWeight:800, color: r.pct>=75?'#15803d':r.pct>=50?'#b45309':'#dc2626'}}>{r.pct}%</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "12px", padding: "20px", marginTop: "14px" }}>
+            <div style={{ textAlign: "center", borderBottom: "2px solid var(--accent)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--accent)" }}>کلاس حاضری رپورٹ</div>
+              <div style={{ fontSize: "1rem", color: "var(--muted)" }}>{cls?.name || cls?.className || cls?.id || ''} — {crMonth}</div>
             </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+                <thead>
+                  <tr style={{ background: "var(--accent)", color: "#fff" }}>
+                    <th style={{ padding: "8px" }}>نام طالب علم</th>
+                    <th style={{ padding: "8px" }}>رجسٹریشن / ID</th>
+                    <th style={{ padding: "8px", color: "#86efac" }}>P (حاضر)</th>
+                    <th style={{ padding: "8px", color: "#fca5a5" }}>A (غیر حاضر)</th>
+                    <th style={{ padding: "8px", color: "#bae6fd" }}>L (رخصت)</th>
+                    <th style={{ padding: "8px", color: "#fde68a" }}>LT (لیٹ)</th>
+                    <th style={{ padding: "8px" }}>% حاضری</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(r => (
+                    <tr key={r.id || r.admRegNo} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td style={{ padding: "8px", textAlign: "right", fontWeight: 700 }}>{r.name || '—'}</td>
+                      <td style={{ padding: "8px", textAlign: "center" }}>{r.admRegNo || r.roll_number || r.id}</td>
+                      <td style={{ padding: "8px", textAlign: "center", color: "#15803d", fontWeight: 700 }}>{r.P}</td>
+                      <td style={{ padding: "8px", textAlign: "center", color: "#dc2626", fontWeight: 700 }}>{r.A}</td>
+                      <td style={{ padding: "8px", textAlign: "center", color: "#0284c7", fontWeight: 700 }}>{r.L}</td>
+                      <td style={{ padding: "8px", textAlign: "center", color: "#b45309", fontWeight: 700 }}>{r.Late}</td>
+                      <td style={{
+                        padding: "8px",
+                        textAlign: "center",
+                        fontWeight: 800,
+                        color: r.pct >= 75 ? '#15803d' : r.pct >= 50 ? '#b45309' : '#dc2626'
+                      }}>
+                        {r.pct}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       );
+    } catch (err) {
+      console.error('Error generating class report:', err);
+      setCrResult(<div className="empty-dashboard-state">رپورٹ لوڈ کرنے میں خرابی: {err.message}</div>);
+    } finally {
+      setLoadingCr(false);
+    }
   };
 
   // --- View: summary ---
-  const [sumMonth, setSumMonth] = useState('');
-  const renderAttSummary = () => {
-      if (!sumMonth) return null;
+  const [sumResult, setSumResult] = useState(null);
+  const [loadingSum, setLoadingSum] = useState(false);
+
+  const handleGenerateAttSummary = async () => {
+    if (!sumMonth) {
+      alert('مہینہ منتخب کریں');
+      return;
+    }
+
+    if (!classesList.length) {
+      setSumResult(<div className="empty-dashboard-state">کوئی کلاس موجود نہیں</div>);
+      return;
+    }
+
+    setLoadingSum(true);
+    try {
       const [yr, mo] = sumMonth.split('-').map(Number);
       const days = new Date(yr, mo, 0).getDate();
 
-      if (!classesList.length) return <div className="empty-dashboard-state">کوئی کلاس موجود نہیں</div>;
+      let monthRecords = [];
+      try {
+        monthRecords = await fetchStudentAttendanceFromSupabase({ month: sumMonth }, activeMadrasaId);
+      } catch (e) {
+        monthRecords = studentAttendanceList.filter(a => a.date && a.date.startsWith(sumMonth));
+      }
 
-      const rows = classesList.map(cls => {
-          const students = records.filter(r => r.isAdmissionProfile && r.classId === cls.id && r.status !== 'withdrawn');
-          let totalP=0, totalA=0, totalL=0, totalDays=0;
-          students.forEach(s => {
-              for (let d=1; d<=days; d++) {
-                  const key = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                  const st = attendance[key]?.[s.admRegNo];
-                  if (st) {
-                      totalDays++;
-                      if (st==='P') totalP++; else if (st==='A') totalA++; else if (st==='L') totalL++;
-                  }
-              }
-          });
-          const pct = totalDays ? Math.round((totalP/totalDays)*100) : 0;
-          return { cls, count: students.length, totalP, totalA, totalL, pct };
+      const attMap = new Map();
+      (monthRecords || []).forEach(row => {
+        if (row.student_id && row.date) {
+          attMap.set(`${row.student_id}_${row.date}`, row);
+        }
       });
 
-      return (
+      const rows = classesList.map(cls => {
+        const students = records.filter(r =>
+          (r.isAdmissionProfile || r.roll_number) &&
+          (r.classId === cls.id || r.class_id === cls.id || r.admClass === cls.id) &&
+          r.status !== 'left' && !r.isWithdrawn
+        );
+
+        let totalP = 0, totalA = 0, totalL = 0, totalLate = 0, totalDays = 0;
+
+        students.forEach(s => {
+          for (let d = 1; d <= days; d++) {
+            const dayStr = String(d).padStart(2, '0');
+            const dateKey = `${yr}-${String(mo).padStart(2, '0')}-${dayStr}`;
+
+            let st = null;
+            const supRec = attMap.get(`${s.id}_${dateKey}`);
+            if (supRec) {
+              st = normalizeAttendanceStatus(supRec.status);
+            } else if (attendance[dateKey] && (attendance[dateKey][s.admRegNo] || attendance[dateKey][s.id])) {
+              const raw = attendance[dateKey][s.admRegNo] || attendance[dateKey][s.id];
+              st = normalizeAttendanceStatus(raw);
+            }
+
+            if (st) {
+              totalDays++;
+              if (st === 'present') totalP++;
+              else if (st === 'absent') totalA++;
+              else if (st === 'leave') totalL++;
+              else if (st === 'late') totalLate++;
+            }
+          }
+        });
+
+        const pct = totalDays ? Math.round((totalP / totalDays) * 100) : 0;
+        return { cls, count: students.length, totalP, totalA, totalL, totalLate, pct };
+      });
+
+      setSumResult(
         <div id="attSummaryArea">
-            <div style={{background:"#fff", border:"1px solid var(--border)", borderRadius:"12px", padding:"20px", marginTop:"14px"}}>
-                <div style={{textAlign:"center", borderBottom:"2px solid var(--accent)", paddingBottom:"12px", marginBottom:"16px"}}>
-                    <div style={{fontSize:"1.3rem", fontWeight:800, color:"var(--accent)"}}>خلاصہ حاضری رپورٹ</div>
-                    <div style={{fontSize:"1rem", color:"var(--muted)"}}>{sumMonth} — پورا ادارہ</div>
-                </div>
-                <div style={{overflowX:"auto"}}>
-                    <table style={{width:"100%", borderCollapse:"collapse", fontSize:"0.9rem"}}>
-                        <thead>
-                            <tr style={{background:"var(--accent)", color:"#fff"}}>
-                                <th style={{padding:"10px 14px"}}>کلاس</th>
-                                <th style={{padding:"10px"}}>طلباء</th>
-                                <th style={{padding:"10px", color:"#86efac"}}>حاضر</th>
-                                <th style={{padding:"10px", color:"#fca5a5"}}>غیر حاضر</th>
-                                <th style={{padding:"10px", color:"#fde68a"}}>لیٹ</th>
-                                <th style={{padding:"10px"}}>% حاضری</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.map(r => (
-                                <tr key={r.cls.id} style={{borderBottom:"1px solid var(--border)"}}>
-                                    <td style={{padding:"10px 14px", textAlign:"right", fontWeight:700}}>{r.cls.name || r.cls.className || r.cls.id}</td>
-                                    <td style={{padding:"10px", textAlign:"center"}}>{r.count}</td>
-                                    <td style={{padding:"10px", textAlign:"center", color:"#15803d", fontWeight:700}}>{r.totalP}</td>
-                                    <td style={{padding:"10px", textAlign:"center", color:"#dc2626", fontWeight:700}}>{r.totalA}</td>
-                                    <td style={{padding:"10px", textAlign:"center", color:"#b45309", fontWeight:700}}>{r.totalL}</td>
-                                    <td style={{padding:"10px", textAlign:"center", fontWeight:800, fontSize:"1.05rem", color: r.pct>=75?'#15803d':r.pct>=50?'#b45309':'#dc2626'}}>{r.pct}%</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+          <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "12px", padding: "20px", marginTop: "14px" }}>
+            <div style={{ textAlign: "center", borderBottom: "2px solid var(--accent)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--accent)" }}>خلاصہ حاضری رپورٹ</div>
+              <div style={{ fontSize: "1rem", color: "var(--muted)" }}>{sumMonth} — پورا ادارہ</div>
             </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                <thead>
+                  <tr style={{ background: "var(--accent)", color: "#fff" }}>
+                    <th style={{ padding: "10px 14px" }}>کلاس</th>
+                    <th style={{ padding: "10px" }}>طلباء</th>
+                    <th style={{ padding: "10px", color: "#86efac" }}>حاضر (P)</th>
+                    <th style={{ padding: "10px", color: "#fca5a5" }}>غیر حاضر (A)</th>
+                    <th style={{ padding: "10px", color: "#bae6fd" }}>رخصت (L)</th>
+                    <th style={{ padding: "10px", color: "#fde68a" }}>لیٹ (LT)</th>
+                    <th style={{ padding: "10px" }}>% حاضری</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(r => (
+                    <tr key={r.cls.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td style={{ padding: "10px 14px", textAlign: "right", fontWeight: 700 }}>{r.cls.name || r.cls.className || r.cls.id}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>{r.count}</td>
+                      <td style={{ padding: "10px", textAlign: "center", color: "#15803d", fontWeight: 700 }}>{r.totalP}</td>
+                      <td style={{ padding: "10px", textAlign: "center", color: "#dc2626", fontWeight: 700 }}>{r.totalA}</td>
+                      <td style={{ padding: "10px", textAlign: "center", color: "#0284c7", fontWeight: 700 }}>{r.totalL}</td>
+                      <td style={{ padding: "10px", textAlign: "center", color: "#b45309", fontWeight: 700 }}>{r.totalLate}</td>
+                      <td style={{
+                        padding: "10px",
+                        textAlign: "center",
+                        fontWeight: 800,
+                        fontSize: "1.05rem",
+                        color: r.pct >= 75 ? '#15803d' : r.pct >= 50 ? '#b45309' : '#dc2626'
+                      }}>
+                        {r.pct}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       );
+    } catch (err) {
+      console.error('Error generating summary report:', err);
+      setSumResult(<div className="empty-dashboard-state">رپورٹ لوڈ کرنے میں خرابی: {err.message}</div>);
+    } finally {
+      setLoadingSum(false);
+    }
   };
 
   // --- View: staff ---
-  const [staffAttDate, setStaffAttDate] = useState(new Date().toISOString().slice(0,10));
+  const [staffAttDate, setStaffAttDate] = useState(new Date().toISOString().slice(0, 10));
   const [staffSession, setStaffSession] = useState('checkin');
   const [staffAttFormData, setStaffAttFormData] = useState({});
   const [staffFlowMsg, setStaffFlowMsg] = useState('');
 
   const getStaffForAttendance = () => {
-      if (staffProfiles && staffProfiles.length > 0) {
-          return [...staffProfiles]
-              .sort((a, b) => Number(a.staffCode || 0) - Number(b.staffCode || 0))
-              .map(s => ({
-                  teacherId: String(s.staffCode),
-                  name: s.name || '-',
-                  shiftStart: s.shiftStart || '06:50',
-                  shiftEnd: s.shiftEnd || '14:45'
-              }));
-      }
-      const teachers = new Set();
-      classesList.forEach(c => {
-          if (c.teacher) teachers.add(c.teacher.trim());
-      });
-      return Array.from(teachers).map((name, idx) => ({
-          teacherId: String(1001 + idx),
-          name,
-          shiftStart: '06:50',
-          shiftEnd: '14:45'
-      }));
+    if (staffProfiles && staffProfiles.length > 0) {
+      return [...staffProfiles]
+        .sort((a, b) => Number(a.staffCode || 0) - Number(b.staffCode || 0))
+        .map(s => ({
+          teacherId: String(s.staffCode),
+          name: s.name || '-',
+          shiftStart: s.shiftStart || '06:50',
+          shiftEnd: s.shiftEnd || '14:45'
+        }));
+    }
+    const teachers = new Set();
+    classesList.forEach(c => {
+      if (c.teacher) teachers.add(c.teacher.trim());
+    });
+    return Array.from(teachers).map((name, idx) => ({
+      teacherId: String(1001 + idx),
+      name,
+      shiftStart: '06:50',
+      shiftEnd: '14:45'
+    }));
   };
   const staffMembers = getStaffForAttendance();
 
   useEffect(() => {
-      if (activeView === 'staff') {
-          const lock = staffFlow || {};
-          const lockedDate = lock.pendingDate || '';
-          const hasPending = lock.checkInSaved && !lock.checkOutSaved && !!lockedDate;
+    if (activeView === 'staff') {
+      const lock = staffFlow || {};
+      const lockedDate = lock.pendingDate || '';
+      const hasPending = lock.checkInSaved && !lock.checkOutSaved && !!lockedDate;
 
-          let targetDate = staffAttDate;
-          if (hasPending && staffAttDate !== lockedDate) {
-              setStaffAttDate(lockedDate);
-              targetDate = lockedDate;
-              setStaffFlowMsg(`اس وقت ${lockedDate} کی حاضری زیرِ تکمیل ہے۔ پہلے چیک آؤٹ مکمل کریں۔`);
-          } else {
-              setStaffFlowMsg('');
-          }
-
-          const savedData = staffAttendance[targetDate] || {};
-          const initialForm = {};
-          
-          staffMembers.forEach((staff) => {
-               const rec = savedData[staff.teacherId] || savedData[staff.name] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
-               initialForm[staff.teacherId] = {
-                   status: rec.status || 'present',
-                   checkIn: rec.checkIn || staff.shiftStart,
-                   checkOut: rec.checkOut || staff.shiftEnd,
-                   remarks: rec.remarks || ''
-               };
-          });
-          setStaffAttFormData(initialForm);
+      let targetDate = staffAttDate;
+      if (hasPending && staffAttDate !== lockedDate) {
+        setStaffAttDate(lockedDate);
+        targetDate = lockedDate;
+        setStaffFlowMsg(`اس وقت ${lockedDate} کی حاضری زیرِ تکمیل ہے۔ پہلے چیک آؤٹ مکمل کریں۔`);
+      } else {
+        setStaffFlowMsg('');
       }
+
+      const savedData = staffAttendance[targetDate] || {};
+      const initialForm = {};
+      
+      staffMembers.forEach((staff) => {
+        const rec = savedData[staff.teacherId] || savedData[staff.name] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
+        initialForm[staff.teacherId] = {
+          status: rec.status || 'present',
+          checkIn: rec.checkIn || staff.shiftStart,
+          checkOut: rec.checkOut || staff.shiftEnd,
+          remarks: rec.remarks || ''
+        };
+      });
+      setStaffAttFormData(initialForm);
+    }
   }, [activeView, staffAttDate, staffSession, staffProfiles, staffAttendance, staffFlow, classesList]);
 
   const handleStaffAttChange = (teacherId, field, value) => {
-      setStaffAttFormData(prev => {
-          const st = prev[teacherId];
-          const newSt = { ...st, [field]: value };
-          if (field === 'status' && value !== 'present') {
-              newSt.checkIn = '';
-              newSt.checkOut = '';
-          } else if (field === 'status' && value === 'present') {
-              const profile = staffMembers.find(s => s.teacherId === teacherId);
-              newSt.checkIn = newSt.checkIn || profile?.shiftStart || '06:50';
-              newSt.checkOut = newSt.checkOut || profile?.shiftEnd || '14:45';
-          }
-          return { ...prev, [teacherId]: newSt };
-      });
+    setStaffAttFormData(prev => {
+      const st = prev[teacherId];
+      const newSt = { ...st, [field]: value };
+      if (field === 'status' && value !== 'present') {
+        newSt.checkIn = '';
+        newSt.checkOut = '';
+      } else if (field === 'status' && value === 'present') {
+        const profile = staffMembers.find(s => s.teacherId === teacherId);
+        newSt.checkIn = newSt.checkIn || profile?.shiftStart || '06:50';
+        newSt.checkOut = newSt.checkOut || profile?.shiftEnd || '14:45';
+      }
+      return { ...prev, [teacherId]: newSt };
+    });
   };
 
   const getMinutesDifference = (actualTime, expectedTime) => {
-      if (!actualTime || !expectedTime) return 0;
-      const [aH, aM] = actualTime.split(':').map(Number);
-      const [eH, eM] = expectedTime.split(':').map(Number);
-      if ([aH, aM, eH, eM].some(n => Number.isNaN(n))) return 0;
-      return (aH * 60 + aM) - (eH * 60 + eM);
+    if (!actualTime || !expectedTime) return 0;
+    const [aH, aM] = actualTime.split(':').map(Number);
+    const [eH, eM] = expectedTime.split(':').map(Number);
+    if ([aH, aM, eH, eM].some(n => Number.isNaN(n))) return 0;
+    return (aH * 60 + aM) - (eH * 60 + eM);
   };
 
   const saveStaffAttendanceCheckIn = () => {
-      if (!staffAttDate) return;
-      const updatedStaffAtt = JSON.parse(JSON.stringify(staffAttendance));
-      const attRecord = updatedStaffAtt[staffAttDate] || {};
+    if (!staffAttDate) return;
+    const updatedStaffAtt = JSON.parse(JSON.stringify(staffAttendance));
+    const attRecord = updatedStaffAtt[staffAttDate] || {};
 
-      staffMembers.forEach(staff => {
-          const form = staffAttFormData[staff.teacherId];
-          const prev = attRecord[staff.teacherId] || attRecord[staff.name] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
-          const checkIn = (form.status !== 'present') ? '' : form.checkIn;
-          const lateMinutes = (form.status === 'present' && checkIn) ? Math.max(getMinutesDifference(checkIn, staff.shiftStart), 0) : 0;
-          
-          attRecord[staff.teacherId] = {
-              teacherId: staff.teacherId,
-              teacherName: staff.name,
-              status: form.status,
-              checkIn,
-              checkOut: prev.checkOut || '',
-              lateMinutes,
-              earlyLeaveMinutes: Number(prev.earlyLeaveMinutes || 0),
-              remarks: form.remarks
-          };
-      });
-
-      updatedStaffAtt[staffAttDate] = attRecord;
+    staffMembers.forEach(staff => {
+      const form = staffAttFormData[staff.teacherId];
+      const prev = attRecord[staff.teacherId] || attRecord[staff.name] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
+      const checkIn = (form.status !== 'present') ? '' : form.checkIn;
+      const lateMinutes = (form.status === 'present' && checkIn) ? Math.max(getMinutesDifference(checkIn, staff.shiftStart), 0) : 0;
       
-      updateLocalStorage({
-          staffAttendance: updatedStaffAtt,
-          staffAttendanceFlow: {
-              pendingDate: staffAttDate,
-              checkInSaved: true,
-              checkOutSaved: false
-          }
-      });
-      alert("چیک اِن حاضری کامیابی سے محفوظ ہو گئی۔ اب دن کے اختتام پر اسی تاریخ میں چیک آؤٹ درج کریں۔");
-      setShowHistory(true);
+      attRecord[staff.teacherId] = {
+        teacherId: staff.teacherId,
+        teacherName: staff.name,
+        status: form.status,
+        checkIn,
+        checkOut: prev.checkOut || '',
+        lateMinutes,
+        earlyLeaveMinutes: Number(prev.earlyLeaveMinutes || 0),
+        remarks: form.remarks
+      };
+    });
+
+    updatedStaffAtt[staffAttDate] = attRecord;
+    
+    updateLocalStorage({
+      staffAttendance: updatedStaffAtt,
+      staffAttendanceFlow: {
+        pendingDate: staffAttDate,
+        checkInSaved: true,
+        checkOutSaved: false
+      }
+    });
+    alert("چیک اِن حاضری کامیابی سے محفوظ ہو گئی۔ اب دن کے اختتام پر اسی تاریخ میں چیک آؤٹ درج کریں۔");
+    setShowHistory(true);
   };
 
   const saveStaffAttendanceCheckOut = () => {
-      if (!staffAttDate) return;
-      const flow = staffFlow || {};
-      if (flow.pendingDate && flow.pendingDate !== staffAttDate && flow.checkInSaved && !flow.checkOutSaved) {
-          alert(`پہلے ${flow.pendingDate} کی چیک آؤٹ مکمل کریں۔`);
-          setStaffAttDate(flow.pendingDate);
-          return;
-      }
+    if (!staffAttDate) return;
+    const flow = staffFlow || {};
+    if (flow.pendingDate && flow.pendingDate !== staffAttDate && flow.checkInSaved && !flow.checkOutSaved) {
+      alert(`پہلے ${flow.pendingDate} کی چیک آؤٹ مکمل کریں۔`);
+      setStaffAttDate(flow.pendingDate);
+      return;
+    }
 
-      const updatedStaffAtt = JSON.parse(JSON.stringify(staffAttendance));
-      const attRecord = updatedStaffAtt[staffAttDate] || {};
+    const updatedStaffAtt = JSON.parse(JSON.stringify(staffAttendance));
+    const attRecord = updatedStaffAtt[staffAttDate] || {};
 
-      staffMembers.forEach(staff => {
-          const form = staffAttFormData[staff.teacherId];
-          const prev = attRecord[staff.teacherId] || attRecord[staff.name] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
-          const checkOut = (form.status !== 'present') ? '' : form.checkOut;
-          
-          const lateMinutes = (form.status === 'present' && prev.checkIn) ? Math.max(getMinutesDifference(prev.checkIn, staff.shiftStart), 0) : 0;
-          const earlyLeaveMinutes = (form.status === 'present' && checkOut) ? Math.max(getMinutesDifference(staff.shiftEnd, checkOut), 0) : 0;
-          
-          attRecord[staff.teacherId] = {
-              teacherId: staff.teacherId,
-              teacherName: staff.name,
-              status: form.status,
-              checkIn: prev.checkIn || '',
-              checkOut,
-              lateMinutes,
-              earlyLeaveMinutes,
-              remarks: form.remarks
-          };
-      });
-
-      updatedStaffAtt[staffAttDate] = attRecord;
+    staffMembers.forEach(staff => {
+      const form = staffAttFormData[staff.teacherId];
+      const prev = attRecord[staff.teacherId] || attRecord[staff.name] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
+      const checkOut = (form.status !== 'present') ? '' : form.checkOut;
       
-      updateLocalStorage({
-          staffAttendance: updatedStaffAtt,
-          staffAttendanceFlow: {
-              pendingDate: '',
-              checkInSaved: true,
-              checkOutSaved: true,
-              completedDate: staffAttDate
-          }
-      });
-      alert("چیک آؤٹ کامیابی سے محفوظ ہو گیا۔ اس تاریخ کی عملے کی حاضری مکمل ہو گئی۔");
-      setShowHistory(true);
+      const lateMinutes = (form.status === 'present' && prev.checkIn) ? Math.max(getMinutesDifference(prev.checkIn, staff.shiftStart), 0) : 0;
+      const earlyLeaveMinutes = (form.status === 'present' && checkOut) ? Math.max(getMinutesDifference(staff.shiftEnd, checkOut), 0) : 0;
+      
+      attRecord[staff.teacherId] = {
+        teacherId: staff.teacherId,
+        teacherName: staff.name,
+        status: form.status,
+        checkIn: prev.checkIn || '',
+        checkOut,
+        lateMinutes,
+        earlyLeaveMinutes,
+        remarks: form.remarks
+      };
+    });
+
+    updatedStaffAtt[staffAttDate] = attRecord;
+    
+    updateLocalStorage({
+      staffAttendance: updatedStaffAtt,
+      staffAttendanceFlow: {
+        pendingDate: '',
+        checkInSaved: true,
+        checkOutSaved: true,
+        completedDate: staffAttDate
+      }
+    });
+    alert("چیک آؤٹ کامیابی سے محفوظ ہو گیا۔ اس تاریخ کی عملے کی حاضری مکمل ہو گئی۔");
+    setShowHistory(true);
   };
 
   // --- History Panel ---
   const renderHistoryPanel = () => {
-      if (!showHistory) return null;
-      const type = activeView === 'staff' ? 'staff' : 'student';
+    if (!showHistory) return null;
+    const type = activeView === 'staff' ? 'staff' : 'student';
 
-      if (type === 'student') {
-          const rows = [];
-          Object.keys(dailyAttendance).forEach(classId => {
-              const dateMap = dailyAttendance[classId] || {};
-              Object.keys(dateMap).forEach(date => {
-                  const entries = dateMap[date] || {};
-                  const regNos = Object.keys(entries);
-                  let present = 0, absent = 0, leave = 0;
-                  regNos.forEach(reg => {
-                      const status = entries[reg]?.status || 'present';
-                      if (status === 'present') present++;
-                      else if (status === 'absent') absent++;
-                      else if (status === 'leave') leave++;
-                  });
-                  const cls = classesList.find(c => c.id === classId);
-                  rows.push({
-                      date,
-                      className: cls ? (cls.name || cls.className || classId) : classId,
-                      total: regNos.length,
-                      present,
-                      absent,
-                      leave
-                  });
-              });
+    if (type === 'student') {
+      // Aggregate attendance history from Supabase list and dailyAttendance
+      const dateMap = {};
+
+      studentAttendanceList.forEach(item => {
+        if (!item.date) return;
+        const key = item.date;
+        if (!dateMap[key]) {
+          dateMap[key] = { date: key, present: 0, absent: 0, leave: 0, late: 0, total: 0, classNames: new Set() };
+        }
+        dateMap[key].total++;
+        const st = normalizeAttendanceStatus(item.status);
+        if (st === 'present') dateMap[key].present++;
+        else if (st === 'absent') dateMap[key].absent++;
+        else if (st === 'leave') dateMap[key].leave++;
+        else if (st === 'late') dateMap[key].late++;
+
+        const student = records.find(r => r.id === item.student_id);
+        if (student) {
+          const cls = classesList.find(c => c.id === (student.admClass || student.class_id || student.classId));
+          if (cls) dateMap[key].classNames.add(cls.name || cls.className || cls.id);
+        }
+      });
+
+      // Also merge legacy dailyAttendance
+      Object.keys(dailyAttendance).forEach(classId => {
+        const clsEntries = dailyAttendance[classId] || {};
+        Object.keys(clsEntries).forEach(date => {
+          const entries = clsEntries[date] || {};
+          const regNos = Object.keys(entries);
+          if (!dateMap[date]) {
+            dateMap[date] = { date, present: 0, absent: 0, leave: 0, late: 0, total: 0, classNames: new Set() };
+          }
+          const cls = classesList.find(c => c.id === classId);
+          if (cls) dateMap[date].classNames.add(cls.name || cls.className || classId);
+        });
+      });
+
+      const rows = Object.values(dateMap).sort((a, b) => new Date(b.date) - new Date(a.date));
+      if (rows.length === 0) return <div className="empty-dashboard-state">طلباء کی کوئی محفوظ حاضری موجود نہیں۔</div>;
+
+      return (
+        <div className="table-responsive" style={{ marginTop: "10px" }}>
+          <table>
+            <thead>
+              <tr>
+                <th>تاریخ</th>
+                <th>کلاس</th>
+                <th>کل ریکارڈز</th>
+                <th>حاضر (P)</th>
+                <th>غیر حاضر (A)</th>
+                <th>رخصت (L)</th>
+                <th>لیٹ (LT)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.date}</td>
+                  <td>{r.classNames.size > 0 ? Array.from(r.classNames).join(', ') : 'عام'}</td>
+                  <td>{r.total}</td>
+                  <td style={{ color: "#2e7d32", fontWeight: "bold" }}>{r.present}</td>
+                  <td style={{ color: "#c62828", fontWeight: "bold" }}>{r.absent}</td>
+                  <td style={{ color: "#0284c7", fontWeight: "bold" }}>{r.leave}</td>
+                  <td style={{ color: "#b45309", fontWeight: "bold" }}>{r.late}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    } else {
+      const detailedRows = [];
+      Object.keys(staffAttendance).forEach(date => {
+        const dateEntries = staffAttendance[date] || {};
+        Object.keys(dateEntries).forEach(teacherKey => {
+          const rec = dateEntries[teacherKey] || {};
+          detailedRows.push({
+            date,
+            teacherId: rec.teacherId || teacherKey,
+            teacherName: rec.teacherName || teacherKey,
+            status: rec.status || 'present',
+            checkIn: rec.checkIn || '-',
+            checkOut: rec.checkOut || '-',
+            lateMinutes: Number(rec.lateMinutes || 0),
+            earlyLeaveMinutes: Number(rec.earlyLeaveMinutes || 0)
           });
+        });
+      });
+      detailedRows.sort((a, b) => new Date(b.date) - new Date(a.date) || a.teacherName.localeCompare(b.teacherName, 'ur'));
 
-          rows.sort((a, b) => new Date(b.date) - new Date(a.date));
-          if (rows.length === 0) return <div className="empty-dashboard-state">طلباء کی کوئی محفوظ حاضری موجود نہیں۔</div>;
+      if (detailedRows.length === 0) return <div className="empty-dashboard-state">عملے کی کوئی محفوظ حاضری موجود نہیں۔</div>;
 
-          return (
-              <div className="table-responsive" style={{marginTop:"10px"}}>
-                  <table>
-                      <thead>
-                          <tr>
-                              <th>تاریخ</th>
-                              <th>کلاس</th>
-                              <th>کل طلباء</th>
-                              <th>حاضر</th>
-                              <th>غیر حاضر</th>
-                              <th>رخصت</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          {rows.map((r, i) => (
-                              <tr key={i}>
-                                  <td>{r.date}</td>
-                                  <td>{r.className}</td>
-                                  <td>{r.total}</td>
-                                  <td style={{color:"#2e7d32", fontWeight:"bold"}}>{r.present}</td>
-                                  <td style={{color:"#c62828", fontWeight:"bold"}}>{r.absent}</td>
-                                  <td style={{color:"#ef6c00", fontWeight:"bold"}}>{r.leave}</td>
-                              </tr>
-                          ))}
-                      </tbody>
-                  </table>
-              </div>
-          );
-      } else {
-          const detailedRows = [];
-          Object.keys(staffAttendance).forEach(date => {
-              const dateEntries = staffAttendance[date] || {};
-              Object.keys(dateEntries).forEach(teacherKey => {
-                  const rec = dateEntries[teacherKey] || {};
-                  detailedRows.push({
-                      date,
-                      teacherId: rec.teacherId || teacherKey,
-                      teacherName: rec.teacherName || teacherKey,
-                      status: rec.status || 'present',
-                      checkIn: rec.checkIn || '-',
-                      checkOut: rec.checkOut || '-',
-                      lateMinutes: Number(rec.lateMinutes || 0),
-                      earlyLeaveMinutes: Number(rec.earlyLeaveMinutes || 0)
-                  });
-              });
-          });
-          detailedRows.sort((a, b) => new Date(b.date) - new Date(a.date) || a.teacherName.localeCompare(b.teacherName, 'ur'));
+      const monthlyMap = {};
+      detailedRows.forEach(r => {
+        const month = r.date.slice(0, 7);
+        const key = `${month}|${r.teacherId}`;
+        if (!monthlyMap[key]) {
+          monthlyMap[key] = { month, teacherId: r.teacherId, teacherName: r.teacherName, present: 0, absent: 0, leave: 0, totalLateMinutes: 0, totalEarlyLeaveMinutes: 0 };
+        }
+        if (r.status === 'present') monthlyMap[key].present++;
+        else if (r.status === 'absent') monthlyMap[key].absent++;
+        else if (r.status === 'leave') monthlyMap[key].leave++;
+        monthlyMap[key].totalLateMinutes += r.lateMinutes;
+        monthlyMap[key].totalEarlyLeaveMinutes += r.earlyLeaveMinutes;
+      });
+      const monthlyRows = Object.values(monthlyMap).sort((a, b) => b.month.localeCompare(a.month) || Number(a.teacherId) - Number(b.teacherId));
 
-          if (detailedRows.length === 0) return <div className="empty-dashboard-state">عملے کی کوئی محفوظ حاضری موجود نہیں۔</div>;
-
-          const monthlyMap = {};
-          detailedRows.forEach(r => {
-              const month = r.date.slice(0, 7);
-              const key = `${month}|${r.teacherId}`;
-              if (!monthlyMap[key]) {
-                  monthlyMap[key] = { month, teacherId: r.teacherId, teacherName: r.teacherName, present: 0, absent: 0, leave: 0, totalLateMinutes: 0, totalEarlyLeaveMinutes: 0 };
-              }
-              if (r.status === 'present') monthlyMap[key].present++;
-              else if (r.status === 'absent') monthlyMap[key].absent++;
-              else if (r.status === 'leave') monthlyMap[key].leave++;
-              monthlyMap[key].totalLateMinutes += r.lateMinutes;
-              monthlyMap[key].totalEarlyLeaveMinutes += r.earlyLeaveMinutes;
-          });
-          const monthlyRows = Object.values(monthlyMap).sort((a, b) => b.month.localeCompare(a.month) || Number(a.teacherId) - Number(b.teacherId));
-
-          return (
-              <>
-                  <div className="table-responsive" style={{marginTop:"10px"}}>
-                      <table>
-                          <thead>
-                              <tr>
-                                  <th>تاریخ</th>
-                                  <th>ٹیچر ID</th>
-                                  <th>نام استاد</th>
-                                  <th>حیثیت</th>
-                                  <th>آمد</th>
-                                  <th>روانگی</th>
-                                  <th>دیر (منٹ)</th>
-                                  <th>جلد روانگی (منٹ)</th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              {detailedRows.map((r, i) => (
-                                  <tr key={i}>
-                                      <td>{r.date}</td>
-                                      <td>{r.teacherId}</td>
-                                      <td>{r.teacherName}</td>
-                                      <td>{r.status}</td>
-                                      <td>{r.checkIn}</td>
-                                      <td>{r.checkOut}</td>
-                                      <td style={{color: r.lateMinutes > 0 ? '#c62828' : '#2e7d32', fontWeight:"bold"}}>{r.lateMinutes}</td>
-                                      <td style={{color: r.earlyLeaveMinutes > 0 ? '#f57c00' : '#2e7d32', fontWeight:"bold"}}>{r.earlyLeaveMinutes}</td>
-                                  </tr>
-                              ))}
-                          </tbody>
-                      </table>
-                  </div>
-                  <h3 style={{margin:"18px 0 10px 0", color:"var(--accent)"}}>ماہانہ تنخواہ کیلکولیشن خلاصہ</h3>
-                  <div className="table-responsive" style={{marginTop:"10px"}}>
-                      <table>
-                          <thead>
-                              <tr>
-                                  <th>ماہ</th>
-                                  <th>ٹیچر ID</th>
-                                  <th>نام استاد</th>
-                                  <th>حاضر دن</th>
-                                  <th>غیر حاضر</th>
-                                  <th>رخصت</th>
-                                  <th>کل دیر (منٹ)</th>
-                                  <th>کل جلد روانگی (منٹ)</th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              {monthlyRows.map((r, i) => (
-                                  <tr key={i}>
-                                      <td>{r.month}</td>
-                                      <td>{r.teacherId}</td>
-                                      <td>{r.teacherName}</td>
-                                      <td>{r.present}</td>
-                                      <td>{r.absent}</td>
-                                      <td>{r.leave}</td>
-                                      <td>{r.totalLateMinutes}</td>
-                                      <td>{r.totalEarlyLeaveMinutes}</td>
-                                  </tr>
-                              ))}
-                          </tbody>
-                      </table>
-                  </div>
-              </>
-          );
-      }
+      return (
+        <>
+          <div className="table-responsive" style={{ marginTop: "10px" }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>تاریخ</th>
+                  <th>ٹیچر ID</th>
+                  <th>نام استاد</th>
+                  <th>حیثیت</th>
+                  <th>آمد</th>
+                  <th>روانگی</th>
+                  <th>دیر (منٹ)</th>
+                  <th>جلد روانگی (منٹ)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detailedRows.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.date}</td>
+                    <td>{r.teacherId}</td>
+                    <td>{r.teacherName}</td>
+                    <td>{r.status}</td>
+                    <td>{r.checkIn}</td>
+                    <td>{r.checkOut}</td>
+                    <td style={{ color: r.lateMinutes > 0 ? '#c62828' : '#2e7d32', fontWeight: "bold" }}>{r.lateMinutes}</td>
+                    <td style={{ color: r.earlyLeaveMinutes > 0 ? '#f57c00' : '#2e7d32', fontWeight: "bold" }}>{r.earlyLeaveMinutes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <h3 style={{ margin: "18px 0 10px 0", color: "var(--accent)" }}>ماہانہ تنخواہ کیلکولیشن خلاصہ</h3>
+          <div className="table-responsive" style={{ marginTop: "10px" }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>ماہ</th>
+                  <th>ٹیچر ID</th>
+                  <th>نام استاد</th>
+                  <th>حاضر دن</th>
+                  <th>غیر حاضر</th>
+                  <th>رخصت</th>
+                  <th>کل دیر (منٹ)</th>
+                  <th>کل جلد روانگی (منٹ)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyRows.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.month}</td>
+                    <td>{r.teacherId}</td>
+                    <td>{r.teacherName}</td>
+                    <td>{r.present}</td>
+                    <td>{r.absent}</td>
+                    <td>{r.leave}</td>
+                    <td>{r.totalLateMinutes}</td>
+                    <td>{r.totalEarlyLeaveMinutes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      );
+    }
   };
 
   return (
@@ -706,7 +1192,7 @@ export default function Attendance() {
           </button>
         </div>
         <div id="attendanceHistoryArea" style={{ marginTop: "14px" }}>
-            {renderHistoryPanel()}
+          {renderHistoryPanel()}
         </div>
       </div>
 
@@ -724,59 +1210,85 @@ export default function Attendance() {
             <select value={studentAttClass} onChange={(e) => setStudentAttClass(e.target.value)}>
               <option value="">کلاس منتخب کریں...</option>
               {classesList.map(c => (
-                  <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>
+                <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>
               ))}
             </select>
           </div>
         </div>
         <div id="studentAttendanceListArea">
-            {!studentAttDate || !studentAttClass ? (
-                <p style={{textAlign:"center", color:"var(--muted)"}}>تاریخ اور کلاس منتخب کریں۔</p>
-            ) : studentsInClass.length === 0 ? (
-                <p style={{textAlign:"center", color:"var(--muted)"}}>اس کلاس میں کوئی طالب علم موجود نہیں۔</p>
-            ) : studentAttFormData && (
-                <div className="table-responsive" style={{marginTop:"20px"}}>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>نام طالب علم</th>
-                                <th>حاضری کی حیثیت</th>
-                                <th>ریمارکس (اگر کوئی ہوں)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {studentsInClass.map(s => {
-                                const formData = studentAttFormData[s.admRegNo] || { status: 'present', remarks: '' };
-                                return (
-                                    <tr key={s.admRegNo}>
-                                        <td>{s.admRegNo}</td>
-                                        <td><strong>{s.name}</strong><br/><span style={{fontSize:"0.8rem", color:"#666"}}>{s.admFatherName}</span></td>
-                                        <td>
-                                            <select style={{width:"auto", minWidth:"150px", padding:"5px"}} value={formData.status} onChange={e => handleStudentAttChange(s.admRegNo, 'status', e.target.value)}>
-                                                <option value="present">حاضر (Present)</option>
-                                                <option value="absent">غیر حاضر (Absent)</option>
-                                                <option value="leave">رخصت (Leave)</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="text" placeholder="ریمارکس..." style={{width:"100%", padding:"5px"}} value={formData.remarks} onChange={e => handleStudentAttChange(s.admRegNo, 'remarks', e.target.value)} />
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+          {!studentAttDate || !studentAttClass ? (
+            <p style={{ textAlign: "center", color: "var(--muted)" }}>تاریخ اور کلاس منتخب کریں۔</p>
+          ) : studentsInClass.length === 0 ? (
+            <p style={{ textAlign: "center", color: "var(--muted)" }}>اس کلاس میں کوئی طالب علم موجود نہیں۔</p>
+          ) : studentAttFormData && (
+            <div className="table-responsive" style={{ marginTop: "20px" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>نام طالب علم</th>
+                    <th>حاضری کی حیثیت</th>
+                    <th>ریمارکس (اگر کوئی ہوں)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studentsInClass.map(s => {
+                    const sKey = s.id || s.admRegNo;
+                    const formData = studentAttFormData[sKey] || { status: 'present', remarks: '' };
+                    return (
+                      <tr key={sKey}>
+                        <td>{s.admRegNo || s.roll_number || s.id}</td>
+                        <td>
+                          <strong>{s.name}</strong><br />
+                          <span style={{ fontSize: "0.8rem", color: "#666" }}>{s.admFatherName || s.father_name}</span>
+                        </td>
+                        <td>
+                          <select
+                            style={{ width: "auto", minWidth: "160px", padding: "6px" }}
+                            value={formData.status}
+                            onChange={e => handleStudentAttChange(sKey, 'status', e.target.value)}
+                          >
+                            <option value="present">حاضر (Present / P)</option>
+                            <option value="absent">غیر حاضر (Absent / A)</option>
+                            <option value="leave">رخصت (Leave / L)</option>
+                            <option value="late">لیٹ (Late / LT)</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            placeholder="ریمارکس..."
+                            style={{ width: "100%", padding: "5px" }}
+                            value={formData.remarks}
+                            onChange={e => handleStudentAttChange(sKey, 'remarks', e.target.value)}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
         
         {studentAttFormData && studentsInClass.length > 0 && (
-            <div className="btn-container" style={{ marginTop: "20px" }}>
-            <button onClick={saveStudentAttendance} style={{ background: "linear-gradient(135deg,#1b5e20,#2e7d32)", fontSize: "1.1rem", padding: "13px 44px", borderRadius: "10px", boxShadow: "0 4px 14px rgba(27,94,32,0.28)" }}>
-                حاضری محفوظ کریں
+          <div className="btn-container" style={{ marginTop: "20px" }}>
+            <button
+              onClick={saveStudentAttendance}
+              disabled={isSavingBulk}
+              style={{
+                background: "linear-gradient(135deg,#1b5e20,#2e7d32)",
+                fontSize: "1.1rem",
+                padding: "13px 44px",
+                borderRadius: "10px",
+                boxShadow: "0 4px 14px rgba(27,94,32,0.28)",
+                opacity: isSavingBulk ? 0.7 : 1
+              }}
+            >
+              {isSavingBulk ? 'محفوظ ہو رہا ہے...' : 'حاضری محفوظ کریں'}
             </button>
-            </div>
+          </div>
         )}
       </div>
       )}
@@ -789,7 +1301,7 @@ export default function Attendance() {
             <div className="form-section-icon icon-amber"></div>
             <div>
               <div className="form-section-title">اندراج انفرادی طالب علم</div>
-              <div className="form-section-subtitle">غیر حاضر طالب علم کی حاضری بعد میں لگائیں یا درست کریں</div>
+              <div className="form-section-subtitle">کسی طالب علم کی حاضری بعد میں لگائیں یا درست کریں</div>
             </div>
           </div>
           <div className="grid-row" style={{ marginBottom: "14px" }}>
@@ -803,11 +1315,11 @@ export default function Attendance() {
             </div>
           </div>
           {indAttStudent && (
-          <div id="indAttStudentInfo" className="fee-student-badge" style={{ display: 'flex' }}>
+          <div id="indAttStudentInfo" className="fee-student-badge" style={{ display: 'flex', marginBottom: '14px' }}>
             <div className="fee-student-avatar"></div>
             <div>
               <div className="fee-student-name">{indAttStudent.name || '—'}</div>
-              <div className="fee-student-father">والد: <span>{indAttStudent.admFatherName || '—'}</span></div>
+              <div className="fee-student-father">والد: <span>{indAttStudent.admFatherName || indAttStudent.father_name || '—'}</span></div>
             </div>
           </div>
           )}
@@ -815,20 +1327,37 @@ export default function Attendance() {
             <div>
               <label>حاضری کی کیفیت</label>
               <select value={indAttStatus} onChange={e => setIndAttStatus(e.target.value)}>
-                <option value="P">حاضر (P)</option>
-                <option value="A">غیر حاضر (A)</option>
-                <option value="L">لیٹ (L)</option>
-                <option value="E">معذور (E)</option>
+                <option value="present">حاضر (Present / P)</option>
+                <option value="absent">غیر حاضر (Absent / A)</option>
+                <option value="leave">رخصت (Leave / L)</option>
+                <option value="late">لیٹ (Late / LT)</option>
               </select>
             </div>
+            <div>
+              <label>ریمارکس</label>
+              <input
+                type="text"
+                value={indAttRemarks}
+                onChange={e => setIndAttRemarks(e.target.value)}
+                placeholder="ریمارکس (اگر کوئی ہوں)..."
+              />
+            </div>
+          </div>
+          <div className="grid-row" style={{ marginTop: "14px" }}>
             <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
               <button onClick={searchIndividualStudent} style={{ background: "var(--accent)", flex: 1 }}>تلاش کریں</button>
               {indAttStudent && (
-                  <button onClick={saveIndividualAttendance} style={{ background: "var(--accent-2)", flex: 1 }}>محفوظ کریں</button>
+                <button
+                  onClick={saveIndividualAttendance}
+                  disabled={isSavingInd}
+                  style={{ background: "var(--accent-2)", flex: 1, opacity: isSavingInd ? 0.7 : 1 }}
+                >
+                  {isSavingInd ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
+                </button>
               )}
             </div>
           </div>
-          {indAttMsg && <div id="indAttMsg" style={{ marginTop: "10px", fontSize: "0.9rem", whiteSpace: "pre-line" }}>{indAttMsg}</div>}
+          {indAttMsg && <div id="indAttMsg" style={{ marginTop: "14px", fontSize: "0.95rem", whiteSpace: "pre-line", color: "var(--accent)", fontWeight: 700 }}>{indAttMsg}</div>}
         </div>
       </div>
       )}
@@ -859,8 +1388,12 @@ export default function Attendance() {
             </div>
           </div>
           <div className="btn-container" style={{ marginTop: "12px" }}>
-            <button onClick={() => setSrResult(renderStudentAttReport())} style={{ background: "var(--accent)" }}>رپورٹ دیکھیں</button>
-            <button onClick={() => { setSrResult(renderStudentAttReport()); setTimeout(() => window.print(), 100); }} style={{ background: "var(--accent-2)" }}>پرنٹ</button>
+            <button onClick={handleGenerateStudentAttReport} disabled={loadingSr} style={{ background: "var(--accent)" }}>
+              {loadingSr ? 'رپورٹ لوڈ ہو رہی ہے...' : 'رپورٹ دیکھیں'}
+            </button>
+            <button onClick={() => { handleGenerateStudentAttReport(); setTimeout(() => window.print(), 200); }} style={{ background: "var(--accent-2)" }}>
+              پرنٹ
+            </button>
           </div>
         </div>
         {srResult}
@@ -884,7 +1417,7 @@ export default function Attendance() {
               <select value={crClass} onChange={e => setCrClass(e.target.value)}>
                 <option value="">کلاس منتخب کریں...</option>
                 {classesList.map(c => (
-                    <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>
+                  <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>
                 ))}
               </select>
             </div>
@@ -894,8 +1427,12 @@ export default function Attendance() {
             </div>
           </div>
           <div className="btn-container" style={{ marginTop: "12px" }}>
-            <button onClick={() => setCrResult(renderClassAttReport())} style={{ background: "var(--accent)" }}>رپورٹ دیکھیں</button>
-            <button onClick={() => { setCrResult(renderClassAttReport()); setTimeout(() => window.print(), 100); }} style={{ background: "var(--accent-2)" }}>پرنٹ</button>
+            <button onClick={handleGenerateClassAttReport} disabled={loadingCr} style={{ background: "var(--accent)" }}>
+              {loadingCr ? 'رپورٹ لوڈ ہو رہی ہے...' : 'رپورٹ دیکھیں'}
+            </button>
+            <button onClick={() => { handleGenerateClassAttReport(); setTimeout(() => window.print(), 200); }} style={{ background: "var(--accent-2)" }}>
+              پرنٹ
+            </button>
           </div>
         </div>
         {crResult}
@@ -918,9 +1455,14 @@ export default function Attendance() {
               <label>مہینہ منتخب کریں</label>
               <input type="month" value={sumMonth} onChange={e => setSumMonth(e.target.value)} />
             </div>
+            <div style={{ display: "flex", alignItems: "flex-end" }}>
+              <button onClick={handleGenerateAttSummary} disabled={loadingSum} style={{ background: "var(--accent)", width: "100%" }}>
+                {loadingSum ? 'رپورٹ تیار ہو رہی ہے...' : 'خلاصہ رپورٹ دیکھیں'}
+              </button>
+            </div>
           </div>
         </div>
-        {renderAttSummary()}
+        {sumResult}
       </div>
       )}
 
@@ -948,75 +1490,75 @@ export default function Attendance() {
 
         {/* لاک انفو وارننگ بینر */}
         {staffFlowMsg && (
-            <div id="staffAttendanceLockInfo" className="att-lock-banner" style={{ display: 'block' }}>{staffFlowMsg}</div>
+          <div id="staffAttendanceLockInfo" className="att-lock-banner" style={{ display: 'block' }}>{staffFlowMsg}</div>
         )}
 
         <div id="staffAttendanceListArea">
-            {!staffAttDate ? (
-                <p style={{textAlign:"center", color:"var(--muted)"}}>پہلے تاریخ منتخب کریں۔</p>
-            ) : staffMembers.length === 0 ? (
-                <p style={{textAlign:"center", color:"var(--muted)"}}>سسٹم میں کوئی استاد موجود نہیں ہے۔ کلاسز والے حصے میں جا کر کلاس اور استاد شامل کریں۔</p>
-            ) : (
-                <div className="table-responsive" style={{marginTop:"20px"}}>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ٹیچر ID</th>
-                                <th>نام استاد</th>
-                                <th>معیاری وقت</th>
-                                <th>حیثیت</th>
-                                <th>آمد کا وقت (Check-in)</th>
-                                <th>روانگی کا وقت (Check-out)</th>
-                                <th>ریمارکس</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {staffMembers.map(staff => {
-                                const formData = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '' };
-                                const disable = formData.status !== 'present';
-                                return (
-                                    <tr key={staff.teacherId}>
-                                        <td><strong>{staff.teacherId}</strong></td>
-                                        <td><strong>{staff.name}</strong></td>
-                                        <td><span style={{fontSize:"0.85rem", color:"#555"}}>{staff.shiftStart} تا {staff.shiftEnd}</span></td>
-                                        <td>
-                                            <select style={{width:"auto", minWidth:"120px", padding:"5px"}} value={formData.status} onChange={e => handleStaffAttChange(staff.teacherId, 'status', e.target.value)}>
-                                                <option value="present">حاضر (Present)</option>
-                                                <option value="absent">غیر حاضر (Absent)</option>
-                                                <option value="leave">رخصت (Leave)</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="time" value={formData.checkIn} onChange={e => handleStaffAttChange(staff.teacherId, 'checkIn', e.target.value)} disabled={disable || staffSession === 'checkout'} />
-                                        </td>
-                                        <td>
-                                            <input type="time" value={formData.checkOut} onChange={e => handleStaffAttChange(staff.teacherId, 'checkOut', e.target.value)} disabled={disable || staffSession === 'checkin'} />
-                                        </td>
-                                        <td>
-                                            <input type="text" placeholder="ریمارکس..." style={{width:"100%", padding:"5px"}} value={formData.remarks} onChange={e => handleStaffAttChange(staff.teacherId, 'remarks', e.target.value)} />
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+          {!staffAttDate ? (
+            <p style={{ textAlign: "center", color: "var(--muted)" }}>پہلے تاریخ منتخب کریں۔</p>
+          ) : staffMembers.length === 0 ? (
+            <p style={{ textAlign: "center", color: "var(--muted)" }}>سسٹم میں کوئی استاد موجود نہیں ہے۔ کلاسز والے حصے میں جا کر کلاس اور استاد شامل کریں۔</p>
+          ) : (
+            <div className="table-responsive" style={{ marginTop: "20px" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ٹیچر ID</th>
+                    <th>نام استاد</th>
+                    <th>معیاری وقت</th>
+                    <th>حیثیت</th>
+                    <th>آمد کا وقت (Check-in)</th>
+                    <th>روانگی کا وقت (Check-out)</th>
+                    <th>ریمارکس</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffMembers.map(staff => {
+                    const formData = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '' };
+                    const disable = formData.status !== 'present';
+                    return (
+                      <tr key={staff.teacherId}>
+                        <td><strong>{staff.teacherId}</strong></td>
+                        <td><strong>{staff.name}</strong></td>
+                        <td><span style={{ fontSize: "0.85rem", color: "#555" }}>{staff.shiftStart} تا {staff.shiftEnd}</span></td>
+                        <td>
+                          <select style={{ width: "auto", minWidth: "120px", padding: "5px" }} value={formData.status} onChange={e => handleStaffAttChange(staff.teacherId, 'status', e.target.value)}>
+                            <option value="present">حاضر (Present)</option>
+                            <option value="absent">غیر حاضر (Absent)</option>
+                            <option value="leave">رخصت (Leave)</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input type="time" value={formData.checkIn} onChange={e => handleStaffAttChange(staff.teacherId, 'checkIn', e.target.value)} disabled={disable || staffSession === 'checkout'} />
+                        </td>
+                        <td>
+                          <input type="time" value={formData.checkOut} onChange={e => handleStaffAttChange(staff.teacherId, 'checkOut', e.target.value)} disabled={disable || staffSession === 'checkin'} />
+                        </td>
+                        <td>
+                          <input type="text" placeholder="ریمارکس..." style={{ width: "100%", padding: "5px" }} value={formData.remarks} onChange={e => handleStaffAttChange(staff.teacherId, 'remarks', e.target.value)} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {staffAttDate && staffMembers.length > 0 && (
-            <div className="btn-container" style={{ marginTop: "20px", gap: "14px", justifyContent: "center" }}>
-                {staffSession === 'checkin' && (
-                    <button onClick={saveStaffAttendanceCheckIn} className="checkin-save-btn" style={{display:"inline-block"}}>
-                        چیک اِن محفوظ کریں
-                    </button>
-                )}
-                {staffSession === 'checkout' && (
-                    <button onClick={saveStaffAttendanceCheckOut} className="checkout-save-btn" style={{display:"inline-block"}}>
-                        چیک آؤٹ محفوظ کریں
-                    </button>
-                )}
-            </div>
+          <div className="btn-container" style={{ marginTop: "20px", gap: "14px", justifyContent: "center" }}>
+            {staffSession === 'checkin' && (
+              <button onClick={saveStaffAttendanceCheckIn} className="checkin-save-btn" style={{ display: "inline-block" }}>
+                چیک اِن محفوظ کریں
+              </button>
+            )}
+            {staffSession === 'checkout' && (
+              <button onClick={saveStaffAttendanceCheckOut} className="checkout-save-btn" style={{ display: "inline-block" }}>
+                چیک آؤٹ محفوظ کریں
+              </button>
+            )}
+          </div>
         )}
       </div>
       )}

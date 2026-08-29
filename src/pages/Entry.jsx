@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { getCurrentAcademicYearStart, formatAcademicYear, getAcademicYearOptions } from '../utils/academicYear';
@@ -16,31 +17,109 @@ const ME_COLS = [
 ];
 const ME_MAX_TOTAL = ME_COLS.filter(c => c.max).reduce((s, c) => s + c.max, 0);
 
-const yearTargets = {
-  1: [30, 29, 28, 27, 26, 1, 2, 3],
-  2: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-  3: [14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
-  4: [24, 25]
+export const PAGES_PER_PAO = 5;
+export const PAGES_PER_JUZ = 20;
+
+// Correct yearTargets matching original edit.html
+export const yearTargets = {
+  1: [30, 29, 28],
+  2: [27, 26, 25, 24, 23, 22],
+  3: [21, 20, 19, 18, 17, 16, 15, 14, 13],
+  4: [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 };
-const PAGES_PER_JUZ = 20;
+
+export const scoreThresholds = [
+  { pct: 100, score: 100 },
+  { pct: 75, score: 75 },
+  { pct: 50, score: 50 },
+  { pct: 25, score: 25 }
+];
+
+/* ========== HOLIDAY & WORKING DAYS LOGIC (2025-2026) ========== */
+const getDateRange = (start, end) => {
+  let arr = [];
+  let dt = new Date(start + 'T00:00:00');
+  let endDt = new Date(end + 'T00:00:00');
+
+  while (dt <= endDt) {
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    arr.push(`${y}-${m}-${d}`);
+    dt.setDate(dt.getDate() + 1);
+  }
+  return arr;
+};
+
+const specialHolidays = [
+  ...getDateRange("2025-04-01", "2025-04-05"),
+  ...getDateRange("2025-06-06", "2025-07-01"),
+  "2025-07-05", "2025-07-06",
+  "2025-08-14",
+  "2025-09-06",
+  "2026-02-05",
+  ...getDateRange("2026-03-17", "2026-03-25")
+];
+
+export const calculateWorkingDays = (year, monthIndex) => {
+  let date = new Date(year, monthIndex, 1);
+
+  let days = 0;
+  while (date.getMonth() === monthIndex) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const dateString = `${y}-${m}-${d}`;
+    const dayOfWeek = date.getDay(); // 0 = Sunday
+
+    if (dayOfWeek !== 0 && !specialHolidays.includes(dateString)) {
+      days++;
+    }
+    date.setDate(date.getDate() + 1);
+  }
+  return days;
+};
 
 export default function Entry() {
-  const { activeMadrasaId, loadMadrasaData, saveMadrasaData } = useMadrasa();
+  const {
+    activeMadrasaId,
+    loadMadrasaData,
+    saveMadrasaData,
+    fetchStudentsFromSupabase,
+    saveHifzHalfYearRecordToSupabase,
+    updateStudentHifzStartDate
+  } = useMadrasa();
+
   const [activeTab, setActiveTab] = useState('monthly');
   
   const [records, setRecords] = useState([]);
+  const [studentsList, setStudentsList] = useState([]);
   const [classesList, setClassesList] = useState([]);
   const [monthlyExams, setMonthlyExams] = useState([]);
 
   useEffect(() => {
-    const storedData = loadMadrasaData('hf_records_v1') || {};
-    setRecords(storedData.records || []);
-    if (storedData.classes && storedData.classes.length > 0) {
+    let isMounted = true;
+    const loadData = async () => {
+      const storedData = loadMadrasaData('hf_records_v1') || {};
+      setRecords(storedData.records || []);
+      if (storedData.classes && storedData.classes.length > 0) {
         setClassesList(storedData.classes);
-    } else {
+      } else {
         setClassesList(DEFAULT_CLASSES);
-    }
-    setMonthlyExams(storedData.monthlyExams || []);
+      }
+      setMonthlyExams(storedData.monthlyExams || []);
+
+      try {
+        const stds = await fetchStudentsFromSupabase(activeMadrasaId);
+        if (isMounted && stds && stds.length > 0) {
+          setStudentsList(stds);
+        }
+      } catch (err) {
+        console.warn('Could not fetch students in Entry:', err);
+      }
+    };
+    loadData();
+    return () => { isMounted = false; };
   }, [activeMadrasaId]);
 
   const saveToLocal = (newMonthlyExams) => {
@@ -59,11 +138,11 @@ export default function Entry() {
   };
 
   const switchTab = (tab) => {
-      setActiveTab(tab);
-      setMeStudents(null);
-      setCrResultsData(null);
-      setSrResultsData(null);
-      setIrResultsData(null);
+    setActiveTab(tab);
+    setMeStudents(null);
+    setCrResultsData(null);
+    setSrResultsData(null);
+    setIrResultsData(null);
   };
 
   const defaultYear = String(getCurrentAcademicYearStart());
@@ -113,10 +192,10 @@ export default function Entry() {
     list[index][key] = value;
     
     if (!isSub) {
-        list[index].total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Math.min(Number(list[index][c.key] || 0), c.max), 0);
-        const pct = ME_MAX_TOTAL > 0 ? (list[index].total / ME_MAX_TOTAL) * 100 : 0;
-        list[index].pct = +pct.toFixed(1);
-        list[index].gradeObj = meGrade(pct);
+      list[index].total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Math.min(Number(list[index][c.key] || 0), c.max), 0);
+      const pct = ME_MAX_TOTAL > 0 ? (list[index].total / ME_MAX_TOTAL) * 100 : 0;
+      list[index].pct = +pct.toFixed(1);
+      list[index].gradeObj = meGrade(pct);
     }
     setMeStudents({ ...meStudents, data: list });
   };
@@ -163,18 +242,242 @@ export default function Entry() {
   // --- 2. Hifz Logic (ششماہی و سالانہ) ---
   const [selectYear, setSelectYear] = useState('1');
   const [selectHalfYear, setSelectHalfYear] = useState('1');
+  const [hifzStudentId, setHifzStudentId] = useState('');
+  const [hifzStudentName, setHifzStudentName] = useState('');
+  const [hifzStartDate, setHifzStartDate] = useState('');
+  const [hifzSaving, setHifzSaving] = useState(false);
 
+  // Month configs for Half Year 1 and 2
+  const monthsConfig = selectHalfYear === '1' ? [
+    { name: 'اپریل', mIdx: 3, y: 2025 },
+    { name: 'مئی', mIdx: 4, y: 2025 },
+    { name: 'جون', mIdx: 5, y: 2025 },
+    { name: 'جولائی', mIdx: 6, y: 2025 },
+    { name: 'اگست', mIdx: 7, y: 2025 },
+    { name: 'ستمبر', mIdx: 8, y: 2025 }
+  ] : [
+    { name: 'اکتوبر', mIdx: 9, y: 2025 },
+    { name: 'نومبر', mIdx: 10, y: 2025 },
+    { name: 'دسمبر', mIdx: 11, y: 2025 },
+    { name: 'جنوری', mIdx: 0, y: 2026 },
+    { name: 'فروری', mIdx: 1, y: 2026 },
+    { name: 'مارچ', mIdx: 2, y: 2026 }
+  ];
+
+  // Attendance rows state
+  const [attendanceRows, setAttendanceRows] = useState(() => {
+    return [
+      { name: 'اپریل', y: 2025, working: calculateWorkingDays(2025, 3), absent: 0, leave: 0 },
+      { name: 'مئی', y: 2025, working: calculateWorkingDays(2025, 4), absent: 0, leave: 0 },
+      { name: 'جون', y: 2025, working: calculateWorkingDays(2025, 5), absent: 0, leave: 0 },
+      { name: 'جولائی', y: 2025, working: calculateWorkingDays(2025, 6), absent: 0, leave: 0 },
+      { name: 'اگست', y: 2025, working: calculateWorkingDays(2025, 7), absent: 0, leave: 0 },
+      { name: 'ستمبر', y: 2025, working: calculateWorkingDays(2025, 8), absent: 0, leave: 0 }
+    ];
+  });
+
+  // Pages input state: { [monthName]: pagesRead }
+  const [monthlyPages, setMonthlyPages] = useState({});
+
+  // Reset or update attendance rows whenever half-year changes
+  useEffect(() => {
+    setAttendanceRows(monthsConfig.map(m => ({
+      name: m.name,
+      y: m.y,
+      working: calculateWorkingDays(m.y, m.mIdx),
+      absent: 0,
+      leave: 0
+    })));
+    setMonthlyPages({});
+  }, [selectHalfYear]);
+
+  // Expected completion calculation (+3 years)
+  const calculateExpectedEnd = (start) => {
+    if (!start) return '';
+    try {
+      const d = new Date(start);
+      if (isNaN(d.getTime())) return '';
+      d.setFullYear(d.getFullYear() + 3);
+      return d.toISOString().split('T')[0];
+    } catch (e) {
+      return '';
+    }
+  };
+
+  const expectedEnd = calculateExpectedEnd(hifzStartDate);
+
+  // Student selection helper
+  const handleStudentSelect = (selectedId) => {
+    setHifzStudentId(selectedId);
+    if (!selectedId) return;
+
+    const std = studentsList.find(s => s.id === selectedId || s.roll_number === selectedId) ||
+                records.find(r => r.id === selectedId || r.admRegNo === selectedId || r.name === selectedId);
+
+    if (std) {
+      setHifzStudentName(std.name || std.admName || '');
+      const sDate = std.hifz_start_date || std.admission_date || std.admDate || '';
+      if (sDate) {
+        setHifzStartDate(sDate.split('T')[0]);
+      }
+    }
+  };
+
+  const handleAttendanceChange = (index, field, value) => {
+    const next = [...attendanceRows];
+    next[index] = {
+      ...next[index],
+      [field]: Math.max(0, Number(value) || 0)
+    };
+    setAttendanceRows(next);
+  };
+
+  const handlePagesChange = (monthName, value) => {
+    setMonthlyPages(prev => ({
+      ...prev,
+      [monthName]: Math.max(0, Number(value) || 0)
+    }));
+  };
+
+  // Calculations for Attendance and Academic targets
   const yearVal = Number(selectYear);
-  const totalJuz = yearTargets[yearVal].length;
+  const totalJuz = (yearTargets[yearVal] || []).length;
   const totalPagesOfYear = totalJuz * PAGES_PER_JUZ;
-  const halfYearTarget = totalPagesOfYear / 2;
+  const standardTargetHalf = totalPagesOfYear / 2;
 
-  let monthsConfig = [];
-  if (selectHalfYear === '1') {
-      monthsConfig = [{ name: 'اپریل', y: 2025 }, { name: 'مئی', y: 2025 }, { name: 'جون', y: 2025 }, { name: 'جولائی', y: 2025 }, { name: 'اگست', y: 2025 }, { name: 'ستمبر', y: 2025 }];
-  } else {
-      monthsConfig = [{ name: 'اکتوبر', y: 2025 }, { name: 'نومبر', y: 2025 }, { name: 'دسمبر', y: 2025 }, { name: 'جنوری', y: 2026 }, { name: 'فروری', y: 2026 }, { name: 'مارچ', y: 2026 }];
+  // Attendance summary totals
+  let totalWorking = 0;
+  let totalAbsent = 0;
+  let totalLeave = 0;
+  let totalPresent = 0;
+  const attendanceMonthlyDetails = {};
+
+  attendanceRows.forEach(row => {
+    const w = Number(row.working) || 0;
+    const a = Number(row.absent) || 0;
+    const l = Number(row.leave) || 0;
+    const p = Math.max(0, w - (a + l));
+    totalWorking += w;
+    totalAbsent += a;
+    totalLeave += l;
+    totalPresent += p;
+    attendanceMonthlyDetails[row.name] = { working: w, absent: a, leave: l, present: p };
+  });
+
+  const totalAbsentLeave = totalAbsent + totalLeave;
+  const attPct = totalWorking ? +((totalPresent / totalWorking) * 100).toFixed(2) : 0;
+
+  // Proportional target calculation (from edit.html)
+  let targetHalf = standardTargetHalf;
+  if (totalWorking > 0) {
+    targetHalf = +(standardTargetHalf * (totalPresent / totalWorking)).toFixed(1);
   }
+
+  // Academic pages totals
+  let totalPages = 0;
+  const academicMonthlyDetails = {};
+  monthsConfig.forEach(m => {
+    const val = Number(monthlyPages[m.name] || 0);
+    totalPages += val;
+    academicMonthlyDetails[m.name] = val;
+  });
+
+  const eduPct = targetHalf > 0 ? +((totalPages / targetHalf) * 100).toFixed(2) : 0;
+  const pao = +(totalPages / PAGES_PER_PAO).toFixed(2);
+  const juz = +(totalPages / PAGES_PER_JUZ).toFixed(2);
+
+  let score = 0;
+  for (const t of scoreThresholds) {
+    if (eduPct >= t.pct) {
+      score = t.score;
+      break;
+    }
+  }
+
+  // Save Hifz Record
+  const handleSaveHifzRecord = async () => {
+    const name = hifzStudentName.trim();
+    const start = hifzStartDate;
+
+    if (!name || !start) {
+      alert('براہِ کرم بچے کا نام اور آغازِ تاریخ درج کریں۔');
+      return;
+    }
+
+    if (totalPages === 0 && totalPresent === 0) {
+      alert('براہِ کرم کوئی تعلیمی یا حاضری کا ریکارڈ درج کریں۔');
+      return;
+    }
+
+    // Resolve student ID
+    const matchedStudent = studentsList.find(s => s.id === hifzStudentId || s.name === name || s.roll_number === hifzStudentId) ||
+                           records.find(r => r.id === hifzStudentId || r.name === name);
+    const resolvedStudentId = matchedStudent?.id || (hifzStudentId || null);
+
+    // Duplicate check matching original edit.html confirmation behavior
+    const existingRecord = records.find(r =>
+      !r.isAdmissionProfile &&
+      Number(r.year || r.hifz_year) === yearVal &&
+      Number(r.halfYear || r.half_year) === Number(selectHalfYear) &&
+      ((resolvedStudentId && (r.student_id === resolvedStudentId || r.id === resolvedStudentId || r.studentUuid === resolvedStudentId)) ||
+       (name && r.name === name))
+    );
+
+    if (existingRecord) {
+      const confirmOverwrite = window.confirm(`سال ${yearVal} ششماہی ${selectHalfYear} کا ریکارڈ موجود ہے۔ کیا آپ تبدیل کرنا چاہتے ہیں؟`);
+      if (!confirmOverwrite) return;
+    }
+
+    const payload = {
+      student_id: resolvedStudentId,
+      student_name: name,
+      hifz_year: yearVal,
+      half_year: Number(selectHalfYear),
+      total_pages: totalPages,
+      pao: pao,
+      juz: juz,
+      pct: eduPct,
+      score: score,
+      total_working: totalWorking,
+      total_present: totalPresent,
+      total_absent: totalAbsent,
+      total_leave: totalLeave,
+      attendance_pct: attPct,
+      monthly_academic_details: academicMonthlyDetails,
+      monthly_attendance_details: attendanceMonthlyDetails
+    };
+
+    try {
+      setHifzSaving(true);
+      await saveHifzHalfYearRecordToSupabase(payload, activeMadrasaId);
+
+      if (resolvedStudentId && start) {
+        await updateStudentHifzStartDate(resolvedStudentId, start, activeMadrasaId);
+      }
+
+      alert(`سال ${yearVal} ششماہی ${selectHalfYear} کا ریکارڈ کامیابی سے محفوظ ہو گیا!\nطالب علم: ${name}\nکل صفحات: ${totalPages} (${eduPct}%)\nحاضری: ${attPct}%`);
+
+      // Reset form
+      setMonthlyPages({});
+      setAttendanceRows(monthsConfig.map(m => ({
+        name: m.name,
+        y: m.y,
+        working: calculateWorkingDays(m.y, m.mIdx),
+        absent: 0,
+        leave: 0
+      })));
+    } catch (err) {
+      console.error('Error saving Hifz record:', err);
+      alert('ریکارڈ محفوظ کرنے میں خرابی پیش آئی: ' + (err.message || err));
+    } finally {
+      setHifzSaving(false);
+    }
+  };
+
+  // Enrolled students for dropdown autocomplete
+  const enrolledStudents = studentsList.length > 0
+    ? studentsList
+    : records.filter(r => r.isAdmissionProfile && !r.isWithdrawn);
 
   // --- 3. Class Report ---
   const [crClassSelect, setCrClassSelect] = useState('');
@@ -199,7 +502,8 @@ export default function Entry() {
   const renderStudentReport = () => {
     const id = srStudentId.trim();
     if (!id) { alert('رجسٹریشن نمبر درج کریں'); return; }
-    const student = records.find(r => r.isAdmissionProfile && r.admRegNo === id);
+    const student = records.find(r => r.isAdmissionProfile && r.admRegNo === id) ||
+                    studentsList.find(s => s.roll_number === id || s.id === id);
     if (!student) { setSrResultsData('notfound'); return; }
     
     const exams = monthlyExams.filter(exam => exam.students && exam.students.some(s => s.regNo === id))
@@ -285,11 +589,11 @@ export default function Entry() {
                   <table className="me-table">
                     <thead>
                       <tr>
-                        <th rowspan="2" style={{ minWidth: "48px" }}>نمبر</th>
-                        <th rowspan="2" style={{ minWidth: "160px", textAlign: "right", paddingRight: "12px" }}>طالب علم</th>
-                        {ME_COLS.filter(c => !c.sub).map(c => <th rowspan="2" key={c.key}>{c.label}<br/><span className="me-max-label">/ {c.max}</span></th>)}
-                        <th colspan="2" className="me-literacy-group">خواندگی</th>
-                        <th rowspan="2" style={{ minWidth: "80px" }}>کل<br/><span className="me-max-label">/ {ME_MAX_TOTAL}</span></th>
+                        <th rowSpan="2" style={{ minWidth: "48px" }}>نمبر</th>
+                        <th rowSpan="2" style={{ minWidth: "160px", textAlign: "right", paddingRight: "12px" }}>طالب علم</th>
+                        {ME_COLS.filter(c => !c.sub).map(c => <th rowSpan="2" key={c.key}>{c.label}<br/><span className="me-max-label">/ {c.max}</span></th>)}
+                        <th colSpan="2" className="me-literacy-group">خواندگی</th>
+                        <th rowSpan="2" style={{ minWidth: "80px" }}>کل<br/><span className="me-max-label">/ {ME_MAX_TOTAL}</span></th>
                       </tr>
                       <tr className="me-subhead">
                         {ME_COLS.filter(c => c.sub).map(c => <th className="me-literacy-sub" key={c.key}>{c.label}</th>)}
@@ -297,7 +601,7 @@ export default function Entry() {
                     </thead>
                     <tbody>
                       {meStudents.data.map((item, idx) => (
-                        <tr key={item.student.admRegNo}>
+                        <tr key={item.student.admRegNo || idx}>
                           <td><span className="me-reg">{item.student.admRegNo || '-'}</span></td>
                           <td className="me-td-info"><span className="me-name">{item.student.name || '-'}</span></td>
                           {ME_COLS.map(c => (
@@ -405,24 +709,76 @@ export default function Entry() {
       {activeTab === 'hifz' && (
         <div id="entrySection-hifz" className="no-print">
             <div className="grid-row" style={{ marginTop: "20px" }}>
-              <div><label>بچے کا نام</label><input type="text" id="studentName" /></div>
-              <div><label>آغازِ حفظ کی تاریخ</label><input type="date" id="startDate" /></div>
-              <div><label>متوقع تکمیل</label><input type="text" id="expectedEnd" readOnly /></div>
+              <div>
+                <label>طالب علم منتخب کریں</label>
+                <select 
+                  value={hifzStudentId} 
+                  onChange={e => handleStudentSelect(e.target.value)}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border)" }}
+                >
+                  <option value="">طالب علم کا انتخاب کریں...</option>
+                  {enrolledStudents.map(s => (
+                    <option key={s.id || s.roll_number} value={s.id || s.roll_number}>
+                      {s.name || s.admName} ({s.roll_number || s.admRegNo || '—'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label>بچے کا نام (دستی)</label>
+                <input 
+                  type="text" 
+                  id="studentName" 
+                  value={hifzStudentName} 
+                  onChange={e => setHifzStudentName(e.target.value)} 
+                  placeholder="بچے کا نام لکھیں..."
+                />
+              </div>
+              <div>
+                <label>آغازِ حفظ کی تاریخ</label>
+                <input 
+                  type="date" 
+                  id="startDate" 
+                  value={hifzStartDate} 
+                  onChange={e => setHifzStartDate(e.target.value)} 
+                />
+              </div>
+              <div>
+                <label>متوقع تکمیل (خودکار)</label>
+                <input 
+                  type="text" 
+                  id="expectedEnd" 
+                  value={expectedEnd} 
+                  readOnly 
+                  style={{ background: "#f1f5f9" }}
+                />
+              </div>
             </div>
 
             <div id="targetsArea" style={{ marginTop: "20px", overflowX: "auto" }}>
               <h3>پارہ تقسیم — سالانہ حقائق پارے</h3>
               <div className="table-responsive">
                 <table>
-                  <thead><tr><th>سال</th><th>پارے</th><th>کل پارے</th><th>سالانہ کل صفحات</th><th>ششماہی ہدف صفحات</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>سال</th>
+                      <th>پارے</th>
+                      <th>کل پارے</th>
+                      <th>سالانہ کل صفحات</th>
+                      <th>ششماہی ہدف صفحات</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {[1,2,3,4].map(y => {
-                        const arr = yearTargets[y];
+                    {[1, 2, 3, 4].map(y => {
+                        const arr = yearTargets[y] || [];
                         const total = arr.length * PAGES_PER_JUZ;
                         return (
-                          <tr key={y}>
-                            <td>سال {y}</td><td style={{ fontSize: "0.9rem" }}>{arr.join(', ')}</td>
-                            <td>{arr.length}</td><td>{total}</td><td>{total / 2}</td>
+                          <tr key={y} style={Number(selectYear) === y ? { background: '#f0fdf4', fontWeight: 'bold' } : {}}>
+                            <td>سال {y}</td>
+                            <td style={{ fontSize: "0.9rem" }}>{arr.join(', ')}</td>
+                            <td>{arr.length}</td>
+                            <td>{total}</td>
+                            <td>{total / 2}</td>
                           </tr>
                         );
                     })}
@@ -437,7 +793,7 @@ export default function Entry() {
                 <div>
                   <label>حفظ کا سال</label>
                   <select value={selectYear} onChange={e => setSelectYear(e.target.value)}>
-                    {[1,2,3,4].map(y => <option key={y} value={y}>سال {y} ({yearTargets[y].length} پارے)</option>)}
+                    {[1, 2, 3, 4].map(y => <option key={y} value={y}>سال {y} ({(yearTargets[y] || []).length} پارے)</option>)}
                   </select>
                 </div>
                 <div>
@@ -451,33 +807,109 @@ export default function Entry() {
             </div>
 
             <h2>1. حاضری کا ریکارڈ (ایامِ کار)</h2>
-            <div style={{ fontSize: "0.9rem", color: "#666", textAlign: "center", marginBottom: "15px" }}>ایامِ کار خودکار طریقے سے کیلکولیٹ ہوئے ہیں، تاہم آپ دستی تبدیلی کر سکتے ہیں (غیر حاضری اور رخصت ضرور درج کریں)۔</div>
+            <div style={{ fontSize: "0.9rem", color: "#666", textAlign: "center", marginBottom: "15px" }}>
+              ایامِ کار خودکار طریقے سے کیلکولیٹ ہوئے ہیں، تاہم آپ دستی تبدیلی کر سکتے ہیں (غیر حاضری اور رخصت ضرور درج کریں)۔
+            </div>
 
             <div id="attendanceInputArea">
               <div className="attendance-header">
-                <div>مہینہ</div><div>ایامِ کار (W)</div><div>غیر حاضری (A)</div><div>رخصت (L)</div><div>کل حاضری (P) اور %</div>
+                <div>مہینہ</div>
+                <div>ایامِ کار (W)</div>
+                <div>غیر حاضری (A)</div>
+                <div>رخصت (L)</div>
+                <div>کل حاضری (P) اور %</div>
               </div>
-              {monthsConfig.map((m, index) => (
+              {attendanceRows.map((row, index) => {
+                const w = Number(row.working) || 0;
+                const a = Number(row.absent) || 0;
+                const l = Number(row.leave) || 0;
+                const p = Math.max(0, w - (a + l));
+                const rowPct = w ? ((p / w) * 100).toFixed(2) : '0.00';
+
+                return (
                   <div className="attendance-row" key={index}>
-                    <div>{m.name} {m.y}</div>
-                    <div><input type="number" min="0" defaultValue="0" className="working-days" style={{ width: "90px", textAlign: "center" }} /><br/><label style={{ fontSize: "0.75rem" }}>(ایامِ کار)</label></div>
-                    <div><input type="number" min="0" defaultValue="0" className="absent-days" style={{ width: "90px", textAlign: "center" }} /><br/><label style={{ fontSize: "0.75rem" }}>(غیر حاضری)</label></div>
-                    <div><input type="number" min="0" defaultValue="0" className="leave-days" style={{ width: "90px", textAlign: "center" }} /><br/><label style={{ fontSize: "0.75rem" }}>(رخصت)</label></div>
-                    <div className="result-cell"><span className="present-days-display">0</span><span style={{ fontSize: "0.7rem", color: "#555" }}> ایام</span><br/>(<span className="monthly-pct-display">0.00%</span>)</div>
+                    <div>{row.name} {row.y}</div>
+                    <div>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={row.working} 
+                        onChange={e => handleAttendanceChange(index, 'working', e.target.value)}
+                        className="working-days" 
+                        style={{ width: "90px", textAlign: "center" }} 
+                      />
+                      <br/>
+                      <label style={{ fontSize: "0.75rem" }}>(ایامِ کار)</label>
+                    </div>
+                    <div>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={row.absent} 
+                        onChange={e => handleAttendanceChange(index, 'absent', e.target.value)}
+                        className="absent-days" 
+                        style={{ width: "90px", textAlign: "center" }} 
+                      />
+                      <br/>
+                      <label style={{ fontSize: "0.75rem" }}>(غیر حاضری)</label>
+                    </div>
+                    <div>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        value={row.leave} 
+                        onChange={e => handleAttendanceChange(index, 'leave', e.target.value)}
+                        className="leave-days" 
+                        style={{ width: "90px", textAlign: "center" }} 
+                      />
+                      <br/>
+                      <label style={{ fontSize: "0.75rem" }}>(رخصت)</label>
+                    </div>
+                    <div className="result-cell">
+                      <span className="present-days-display" style={{ fontWeight: "700" }}>{p}</span>
+                      <span style={{ fontSize: "0.7rem", color: "#555" }}> ایام</span>
+                      <br/>
+                      (<span className="monthly-pct-display" style={{ fontWeight: "700" }}>{rowPct}%</span>)
+                    </div>
                   </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="grid-row" style={{ background: "#fff8f8", padding: "15px", borderRadius: "8px", border: "1px dashed #c62828", marginTop: "15px" }}>
-                <div><label>ششماہی کل ایامِ کار</label><input type="text" readOnly /></div>
-                <div><label>کل غیر حاضری + رخصت</label><input type="text" readOnly /></div>
-                <div><label>ششماہی کل حاضر ایام</label><input type="text" readOnly /></div>
-                <div><label>حاضری فیصد</label><input type="text" readOnly /></div>
+                <div>
+                  <label>ششماہی کل ایامِ کار</label>
+                  <input type="text" value={totalWorking} readOnly />
+                </div>
+                <div>
+                  <label>کل غیر حاضری + رخصت</label>
+                  <input type="text" value={totalAbsentLeave} readOnly />
+                </div>
+                <div>
+                  <label>ششماہی کل حاضر ایام</label>
+                  <input type="text" value={totalPresent} readOnly style={{ fontWeight: 'bold' }} />
+                </div>
+                <div>
+                  <label>حاضری فیصد</label>
+                  <input 
+                    type="text" 
+                    value={`${attPct}%`} 
+                    readOnly 
+                    style={{ fontWeight: 'bold', color: attPct >= 80 ? 'var(--accent)' : 'var(--danger)' }} 
+                  />
+                </div>
             </div>
 
             <h2>2. مقدارِ خواندگی (تعلیمی ریکارڈ)</h2>
             <div className="grid-row">
-                <div><label>ششماہی ہدف (صفحات)</label><input type="text" value={halfYearTarget} readOnly /></div>
+                <div>
+                  <label>ششماہی ہدف (صفحات — حاضری کے تناسب سے)</label>
+                  <input type="text" value={targetHalf} readOnly style={{ fontWeight: 'bold', color: 'var(--accent)' }} />
+                </div>
+                <div>
+                  <label>معیاری ششماہی ہدف (مکمل ایام)</label>
+                  <input type="text" value={standardTargetHalf} readOnly />
+                </div>
             </div>
             
             <h3>ماہانہ صفحات کا اندراج</h3>
@@ -485,19 +917,50 @@ export default function Entry() {
                {monthsConfig.map((m, index) => (
                   <div key={index}>
                     <label>{m.name} ({m.y})</label>
-                    <input type="number" min="0" className="month-pages" placeholder="0" />
+                    <input 
+                      type="number" 
+                      min="0" 
+                      className="month-pages" 
+                      placeholder="0" 
+                      value={monthlyPages[m.name] ?? ''}
+                      onChange={e => handlePagesChange(m.name, e.target.value)}
+                    />
                   </div>
               ))}
             </div>
 
             <div className="grid-row" style={{ background: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px dashed #ccc" }}>
-              <div><label>کل پڑھے گئے صفحات</label><input type="text" readOnly /></div>
-              <div><label>فیصد</label><input type="text" readOnly /></div>
-              <div><label>اسکور</label><input type="text" readOnly /></div>
+              <div>
+                <label>کل پڑھے گئے صفحات</label>
+                <input type="text" value={totalPages} readOnly style={{ fontWeight: 'bold' }} />
+              </div>
+              <div>
+                <label>پاؤ / پارہ</label>
+                <input type="text" value={`${pao} پاؤ / ${juz} پارہ`} readOnly />
+              </div>
+              <div>
+                <label>تعلیمی فیصد</label>
+                <input 
+                  type="text" 
+                  value={`${eduPct}%`} 
+                  readOnly 
+                  style={{ fontWeight: 'bold', color: eduPct >= 75 ? 'var(--accent)' : 'var(--danger)' }} 
+                />
+              </div>
+              <div>
+                <label>اسکور</label>
+                <input type="text" value={score} readOnly style={{ fontWeight: 'bold' }} />
+              </div>
             </div>
 
-            <div className="btn-container">
-              <button>مکمل ریکارڈ (تعلیمی + حاضری) محفوظ کریں</button>
+            <div className="btn-container" style={{ marginTop: "20px" }}>
+              <button 
+                onClick={handleSaveHifzRecord} 
+                disabled={hifzSaving}
+                style={{ background: "var(--accent)", color: "#fff", padding: "12px 30px", fontSize: "1.05rem", fontWeight: "700" }}
+              >
+                {hifzSaving ? '⏳ محفوظ ہو رہا ہے...' : '💾 مکمل ریکارڈ (تعلیمی + حاضری) محفوظ کریں'}
+              </button>
             </div>
         </div>
       )}

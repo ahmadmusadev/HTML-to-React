@@ -1,20 +1,157 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import './Fees.css';
 
+export const mapSupabaseToUi = (row, studentLookup = {}) => {
+  if (!row) return null;
+  if (row.isFeeRecord) {
+    const amt = Number(row.feeAmount ?? row.amount) || 0;
+    const arr = Number(row.feeArrears ?? row.arrears) || 0;
+    const tot = Number(row.totalPaid) || (amt + arr);
+    const ts = row.timestamp || row.paid_at || row.created_at || new Date().toISOString();
+    return {
+      ...row,
+      isFeeRecord: true,
+      invoiceId: row.invoiceId || row.invoice_id || '',
+      studentId: row.studentId || row.student_id || '',
+      studentUuid: row.studentUuid || row.student_id || '',
+      studentName: row.studentName || row.student_name || '',
+      studentFather: row.studentFather || row.student_father || '',
+      feeMonth: row.feeMonth || row.month_year || '',
+      feeAmount: amt,
+      feeArrears: arr,
+      totalPaid: tot,
+      feeMethod: row.feeMethod || row.payment_method || 'Cash',
+      status: row.status || 'paid',
+      timestamp: ts,
+      paid_at: ts
+    };
+  }
+
+  const amount = Number(row.amount) || 0;
+  const arrears = Number(row.arrears) || 0;
+  const totalPaid = amount + arrears;
+  const timestamp = row.paid_at || row.created_at || new Date().toISOString();
+
+  // If row has joined student info or lookup from studentLookup map
+  const student = row.students || (row.student_id ? studentLookup[row.student_id] : null) || {};
+  const studentRollNo = student.roll_number || student.admRegNo || row.student_roll_number || '';
+  const studentName = student.name || row.student_name || '';
+  const studentFather = student.father_name || student.admFatherName || row.student_father || '';
+
+  return {
+    id: row.id,
+    isFeeRecord: true,
+    invoiceId: row.invoice_id || '',
+    studentId: studentRollNo || row.student_id || '',
+    studentUuid: row.student_id || '',
+    studentName: studentName,
+    studentFather: studentFather,
+    feeMonth: row.month_year || '',
+    feeAmount: amount,
+    feeArrears: arrears,
+    totalPaid: totalPaid,
+    feeMethod: row.payment_method || 'Cash',
+    status: row.status || 'paid',
+    timestamp: timestamp,
+    paid_at: timestamp
+  };
+};
+
+export const mapUiToSupabase = (data, madrasaId) => {
+  const amount = Number(data.feeAmount ?? data.amount) || 0;
+  const arrears = Number(data.feeArrears ?? data.arrears) || 0;
+  const paidAt = data.timestamp || data.paid_at || new Date().toISOString();
+
+  return {
+    student_id: data.studentUuid || data.student_id || null,
+    madrasa_id: madrasaId || data.madrasa_id || null,
+    invoice_id: data.invoiceId || data.invoice_id || null,
+    amount: amount,
+    arrears: arrears,
+    payment_method: data.feeMethod || data.payment_method || 'Cash',
+    month_year: data.feeMonth || data.month_year || '',
+    status: data.status || 'paid',
+    paid_at: paidAt
+  };
+};
+
 export default function Fees() {
-  const { activeMadrasa, activeLogo, activeMadrasaId, loadMadrasaData, saveMadrasaData } = useMadrasa();
-  const [records, setRecords] = useState([]);
-  
+  const {
+    activeMadrasa,
+    activeLogo,
+    activeMadrasaId,
+    fetchStudentsFromSupabase,
+    fetchFeesFromSupabase,
+    addFeeToSupabase
+  } = useMadrasa();
+
+  const [students, setStudents] = useState([]);
+  const [feeRecords, setFeeRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
+
   // Tab Views
   const [activeView, setActiveView] = useState('record'); // record, receipt, analytics
   const [reportType, setReportType] = useState('all'); // all, daily, paid, unpaid, track
 
   // Load Data
   useEffect(() => {
-    const storedData = loadMadrasaData('hf_records_v1') || {};
-    setRecords(storedData.records || []);
-  }, [activeMadrasaId]); // reload only on madrasa switch
+    let isMounted = true;
+    const loadData = async () => {
+      setLoading(true);
+      setFetchError(null);
+      try {
+        let hasError = false;
+        const [stdData, feesData] = await Promise.all([
+          fetchStudentsFromSupabase(activeMadrasaId).catch(err => {
+            console.error('Students fetch error in Fees:', err);
+            hasError = true;
+            return null;
+          }),
+          fetchFeesFromSupabase(activeMadrasaId).catch(err => {
+            console.error('Fees fetch error in Fees:', err);
+            hasError = true;
+            return null;
+          })
+        ]);
+
+        if (!isMounted) return;
+
+        const studentMap = {};
+        if (stdData) {
+          const mappedStudents = stdData.map(mapStudentToUi).filter(Boolean);
+          setStudents(mappedStudents);
+          mappedStudents.forEach(s => {
+            if (s.id) studentMap[s.id] = s;
+          });
+        }
+
+        if (feesData) {
+          const mappedFees = feesData
+            .map(f => mapSupabaseToUi(f, studentMap))
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          setFeeRecords(mappedFees);
+        }
+
+        if (hasError) {
+          setFetchError('سرور سے ڈیٹا حاصل کرنے میں دشواری پیش آئی ہے۔ براہ کرم صفحہ ریفریش کریں یا اپنا انٹرنیٹ کنکشن چیک کریں۔');
+        }
+      } catch (err) {
+        console.error('Fees data loading error:', err);
+        if (isMounted) {
+          setFetchError('سرور سے ڈیٹا حاصل کرنے میں دشواری پیش آئی ہے۔ براہ کرم صفحہ ریفریش کریں۔');
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadData();
+    return () => { isMounted = false; };
+  }, [activeMadrasaId]);
 
   // --- View 1: Fee Record Payment ---
   const [feeSearchId, setFeeSearchId] = useState('');
@@ -28,11 +165,15 @@ export default function Fees() {
     const id = feeSearchId.trim();
     if (!id) { alert("براہ کرم رجسٹریشن نمبر درج کریں۔"); return; }
     
-    const student = records.find(r => r.isAdmissionProfile && r.admRegNo === id);
+    const student = students.find(r => r.isAdmissionProfile && (r.admRegNo === id || r.id === id));
     if (!student) {
       alert("اس رجسٹریشن نمبر سے کوئی طالب علم نہیں ملا۔");
       setCurrentFeeStudent(null);
       return;
+    }
+
+    if (student.isWithdrawn) {
+      alert("نوٹ: یہ طالب علم خارج ہو چکا ہے۔");
     }
     
     const now = new Date();
@@ -42,7 +183,7 @@ export default function Fees() {
     setFeeForm({ month: currentMonth, amount: '', arrears: '0', method: 'Cash' });
   };
 
-  const processFeePayment = () => {
+  const processFeePayment = async () => {
     if (!currentFeeStudent) return;
     const { month, amount, arrears, method } = feeForm;
     const feeAmt = parseInt(amount, 10);
@@ -58,41 +199,63 @@ export default function Fees() {
     
     const datePrefix = now.toISOString().slice(2, 10).replace(/-/g, '');
     const randSuffix = Math.floor(Math.random() * 900 + 100);
-    const invoiceId = `${datePrefix}${currentFeeStudent.admRegNo}-${randSuffix}`;
+    const regNo = currentFeeStudent.admRegNo || '00';
+    const invoiceId = `${datePrefix}${regNo}-${randSuffix}`;
 
-    const feeRecord = {
-        isFeeRecord: true,
-        invoiceId: invoiceId,
-        studentId: currentFeeStudent.admRegNo,
-        studentName: currentFeeStudent.name,
-        studentFather: currentFeeStudent.admFatherName,
-        feeMonth: month,
-        feeAmount: feeAmt,
-        feeArrears: feeArr,
-        totalPaid: totalPaid,
-        feeMethod: method,
-        timestamp: now.toISOString()
+    const feeUiData = {
+      isFeeRecord: true,
+      invoiceId: invoiceId,
+      studentId: regNo,
+      studentUuid: currentFeeStudent.id,
+      studentName: currentFeeStudent.name,
+      studentFather: currentFeeStudent.admFatherName || currentFeeStudent.fatherName || '',
+      feeMonth: month,
+      feeAmount: feeAmt,
+      feeArrears: feeArr,
+      totalPaid: totalPaid,
+      feeMethod: method,
+      status: 'paid',
+      timestamp: now.toISOString(),
+      paid_at: now.toISOString()
     };
-    
-    const newRecords = [...records, feeRecord];
-    setRecords(newRecords);
-    
-    const stored = loadMadrasaData('hf_records_v1') || {};
-    stored.records = newRecords;
-    saveMadrasaData('hf_records_v1', stored);
 
-    setPrintData(feeRecord);
-    
-    setTimeout(() => {
+    try {
+      const payload = mapUiToSupabase(feeUiData, activeMadrasaId);
+      payload.students = {
+        id: currentFeeStudent.id,
+        name: currentFeeStudent.name,
+        roll_number: regNo,
+        father_name: currentFeeStudent.admFatherName || currentFeeStudent.fatherName || ''
+      };
+
+      const insertedRow = await addFeeToSupabase(payload, activeMadrasaId);
+      const studentLookup = {
+        [currentFeeStudent.id]: {
+          id: currentFeeStudent.id,
+          name: currentFeeStudent.name,
+          roll_number: regNo,
+          father_name: currentFeeStudent.admFatherName || currentFeeStudent.fatherName || ''
+        }
+      };
+      const newUiFee = mapSupabaseToUi(insertedRow, studentLookup);
+
+      setFeeRecords(prev => [newUiFee, ...prev]);
+      setPrintData(newUiFee);
+      
+      setTimeout(() => {
         alert("فیس ریکارڈ محفوظ ہو گیا۔ پرنٹ ڈائیلاگ کھل رہا ہے...");
         window.print();
         
         setTimeout(() => {
-            setFeeSearchId('');
-            setCurrentFeeStudent(null);
-            setPrintData(null);
+          setFeeSearchId('');
+          setCurrentFeeStudent(null);
+          setPrintData(null);
         }, 500);
-    }, 100);
+      }, 100);
+    } catch (err) {
+      console.error('Save fee error:', err);
+      alert(`⚠️ فیس ریکارڈ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
+    }
   };
 
   // --- View 2: Receipt ---
@@ -104,20 +267,20 @@ export default function Fees() {
     const id = receiptSearchId.trim();
     if (!id) { alert('رجسٹریشن نمبر درج کریں'); return; }
 
-    const student = records.find(r => r.isAdmissionProfile && r.admRegNo === id);
+    const student = students.find(r => r.isAdmissionProfile && (r.admRegNo === id || r.id === id));
     if (!student) { alert('کوئی طالب علم نہیں ملا'); return; }
 
     setReceiptStudent(student);
 
-    const fees = records
-      .filter(r => r.isFeeRecord && r.studentId === id)
-      .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const fees = feeRecords
+      .filter(r => r.isFeeRecord && (r.studentId === student.admRegNo || r.studentUuid === student.id || r.studentId === id))
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
     setStudentPastReceipts(fees);
   };
 
   const reprintReceipt = (invoiceId) => {
-    const fee = records.find(r => r.isFeeRecord && r.invoiceId === invoiceId);
+    const fee = feeRecords.find(r => r.isFeeRecord && r.invoiceId === invoiceId);
     if (!fee) { alert('رسید نہیں ملی'); return; }
     
     setPrintData(fee);
@@ -129,13 +292,11 @@ export default function Fees() {
   };
 
   // --- View 3: Analytics ---
-  const feeRecords = records.filter(r => r.isFeeRecord).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  
   let totalCol = 0;
   let totalArr = 0;
   feeRecords.forEach(f => {
-      totalCol += (f.totalPaid || 0);
-      totalArr += (f.feeArrears || 0);
+    totalCol += (f.totalPaid || 0);
+    totalArr += (f.feeArrears || 0);
   });
 
   const methodColor = {
@@ -154,154 +315,155 @@ export default function Fees() {
   const doTrackFee = () => {
     const id = trackFeeId.trim();
     if (!id) { alert('رجسٹریشن نمبر درج کریں'); return; }
-    const student = records.find(r => r.isAdmissionProfile && r.admRegNo === id);
+    const student = students.find(r => r.isAdmissionProfile && (r.admRegNo === id || r.id === id));
     if (!student) {
-        setTrackResult({ notFound: true });
-        return;
+      setTrackResult({ notFound: true });
+      return;
     }
-    const fees = records.filter(r => r.isFeeRecord && r.studentId === id).sort((a,b) => a.feeMonth.localeCompare(b.feeMonth));
+    const fees = feeRecords
+      .filter(r => r.isFeeRecord && (r.studentId === student.admRegNo || r.studentUuid === student.id || r.studentId === id))
+      .sort((a, b) => (a.feeMonth || '').localeCompare(b.feeMonth || ''));
     setTrackResult({ student, fees, id });
   };
 
   // Switch View Helper
   const switchView = (view) => {
-      setActiveView(view);
-      if (view === 'record') {
-          setFeeSearchId('');
-          setCurrentFeeStudent(null);
-      }
-      if (view === 'analytics') {
-          setReportType('all');
-      }
+    setActiveView(view);
+    if (view === 'record') {
+      setFeeSearchId('');
+      setCurrentFeeStudent(null);
+    }
+    if (view === 'analytics') {
+      setReportType('all');
+    }
   };
 
   // Render Print Template
   const renderPrintReceipt = () => {
-      if (!printData) return null;
-      const now = new Date(printData.timestamp);
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
-      const formattedDate = now.toLocaleDateString('en-US', options);
-      const monthDateObj = new Date(printData.feeMonth + "-01");
-      const readableFeeMonth = monthDateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      const timestampStr = now.toLocaleString('en-PK', { hour12: true });
+    if (!printData) return null;
+    const now = new Date(printData.timestamp);
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const formattedDate = now.toLocaleDateString('en-US', options);
+    const monthDateObj = new Date(printData.feeMonth + "-01");
+    const readableFeeMonth = monthDateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const timestampStr = now.toLocaleString('en-PK', { hour12: true });
 
-      return (
-        <div id="printableReceiptArea" style={{ display: 'none' }}>
-            <div className="receipt-wrap">
-                <div className="receipt-header">
-                <div className="receipt-logo" style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                  {activeLogo ? (
-                    <img src={activeLogo} alt={activeMadrasa.name} style={{ maxHeight: '65px', maxWidth: '160px', objectFit: 'contain' }} />
-                  ) : (
-                    <span style={{ fontSize: '2.5rem', lineHeight: 1 }}>☪</span>
-                  )}
-                </div>
-                <h1 className="receipt-org">{activeMadrasa.name}</h1>
-                <p className="receipt-branch">تعلیمی و حاضری ریکارڈ سسٹم</p>
-                <div className="receipt-badge">FEE RECEIPT — STUDENT COPY</div>
-                </div>
-
-                <div className="receipt-meta-bar">
-                <div className="receipt-meta-item">
-                    <span className="receipt-meta-label">Invoice #</span>
-                    <span className="receipt-meta-val">{printData.invoiceId}</span>
-                </div>
-                <div className="receipt-meta-item">
-                    <span className="receipt-meta-label">Date</span>
-                    <span className="receipt-meta-val">{formattedDate}</span>
-                </div>
-                <div className="receipt-meta-item">
-                    <span className="receipt-meta-label">Class</span>
-                    {/* The original edit.html sets this to empty or omits it for receiptClass, see edit.html line 4618 */}
-                    <span className="receipt-meta-val">-</span>
-                </div>
-                <div className="receipt-meta-item">
-                    <span className="receipt-meta-label">Student ID</span>
-                    <span className="receipt-meta-val">{printData.studentId}</span>
-                </div>
-                </div>
-
-                <div className="receipt-student-box">
-                <div className="receipt-section-title">Student Information</div>
-                <div className="receipt-student-row">
-                    <div>
-                    <span className="receipt-field-label">Name</span>
-                    <span className="receipt-field-val">{(printData.studentName || '').toUpperCase()}</span>
-                    </div>
-                    <div>
-                    <span className="receipt-field-label">Father</span>
-                    <span className="receipt-field-val">{(printData.studentFather || '').toUpperCase()}</span>
-                    </div>
-                </div>
-                </div>
-
-                <table className="receipt-table">
-                <thead>
-                    <tr>
-                    <th style={{ textAlign: "left", width: "65%" }}>Payment Detail</th>
-                    <th style={{ textAlign: "right", width: "35%" }}>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                    <td>Monthly Fee — <span>{readableFeeMonth.toUpperCase()}</span></td>
-                    <td className="receipt-amount-cell">
-                        <span className="receipt-rs">Rs.</span>
-                        <span>{(printData.feeAmount || 0).toLocaleString()}</span>
-                    </td>
-                    </tr>
-                    <tr>
-                    <td>Arrears (Previous Pending)</td>
-                    <td className="receipt-amount-cell">
-                        <span className="receipt-rs">Rs.</span>
-                        <span>{(printData.feeArrears || 0).toLocaleString()}</span>
-                    </td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr className="receipt-total-row">
-                    <td style={{ textAlign: "right", fontWeight: 800, color: "#14532d", letterSpacing: "0.3px" }}>
-                        TOTAL RECEIVED
-                    </td>
-                    <td className="receipt-total-amount">
-                        <span className="receipt-total-rs">Rs.</span>
-                        <span className="receipt-total-num">{(printData.totalPaid || 0).toLocaleString()}</span>
-                    </td>
-                    </tr>
-                </tfoot>
-                </table>
-
-                <div className="receipt-method-row">
-                <div>
-                    <span className="receipt-meta-label">Payment Method</span>
-                    <span className="receipt-meta-val">{printData.feeMethod}</span>
-                </div>
-                <div>
-                    <span className="receipt-meta-label">Received On</span>
-                    <span className="receipt-meta-val">{timestampStr}</span>
-                </div>
-                </div>
-
-                <div className="receipt-footer">
-                <div className="receipt-note">
-                    Please save this voucher for your records.
-                </div>
-                <div className="receipt-sig">
-                    <div className="receipt-sig-line"></div>
-                    <div className="receipt-sig-name">Authorized Administrator</div>
-                    <div className="receipt-sig-org">{activeMadrasa.name}</div>
-                </div>
-                </div>
-
-                {activeLogo && (
-                  <div className="receipt-watermark-image" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.08, pointerEvents: 'none', zIndex: 0 }}>
-                    <img src={activeLogo} alt="" style={{ width: '220px', height: '220px', objectFit: 'contain' }} />
-                  </div>
-                )}
-                <div className="receipt-watermark">PAID</div>
+    return (
+      <div id="printableReceiptArea" style={{ display: 'none' }}>
+        <div className="receipt-wrap">
+          <div className="receipt-header">
+            <div className="receipt-logo" style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+              {activeLogo ? (
+                <img src={activeLogo} alt={activeMadrasa.name} style={{ maxHeight: '65px', maxWidth: '160px', objectFit: 'contain' }} />
+              ) : (
+                <span style={{ fontSize: '2.5rem', lineHeight: 1 }}>☪</span>
+              )}
             </div>
+            <h1 className="receipt-org">{activeMadrasa.name}</h1>
+            <p className="receipt-branch">تعلیمی و حاضری ریکارڈ سسٹم</p>
+            <div className="receipt-badge">FEE RECEIPT — STUDENT COPY</div>
+          </div>
+
+          <div className="receipt-meta-bar">
+            <div className="receipt-meta-item">
+              <span className="receipt-meta-label">Invoice #</span>
+              <span className="receipt-meta-val">{printData.invoiceId}</span>
+            </div>
+            <div className="receipt-meta-item">
+              <span className="receipt-meta-label">Date</span>
+              <span className="receipt-meta-val">{formattedDate}</span>
+            </div>
+            <div className="receipt-meta-item">
+              <span className="receipt-meta-label">Class</span>
+              <span className="receipt-meta-val">-</span>
+            </div>
+            <div className="receipt-meta-item">
+              <span className="receipt-meta-label">Student ID</span>
+              <span className="receipt-meta-val">{printData.studentId}</span>
+            </div>
+          </div>
+
+          <div className="receipt-student-box">
+            <div className="receipt-section-title">Student Information</div>
+            <div className="receipt-student-row">
+              <div>
+                <span className="receipt-field-label">Name</span>
+                <span className="receipt-field-val">{(printData.studentName || '').toUpperCase()}</span>
+              </div>
+              <div>
+                <span className="receipt-field-label">Father</span>
+                <span className="receipt-field-val">{(printData.studentFather || '').toUpperCase()}</span>
+              </div>
+            </div>
+          </div>
+
+          <table className="receipt-table">
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", width: "65%" }}>Payment Detail</th>
+                <th style={{ textAlign: "right", width: "35%" }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Monthly Fee — <span>{readableFeeMonth.toUpperCase()}</span></td>
+                <td className="receipt-amount-cell">
+                  <span className="receipt-rs">Rs.</span>
+                  <span>{(printData.feeAmount || 0).toLocaleString()}</span>
+                </td>
+              </tr>
+              <tr>
+                <td>Arrears (Previous Pending)</td>
+                <td className="receipt-amount-cell">
+                  <span className="receipt-rs">Rs.</span>
+                  <span>{(printData.feeArrears || 0).toLocaleString()}</span>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr className="receipt-total-row">
+                <td style={{ textAlign: "right", fontWeight: 800, color: "#14532d", letterSpacing: "0.3px" }}>
+                  TOTAL RECEIVED
+                </td>
+                <td className="receipt-total-amount">
+                  <span className="receipt-total-rs">Rs.</span>
+                  <span className="receipt-total-num">{(printData.totalPaid || 0).toLocaleString()}</span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div className="receipt-method-row">
+            <div>
+              <span className="receipt-meta-label">Payment Method</span>
+              <span className="receipt-meta-val">{printData.feeMethod}</span>
+            </div>
+            <div>
+              <span className="receipt-meta-label">Received On</span>
+              <span className="receipt-meta-val">{timestampStr}</span>
+            </div>
+          </div>
+
+          <div className="receipt-footer">
+            <div className="receipt-note">
+              Please save this voucher for your records.
+            </div>
+            <div className="receipt-sig">
+              <div className="receipt-sig-line"></div>
+              <div className="receipt-sig-name">Authorized Administrator</div>
+              <div className="receipt-sig-org">{activeMadrasa.name}</div>
+            </div>
+          </div>
+
+          {activeLogo && (
+            <div className="receipt-watermark-image" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.08, pointerEvents: 'none', zIndex: 0 }}>
+              <img src={activeLogo} alt="" style={{ width: '220px', height: '220px', objectFit: 'contain' }} />
+            </div>
+          )}
+          <div className="receipt-watermark">PAID</div>
         </div>
-      );
+      </div>
+    );
   };
 
   return (
@@ -319,6 +481,13 @@ export default function Fees() {
           رپورٹس
         </button>
       </div>
+
+      {fetchError && (
+        <div className="no-print" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>⚠️ {fetchError}</span>
+          <button onClick={() => setFetchError(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#856404' }}>✕</button>
+        </div>
+      )}
 
       {/* ===== ۱: فیس وصول کریں ===== */}
       {activeView === 'record' && (
@@ -345,7 +514,7 @@ export default function Fees() {
             <div className="fee-student-avatar"></div>
             <div>
               <div className="fee-student-name">{currentFeeStudent.name || '—'}</div>
-              <div className="fee-student-father">والد: <span>{currentFeeStudent.admFatherName || '—'}</span></div>
+              <div className="fee-student-father">والد: <span>{currentFeeStudent.admFatherName || currentFeeStudent.fatherName || '—'}</span></div>
             </div>
           </div>
 
@@ -439,7 +608,7 @@ export default function Fees() {
             <div className="fee-student-avatar"></div>
             <div>
               <div className="fee-student-name">{receiptStudent.name || '—'}</div>
-              <div className="fee-student-father">والد: <span>{receiptStudent.admFatherName || '—'}</span></div>
+              <div className="fee-student-father">والد: <span>{receiptStudent.admFatherName || receiptStudent.fatherName || '—'}</span></div>
             </div>
           </div>
 
@@ -563,7 +732,7 @@ export default function Fees() {
 
         {/* ڈیلی اسٹیٹمنٹ */}
         {reportType === 'daily' && (() => {
-            const fees = records.filter(r => r.isFeeRecord && r.timestamp && r.timestamp.slice(0,10) === dailyStatDate);
+            const fees = feeRecords.filter(r => r.isFeeRecord && r.timestamp && r.timestamp.slice(0,10) === dailyStatDate);
             const total = fees.reduce((s,f) => s + (f.totalPaid||0), 0);
             return (
                 <div id="feeReport_daily">
@@ -603,7 +772,7 @@ export default function Fees() {
 
         {/* دہندہ رپورٹ */}
         {reportType === 'paid' && (() => {
-            const fees = records.filter(r => r.isFeeRecord && r.feeMonth === paidReportMonth);
+            const fees = feeRecords.filter(r => r.isFeeRecord && r.feeMonth === paidReportMonth);
             return (
                 <div id="feeReport_paid">
                     <div className="form-section-card" style={{ marginBottom: "14px" }}>
@@ -639,9 +808,10 @@ export default function Fees() {
 
         {/* نادہندہ رپورٹ */}
         {reportType === 'unpaid' && (() => {
-            const allStudents = records.filter(r => r.isAdmissionProfile && !r.isWithdrawn);
-            const paidIds = new Set(records.filter(r => r.isFeeRecord && r.feeMonth === unpaidReportMonth).map(r => r.studentId));
-            const unpaid = allStudents.filter(s => !paidIds.has(s.admRegNo));
+            const allStudents = students.filter(r => r.isAdmissionProfile && !r.isWithdrawn);
+            const paidIds = new Set(feeRecords.filter(r => r.isFeeRecord && r.feeMonth === unpaidReportMonth).map(r => r.studentId));
+            const paidUuids = new Set(feeRecords.filter(r => r.isFeeRecord && r.feeMonth === unpaidReportMonth).map(r => r.studentUuid).filter(Boolean));
+            const unpaid = allStudents.filter(s => !paidIds.has(s.admRegNo) && !paidUuids.has(s.id));
             return (
                 <div id="feeReport_unpaid">
                     <div className="form-section-card" style={{ marginBottom: "14px" }}>
@@ -659,10 +829,10 @@ export default function Fees() {
                             <>
                                 <div style={{ fontWeight: 700, color: "var(--danger)", marginBottom: "10px" }}>مہینہ {unpaidReportMonth} — {unpaid.length} نادہندگان</div>
                                 {unpaid.map(s => (
-                                    <div key={s.admRegNo} style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                                    <div key={s.admRegNo || s.id} style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                                         <div>
                                             <div style={{ fontWeight: 700 }}>{s.name||'—'}</div>
-                                            <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{s.admRegNo} | والد: {s.admFatherName||'—'}</div>
+                                            <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{s.admRegNo || s.id} | والد: {s.admFatherName || s.fatherName || '—'}</div>
                                         </div>
                                         <div style={{ fontSize: "0.82rem", color: "var(--danger)", fontWeight: 700 }}>فیس باقی</div>
                                     </div>
@@ -703,7 +873,7 @@ export default function Fees() {
                         <div className="fee-student-avatar"></div>
                         <div>
                             <div className="fee-student-name">{student.name||'—'}</div>
-                            <div className="fee-student-father">والد: {student.admFatherName||'—'} | ID: {id}</div>
+                            <div className="fee-student-father">والد: {student.admFatherName || student.fatherName || '—'} | ID: {id}</div>
                         </div>
                         </div>
                         <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px", padding: "12px", marginBottom: "14px", textAlign: "center" }}>
