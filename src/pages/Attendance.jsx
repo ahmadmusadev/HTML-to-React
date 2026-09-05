@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { DEFAULT_CLASSES } from '../constants/defaults';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
+import {
+  normalizeStaffAttendanceStatus,
+  formatTimeForUi,
+  getMinutesDifference,
+  calculateLateMinutes,
+  calculateEarlyLeaveMinutes,
+  mapStaffAttendanceRowToUi,
+  mapStaffAttendanceRowsToDict,
+  mapUiToStaffAttendancePayload,
+  derivePendingDate
+} from '../utils/StaffAttendanceMappers';
 import './Entry.css';
 
 // --- Normalization and Helper Functions ---
@@ -84,6 +95,17 @@ export const mapUiToSupabase = (data, madrasaId) => {
   };
 };
 
+export {
+  normalizeStaffAttendanceStatus,
+  formatTimeForUi,
+  calculateLateMinutes,
+  calculateEarlyLeaveMinutes,
+  mapStaffAttendanceRowToUi,
+  mapStaffAttendanceRowsToDict,
+  mapUiToStaffAttendancePayload,
+  derivePendingDate
+};
+
 export default function Attendance() {
   const {
     activeMadrasaId,
@@ -92,7 +114,12 @@ export default function Attendance() {
     fetchStudentsFromSupabase,
     fetchClassesFromSupabase,
     fetchStudentAttendanceFromSupabase,
-    saveStudentAttendanceToSupabase
+    saveStudentAttendanceToSupabase,
+    fetchStaffFromSupabase,
+    fetchStaffAttendanceFromSupabase,
+    upsertStaffAttendanceCheckIn,
+    upsertStaffAttendanceCheckOut,
+    fetchStaffAttendancePendingDate
   } = useMadrasa();
 
   const [records, setRecords] = useState([]);
@@ -104,7 +131,7 @@ export default function Attendance() {
   
   const [staffProfiles, setStaffProfiles] = useState([]);
   const [staffAttendance, setStaffAttendance] = useState({});
-  const [staffFlow, setStaffFlow] = useState({});
+  const [staffPendingDate, setStaffPendingDate] = useState(null);
 
   const [activeView, setActiveView] = useState('class'); 
   // views: class, individual, studentreport, classreport, summary, staff
@@ -118,6 +145,7 @@ export default function Attendance() {
     const loadInitialData = async () => {
       const d = loadMadrasaData('hf_records_v1') || {};
       const localAttList = loadMadrasaData('hf_student_attendance_v1') || [];
+      const localStaffAtt = loadMadrasaData('hf_staff_attendance_v1') || [];
       
       if (isMounted) {
         setRecords(d.records || []);
@@ -130,15 +158,24 @@ export default function Attendance() {
         setAttendance(d.attendance || {});
         setStudentAttendanceList(localAttList);
         setStaffProfiles(d.staffProfiles || []);
-        setStaffAttendance(d.staffAttendance || {});
-        setStaffFlow(d.staffAttendanceFlow || {});
+        if (localStaffAtt.length > 0) {
+          setStaffAttendance(mapStaffAttendanceRowsToDict(localStaffAtt, d.staffProfiles || []));
+        } else {
+          setStaffAttendance(d.staffAttendance || {});
+        }
+        if (d.staffAttendanceFlow?.checkInSaved && !d.staffAttendanceFlow?.checkOutSaved && d.staffAttendanceFlow?.pendingDate) {
+          setStaffPendingDate(d.staffAttendanceFlow.pendingDate);
+        }
       }
 
       try {
-        const [stdData, clsData, attData] = await Promise.all([
+        const [stdData, clsData, attData, staffData, staffAttData, pendingDateData] = await Promise.all([
           fetchStudentsFromSupabase(activeMadrasaId).catch(() => null),
           fetchClassesFromSupabase(activeMadrasaId).catch(() => null),
-          fetchStudentAttendanceFromSupabase({}, activeMadrasaId).catch(() => null)
+          fetchStudentAttendanceFromSupabase({}, activeMadrasaId).catch(() => null),
+          fetchStaffFromSupabase(activeMadrasaId).catch(() => null),
+          fetchStaffAttendanceFromSupabase(activeMadrasaId).catch(() => null),
+          fetchStaffAttendancePendingDate(activeMadrasaId).catch(() => null)
         ]);
 
         if (isMounted) {
@@ -151,6 +188,15 @@ export default function Attendance() {
           if (attData && attData.length > 0) {
             setStudentAttendanceList(attData);
           }
+          if (staffData && staffData.length > 0) {
+            setStaffProfiles(staffData);
+          }
+          if (staffAttData && staffAttData.length > 0) {
+            setStaffAttendance(mapStaffAttendanceRowsToDict(staffAttData, staffData || []));
+          }
+          if (pendingDateData) {
+            setStaffPendingDate(pendingDateData);
+          }
         }
       } catch (err) {
         console.warn('Initial data load warning:', err);
@@ -161,6 +207,37 @@ export default function Attendance() {
     return () => { isMounted = false; };
   }, [activeMadrasaId]);
 
+  // Refresh staff attendance and lock state when activeView switches to 'staff'
+  useEffect(() => {
+    let isMounted = true;
+    if (activeView === 'staff') {
+      const loadStaffData = async () => {
+        try {
+          const [staffData, staffAttData, pendingDateData] = await Promise.all([
+            fetchStaffFromSupabase(activeMadrasaId).catch(() => null),
+            fetchStaffAttendanceFromSupabase(activeMadrasaId).catch(() => null),
+            fetchStaffAttendancePendingDate(activeMadrasaId).catch(() => null)
+          ]);
+
+          if (!isMounted) return;
+
+          if (staffData && staffData.length > 0) {
+            setStaffProfiles(staffData);
+          }
+          if (staffAttData) {
+            setStaffAttendance(mapStaffAttendanceRowsToDict(staffAttData, staffData || staffProfiles));
+          }
+          setStaffPendingDate(pendingDateData || null);
+        } catch (e) {
+          console.warn('Error refreshing staff attendance in view:', e);
+        }
+      };
+
+      loadStaffData();
+    }
+    return () => { isMounted = false; };
+  }, [activeView, activeMadrasaId]);
+
   const updateLocalStorage = (updates) => {
     const d = loadMadrasaData('hf_records_v1') || {};
     Object.assign(d, updates);
@@ -169,7 +246,6 @@ export default function Attendance() {
     if (updates.dailyAttendance) setDailyAttendance(updates.dailyAttendance);
     if (updates.attendance) setAttendance(updates.attendance);
     if (updates.staffAttendance) setStaffAttendance(updates.staffAttendance);
-    if (updates.staffAttendanceFlow) setStaffFlow(updates.staffAttendanceFlow);
   };
 
   // Switch View
@@ -815,12 +891,15 @@ export default function Attendance() {
   const getStaffForAttendance = () => {
     if (staffProfiles && staffProfiles.length > 0) {
       return [...staffProfiles]
-        .sort((a, b) => Number(a.staffCode || 0) - Number(b.staffCode || 0))
+        .sort((a, b) => Number(a.staffCode || a.staff_code || 0) - Number(b.staffCode || b.staff_code || 0))
         .map(s => ({
-          teacherId: String(s.staffCode),
+          id: s.id,
+          staffId: s.id,
+          staffCode: s.staffCode || s.staff_code,
+          teacherId: String(s.staffCode || s.staff_code || s.id),
           name: s.name || '-',
-          shiftStart: s.shiftStart || '06:50',
-          shiftEnd: s.shiftEnd || '14:45'
+          shiftStart: formatTimeForUi(s.shiftStart || s.shift_start, '06:50'),
+          shiftEnd: formatTimeForUi(s.shiftEnd || s.shift_end, '14:45')
         }));
     }
     const teachers = new Set();
@@ -828,6 +907,9 @@ export default function Attendance() {
       if (c.teacher) teachers.add(c.teacher.trim());
     });
     return Array.from(teachers).map((name, idx) => ({
+      id: `teacher_${idx + 1}`,
+      staffId: `teacher_${idx + 1}`,
+      staffCode: 1001 + idx,
       teacherId: String(1001 + idx),
       name,
       shiftStart: '06:50',
@@ -838,9 +920,8 @@ export default function Attendance() {
 
   useEffect(() => {
     if (activeView === 'staff') {
-      const lock = staffFlow || {};
-      const lockedDate = lock.pendingDate || '';
-      const hasPending = lock.checkInSaved && !lock.checkOutSaved && !!lockedDate;
+      const lockedDate = staffPendingDate || '';
+      const hasPending = Boolean(lockedDate);
 
       let targetDate = staffAttDate;
       if (hasPending && staffAttDate !== lockedDate) {
@@ -855,7 +936,7 @@ export default function Attendance() {
       const initialForm = {};
       
       staffMembers.forEach((staff) => {
-        const rec = savedData[staff.teacherId] || savedData[staff.name] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
+        const rec = savedData[staff.teacherId] || savedData[staff.name] || savedData[staff.id] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
         initialForm[staff.teacherId] = {
           status: rec.status || 'present',
           checkIn: rec.checkIn || staff.shiftStart,
@@ -865,11 +946,11 @@ export default function Attendance() {
       });
       setStaffAttFormData(initialForm);
     }
-  }, [activeView, staffAttDate, staffSession, staffProfiles, staffAttendance, staffFlow, classesList]);
+  }, [activeView, staffAttDate, staffSession, staffProfiles, staffAttendance, staffPendingDate, classesList]);
 
   const handleStaffAttChange = (teacherId, field, value) => {
     setStaffAttFormData(prev => {
-      const st = prev[teacherId];
+      const st = prev[teacherId] || {};
       const newSt = { ...st, [field]: value };
       if (field === 'status' && value !== 'present') {
         newSt.checkIn = '';
@@ -883,22 +964,15 @@ export default function Attendance() {
     });
   };
 
-  const getMinutesDifference = (actualTime, expectedTime) => {
-    if (!actualTime || !expectedTime) return 0;
-    const [aH, aM] = actualTime.split(':').map(Number);
-    const [eH, eM] = expectedTime.split(':').map(Number);
-    if ([aH, aM, eH, eM].some(n => Number.isNaN(n))) return 0;
-    return (aH * 60 + aM) - (eH * 60 + eM);
-  };
-
-  const saveStaffAttendanceCheckIn = () => {
+  const saveStaffAttendanceCheckIn = async () => {
     if (!staffAttDate) return;
-    const updatedStaffAtt = JSON.parse(JSON.stringify(staffAttendance));
-    const attRecord = updatedStaffAtt[staffAttDate] || {};
+
+    const recordsToSave = [];
+    const attRecord = { ...(staffAttendance[staffAttDate] || {}) };
 
     staffMembers.forEach(staff => {
-      const form = staffAttFormData[staff.teacherId];
-      const prev = attRecord[staff.teacherId] || attRecord[staff.name] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
+      const form = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '' };
+      const prev = attRecord[staff.teacherId] || attRecord[staff.name] || attRecord[staff.id] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
       const checkIn = (form.status !== 'present') ? '' : form.checkIn;
       const lateMinutes = (form.status === 'present' && checkIn) ? Math.max(getMinutesDifference(checkIn, staff.shiftStart), 0) : 0;
       
@@ -910,39 +984,52 @@ export default function Attendance() {
         checkOut: prev.checkOut || '',
         lateMinutes,
         earlyLeaveMinutes: Number(prev.earlyLeaveMinutes || 0),
-        remarks: form.remarks
+        remarks: form.remarks || ''
       };
+
+      recordsToSave.push({
+        staff_id: staff.id,
+        staffId: staff.id,
+        date: staffAttDate,
+        status: form.status,
+        check_in: checkIn || null,
+        check_out: prev.checkOut || null,
+        late_minutes: lateMinutes,
+        early_leave_minutes: Number(prev.earlyLeaveMinutes || 0),
+        remarks: form.remarks || null
+      });
     });
 
-    updatedStaffAtt[staffAttDate] = attRecord;
-    
-    updateLocalStorage({
-      staffAttendance: updatedStaffAtt,
-      staffAttendanceFlow: {
-        pendingDate: staffAttDate,
-        checkInSaved: true,
-        checkOutSaved: false
-      }
-    });
-    alert("چیک اِن حاضری کامیابی سے محفوظ ہو گئی۔ اب دن کے اختتام پر اسی تاریخ میں چیک آؤٹ درج کریں۔");
-    setShowHistory(true);
+    try {
+      await upsertStaffAttendanceCheckIn(activeMadrasaId, staffAttDate, recordsToSave);
+      const updatedStaffAtt = {
+        ...staffAttendance,
+        [staffAttDate]: attRecord
+      };
+      setStaffAttendance(updatedStaffAtt);
+      setStaffPendingDate(staffAttDate);
+      alert("چیک اِن حاضری کامیابی سے محفوظ ہو گئی۔ اب دن کے اختتام پر اسی تاریخ میں چیک آؤٹ درج کریں۔");
+      setShowHistory(true);
+    } catch (err) {
+      console.error('Save staff check-in error:', err);
+      alert('⚠️ چیک اِن محفوظ کرنے میں خرابی پیش آگئی: ' + (err.message || 'نامعلوم خرابی'));
+    }
   };
 
-  const saveStaffAttendanceCheckOut = () => {
+  const saveStaffAttendanceCheckOut = async () => {
     if (!staffAttDate) return;
-    const flow = staffFlow || {};
-    if (flow.pendingDate && flow.pendingDate !== staffAttDate && flow.checkInSaved && !flow.checkOutSaved) {
-      alert(`پہلے ${flow.pendingDate} کی چیک آؤٹ مکمل کریں۔`);
-      setStaffAttDate(flow.pendingDate);
+    if (staffPendingDate && staffPendingDate !== staffAttDate) {
+      alert(`پہلے ${staffPendingDate} کی چیک آؤٹ مکمل کریں۔`);
+      setStaffAttDate(staffPendingDate);
       return;
     }
 
-    const updatedStaffAtt = JSON.parse(JSON.stringify(staffAttendance));
-    const attRecord = updatedStaffAtt[staffAttDate] || {};
+    const recordsToSave = [];
+    const attRecord = { ...(staffAttendance[staffAttDate] || {}) };
 
     staffMembers.forEach(staff => {
-      const form = staffAttFormData[staff.teacherId];
-      const prev = attRecord[staff.teacherId] || attRecord[staff.name] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
+      const form = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '' };
+      const prev = attRecord[staff.teacherId] || attRecord[staff.name] || attRecord[staff.id] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
       const checkOut = (form.status !== 'present') ? '' : form.checkOut;
       
       const lateMinutes = (form.status === 'present' && prev.checkIn) ? Math.max(getMinutesDifference(prev.checkIn, staff.shiftStart), 0) : 0;
@@ -956,23 +1043,37 @@ export default function Attendance() {
         checkOut,
         lateMinutes,
         earlyLeaveMinutes,
-        remarks: form.remarks
+        remarks: form.remarks || ''
       };
+
+      recordsToSave.push({
+        staff_id: staff.id,
+        staffId: staff.id,
+        date: staffAttDate,
+        status: form.status,
+        check_in: prev.checkIn || null,
+        check_out: checkOut || null,
+        late_minutes: lateMinutes,
+        early_leave_minutes: earlyLeaveMinutes,
+        remarks: form.remarks || null
+      });
     });
 
-    updatedStaffAtt[staffAttDate] = attRecord;
-    
-    updateLocalStorage({
-      staffAttendance: updatedStaffAtt,
-      staffAttendanceFlow: {
-        pendingDate: '',
-        checkInSaved: true,
-        checkOutSaved: true,
-        completedDate: staffAttDate
-      }
-    });
-    alert("چیک آؤٹ کامیابی سے محفوظ ہو گیا۔ اس تاریخ کی عملے کی حاضری مکمل ہو گئی۔");
-    setShowHistory(true);
+    try {
+      await upsertStaffAttendanceCheckOut(activeMadrasaId, staffAttDate, recordsToSave);
+      const updatedStaffAtt = {
+        ...staffAttendance,
+        [staffAttDate]: attRecord
+      };
+      setStaffAttendance(updatedStaffAtt);
+      const nextPending = await fetchStaffAttendancePendingDate(activeMadrasaId).catch(() => null);
+      setStaffPendingDate(nextPending || null);
+      alert("چیک آؤٹ کامیابی سے محفوظ ہو گیا۔ اس تاریخ کی عملے کی حاضری مکمل ہو گئی۔");
+      setShowHistory(true);
+    } catch (err) {
+      console.error('Save staff check-out error:', err);
+      alert('⚠️ چیک آؤٹ محفوظ کرنے میں خرابی پیش آگئی: ' + (err.message || 'نامعلوم خرابی'));
+    }
   };
 
   // --- History Panel ---

@@ -1,8 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
+import { DEFAULT_CLASSES } from '../constants/defaults';
+import {
+  calculateTargetRuku,
+  calculatePct,
+  getExamGrade,
+  getPctColor,
+  mapExamMiqdarToUi,
+  mapUiToExamMiqdarPayload,
+  mapExamResultToUi,
+  mapUiToExamResultPayload
+} from '../utils/ExamsMappers';
 
 export default function Exams() {
-  const { activeMadrasaId, loadMadrasaData, saveMadrasaData } = useMadrasa();
+  const {
+    activeMadrasaId,
+    loadMadrasaData,
+    saveMadrasaData,
+    fetchStudentsFromSupabase,
+    fetchClassesFromSupabase,
+    fetchExamMiqdarFromSupabase,
+    upsertExamMiqdarToSupabase,
+    upsertExamMiqdarSingle,
+    fetchExamResultsFromSupabase,
+    upsertExamResultsToSupabase
+  } = useMadrasa();
+
   const [activeTab, setActiveTab] = useState('miqdar-class');
   
   const [records, setRecords] = useState([]);
@@ -11,27 +35,48 @@ export default function Exams() {
   const [examResults, setExamResults] = useState([]);
 
   // Sync state with active madrasa
-  const loadLocalData = () => {
-    const storedData = loadMadrasaData('hf_records_v1') || {};
-    setRecords(storedData.records || []);
-    setClassesList(storedData.classes || []);
-    setExamMiqdar(storedData.examMiqdar || []);
-    setExamResults(storedData.examResults || []);
-  };
-
   useEffect(() => {
-    loadLocalData();
-  }, [activeMadrasaId]);
+    let isMounted = true;
 
-  const saveToLocalData = (newMiqdar, newResults) => {
-    let storedData = loadMadrasaData('hf_records_v1') || { records: [], classes: [], examMiqdar: [], examResults: [] };
-    if (newMiqdar !== null) storedData.examMiqdar = newMiqdar;
-    if (newResults !== null) storedData.examResults = newResults;
-    saveMadrasaData('hf_records_v1', storedData);
-    
-    if (newMiqdar !== null) setExamMiqdar(newMiqdar);
-    if (newResults !== null) setExamResults(newResults);
-  };
+    const loadInitialData = async () => {
+      const storedData = loadMadrasaData('hf_records_v1') || {};
+      if (isMounted) {
+        setRecords(storedData.records || []);
+        setClassesList(storedData.classes && storedData.classes.length > 0 ? storedData.classes : DEFAULT_CLASSES);
+        setExamMiqdar((storedData.examMiqdar || []).map(mapExamMiqdarToUi).filter(Boolean));
+        setExamResults((storedData.examResults || []).map(mapExamResultToUi).filter(Boolean));
+      }
+
+      try {
+        const [stdData, clsData, miqdarData, resultsData] = await Promise.all([
+          fetchStudentsFromSupabase(activeMadrasaId).catch(() => null),
+          fetchClassesFromSupabase(activeMadrasaId).catch(() => null),
+          fetchExamMiqdarFromSupabase({}, activeMadrasaId).catch(() => null),
+          fetchExamResultsFromSupabase({}, activeMadrasaId).catch(() => null)
+        ]);
+
+        if (isMounted) {
+          if (stdData && stdData.length > 0) {
+            setRecords(stdData.map(s => mapStudentToUi(s)));
+          }
+          if (clsData && clsData.length > 0) {
+            setClassesList(clsData);
+          }
+          if (miqdarData && miqdarData.length > 0) {
+            setExamMiqdar(miqdarData.map(mapExamMiqdarToUi).filter(Boolean));
+          }
+          if (resultsData && resultsData.length > 0) {
+            setExamResults(resultsData.map(mapExamResultToUi).filter(Boolean));
+          }
+        }
+      } catch (err) {
+        console.warn('Initial data load warning in Exams:', err);
+      }
+    };
+
+    loadInitialData();
+    return () => { isMounted = false; };
+  }, [activeMadrasaId]);
 
   // Sub-tab 1: Miqdar Class state
   const [mqClassSelect, setMqClassSelect] = useState('');
@@ -81,34 +126,47 @@ export default function Exams() {
   const getActiveStudentsByClass = (clsId) => {
     return records.filter(r => 
       r.isAdmissionProfile && 
-      (r.admClass === clsId || r.classId === clsId) && 
+      (r.admClass === clsId || r.classId === clsId || r.class_id === clsId) && 
       !r.isWithdrawn && 
+      r.status !== 'left' &&
       r.status !== 'withdrawn'
     );
   };
 
   // Load Sub-tab 1: Miqdar Class
-  const loadMiqdarClass = () => {
+  const loadMiqdarClass = async () => {
     if (!mqClassSelect) { alert('کلاس منتخب کریں'); return; }
     const students = getActiveStudentsByClass(mqClassSelect);
     if (!students.length) { alert('اس کلاس میں کوئی طالب علم نہیں'); setMqClassStudents(null); return; }
     
     const cls = classesList.find(c => c.id === mqClassSelect);
-    const existing = examMiqdar.filter(m => m.classId === mqClassSelect && m.term === mqTermSelect && String(m.year) === String(mqYear));
+
+    let existing = [];
+    try {
+      const fetched = await fetchExamMiqdarFromSupabase({
+        class_id: mqClassSelect,
+        term: mqTermSelect,
+        year: parseInt(mqYear)
+      });
+      existing = (fetched || []).map(mapExamMiqdarToUi).filter(Boolean);
+    } catch (e) {
+      console.warn('Failed to fetch miqdar from Supabase, checking local state:', e);
+      existing = examMiqdar.filter(m => (m.classId === mqClassSelect || m.class_id === mqClassSelect) && m.term === mqTermSelect && String(m.year) === String(mqYear));
+    }
     
     const loadedStudents = students.map(s => {
-      const prev = existing.find(m => m.regNo === s.admRegNo) || {};
+      const prev = existing.find(m => (m.studentId && m.studentId === s.id) || (m.regNo && (m.regNo === s.admRegNo || m.regNo === s.roll_number))) || {};
       return {
         student: s,
-        startPara: prev.startPara || '',
-        startRuku: prev.startRuku || '',
-        endPara: prev.endPara || '',
-        endRuku: prev.endRuku || '',
+        startPara: prev.startPara !== undefined ? prev.startPara : '',
+        startRuku: prev.startRuku !== undefined ? prev.startRuku : '',
+        endPara: prev.endPara !== undefined ? prev.endPara : '',
+        endRuku: prev.endRuku !== undefined ? prev.endRuku : '',
         targetRuku: prev.targetRuku || 0
       };
     });
     setMqClassStudents({
-      title: `${cls ? cls.name : ''} — ${mqTermSelect === 'first' ? 'پہلی' : 'دوسری'} ششماہی ${mqYear}`,
+      title: `${cls ? (cls.class_name || cls.name) : ''} — ${mqTermSelect === 'first' ? 'پہلی' : 'دوسری'} ششماہی ${mqYear}`,
       list: loadedStudents
     });
   };
@@ -120,59 +178,105 @@ export default function Exams() {
     const sr = parseInt(newList[index].startRuku) || 0;
     const ep = parseInt(newList[index].endPara) || 0;
     const er = parseInt(newList[index].endRuku) || 0;
-    newList[index].targetRuku = Math.max(0, (ep - sp) * 8 + (er - sr));
+    newList[index].targetRuku = calculateTargetRuku(sp, sr, ep, er);
     setMqClassStudents({ ...mqClassStudents, list: newList });
   };
 
-  const saveMiqdarClass = () => {
+  const saveMiqdarClass = async () => {
     if (!mqClassStudents || !mqClassStudents.list) return;
-    let newMiqdar = [...examMiqdar];
     const year = parseInt(mqYear);
     
-    mqClassStudents.list.forEach(item => {
+    const payload = mqClassStudents.list.map(item => {
       const sp = parseInt(item.startPara) || 0;
       const sr = parseInt(item.startRuku) || 0;
       const ep = parseInt(item.endPara) || 0;
       const er = parseInt(item.endRuku) || 0;
-      const targetRuku = Math.max(0, (ep - sp) * 8 + (er - sr));
+      const targetRuku = calculateTargetRuku(sp, sr, ep, er);
       
-      const rec = {
-        regNo: item.student.admRegNo,
-        classId: mqClassSelect,
+      return {
+        student_id: item.student.id,
+        class_id: mqClassSelect,
         term: mqTermSelect,
         year: year,
-        startPara: sp,
-        startRuku: sr,
-        endPara: ep,
-        endRuku: er,
-        targetRuku: targetRuku
+        start_para: sp,
+        start_ruku: sr,
+        end_para: ep,
+        end_ruku: er,
+        target_ruku: targetRuku,
+        regNo: item.student.admRegNo
       };
-      
-      const idx = newMiqdar.findIndex(m => m.regNo === rec.regNo && m.classId === rec.classId && m.term === rec.term && m.year === rec.year);
-      if (idx >= 0) newMiqdar[idx] = rec; else newMiqdar.push(rec);
     });
-    
-    saveToLocalData(newMiqdar, null);
-    alert('مقدار خواندگی محفوظ ہو گئی');
+
+    try {
+      await upsertExamMiqdarToSupabase(payload);
+      // Update local state
+      const updatedMapped = payload.map(p => ({
+        studentId: p.student_id,
+        regNo: p.regNo,
+        classId: p.class_id,
+        term: p.term,
+        year: p.year,
+        startPara: p.start_para,
+        startRuku: p.start_ruku,
+        endPara: p.end_para,
+        endRuku: p.end_ruku,
+        targetRuku: p.target_ruku
+      }));
+      setExamMiqdar(prev => {
+        const next = [...prev];
+        updatedMapped.forEach(u => {
+          const idx = next.findIndex(m =>
+            (u.studentId && (m.studentId === u.studentId || m.student_id === u.studentId)) ||
+            (u.regNo && m.regNo === u.regNo) &&
+            m.term === u.term &&
+            String(m.year) === String(u.year)
+          );
+          if (idx >= 0) next[idx] = { ...next[idx], ...u };
+          else next.push(u);
+        });
+        return next;
+      });
+      alert('مقدار خواندگی محفوظ ہو گئی');
+    } catch (e) {
+      console.error('Failed to save exam miqdar:', e);
+      alert('مقدار خواندگی محفوظ کرنے میں خرابی: ' + (e.message || e));
+    }
   };
 
   // Load Sub-tab 2: Miqdar Individual
-  const loadMiqdarIndividual = () => {
+  const loadMiqdarIndividual = async () => {
     const id = mqIndId.trim();
     if (!id) { alert('رجسٹریشن نمبر درج کریں'); return; }
-    const s = records.find(r => r.isAdmissionProfile && r.admRegNo === id);
+    const s = records.find(r => r.isAdmissionProfile && (String(r.admRegNo).trim() === id || String(r.roll_number || '').trim() === id || String(r.id).trim() === id));
     if (!s) { alert('طالب علم نہیں ملا'); setMqIndStudent(null); return; }
     
-    const prev = examMiqdar.find(m => m.regNo === id && m.term === mqIndTerm && m.year == mqIndYear) || {};
+    let prev = {};
+    try {
+      const fetched = await fetchExamMiqdarFromSupabase({
+        student_id: s.id,
+        term: mqIndTerm,
+        year: parseInt(mqIndYear)
+      });
+      if (fetched && fetched.length > 0) {
+        prev = mapExamMiqdarToUi(fetched[0]) || {};
+      }
+    } catch (e) {
+      console.warn('Failed to fetch individual miqdar from Supabase, checking local:', e);
+    }
+
+    if (!prev.id && !prev.targetRuku) {
+      prev = examMiqdar.find(m => ((m.studentId && m.studentId === s.id) || m.regNo === id) && m.term === mqIndTerm && String(m.year) === String(mqIndYear)) || {};
+    }
+
     setMqIndStudent(s);
-    setMqIndStartPara(prev.startPara || '');
-    setMqIndStartRuku(prev.startRuku || '');
-    setMqIndEndPara(prev.endPara || '');
-    setMqIndEndRuku(prev.endRuku || '');
+    setMqIndStartPara(prev.startPara !== undefined ? prev.startPara : '');
+    setMqIndStartRuku(prev.startRuku !== undefined ? prev.startRuku : '');
+    setMqIndEndPara(prev.endPara !== undefined ? prev.endPara : '');
+    setMqIndEndRuku(prev.endRuku !== undefined ? prev.endRuku : '');
     setMqIndMsg('');
   };
 
-  const saveMiqdarIndividual = () => {
+  const saveMiqdarIndividual = async () => {
     const id = mqIndId.trim();
     if (!mqIndStudent || !id) return;
     const year = parseInt(mqIndYear);
@@ -180,48 +284,100 @@ export default function Exams() {
     const sr = parseInt(mqIndStartRuku) || 0;
     const ep = parseInt(mqIndEndPara) || 0;
     const er = parseInt(mqIndEndRuku) || 0;
-    const targetRuku = Math.max(0, (ep - sp) * 8 + (er - sr));
+    const targetRuku = calculateTargetRuku(sp, sr, ep, er);
     
-    let newMiqdar = [...examMiqdar];
     const rec = {
-      regNo: id,
-      classId: mqIndStudent.admClass || mqIndStudent.classId || '',
+      student_id: mqIndStudent.id,
+      class_id: mqIndStudent.admClass || mqIndStudent.classId || mqIndStudent.class_id || null,
       term: mqIndTerm,
       year: year,
-      startPara: sp,
-      startRuku: sr,
-      endPara: ep,
-      endRuku: er,
-      targetRuku: targetRuku
+      start_para: sp,
+      start_ruku: sr,
+      end_para: ep,
+      end_ruku: er,
+      target_ruku: targetRuku,
+      regNo: mqIndStudent.admRegNo || id
     };
-    
-    const idx = newMiqdar.findIndex(m => m.regNo === id && m.term === mqIndTerm && m.year === year);
-    if (idx >= 0) newMiqdar[idx] = rec; else newMiqdar.push(rec);
-    
-    saveToLocalData(newMiqdar, null);
-    setMqIndMsg(`محفوظ ہو گیا — ہدف: ${targetRuku} رکوع`);
+
+    try {
+      await upsertExamMiqdarSingle(rec);
+      setExamMiqdar(prev => {
+        const next = [...prev];
+        const idx = next.findIndex(m =>
+          (rec.student_id && (m.studentId === rec.student_id || m.student_id === rec.student_id)) ||
+          (rec.regNo && m.regNo === rec.regNo) &&
+          m.term === rec.term &&
+          String(m.year) === String(rec.year)
+        );
+        const mappedItem = {
+          studentId: rec.student_id,
+          classId: rec.class_id,
+          term: rec.term,
+          year: rec.year,
+          startPara: rec.start_para,
+          startRuku: rec.start_ruku,
+          endPara: rec.end_para,
+          endRuku: rec.end_ruku,
+          targetRuku: rec.target_ruku,
+          regNo: rec.regNo
+        };
+        if (idx >= 0) next[idx] = { ...next[idx], ...mappedItem };
+        else next.push(mappedItem);
+        return next;
+      });
+      setMqIndMsg(`محفوظ ہو گیا — ہدف: ${targetRuku} رکوع`);
+    } catch (e) {
+      console.error('Failed to save individual miqdar:', e);
+      setMqIndMsg('محفوظ کرنے میں خرابی: ' + (e.message || e));
+    }
   };
 
   // Load Sub-tab 3: Result Entry
-  const loadResultEntry = () => {
+  const loadResultEntry = async () => {
     if (!reClassSelect) { alert('کلاس منتخب کریں'); return; }
     const students = getActiveStudentsByClass(reClassSelect);
     if (!students.length) { alert('اس کلاس میں کوئی طالب علم نہیں'); setReStudents(null); return; }
     
     const cls = classesList.find(c => c.id === reClassSelect);
+
+    let miqdarList = [];
+    let resultsList = [];
+
+    try {
+      const [fetchedMiqdar, fetchedResults] = await Promise.all([
+        fetchExamMiqdarFromSupabase({
+          class_id: reClassSelect,
+          term: reTermSelect,
+          year: parseInt(reYear)
+        }),
+        fetchExamResultsFromSupabase({
+          class_id: reClassSelect,
+          term: reTermSelect,
+          year: parseInt(reYear)
+        })
+      ]);
+      miqdarList = (fetchedMiqdar || []).map(mapExamMiqdarToUi).filter(Boolean);
+      resultsList = (fetchedResults || []).map(mapExamResultToUi).filter(Boolean);
+    } catch (e) {
+      console.warn('Failed to fetch from Supabase, checking local state:', e);
+      miqdarList = examMiqdar.filter(m => (m.classId === reClassSelect || m.class_id === reClassSelect) && m.term === reTermSelect && String(m.year) === String(reYear));
+      resultsList = examResults.filter(e => (e.classId === reClassSelect || e.class_id === reClassSelect) && e.term === reTermSelect && String(e.year) === String(reYear));
+    }
+
     const loadedStudents = students.map(s => {
-      const mq = examMiqdar.find(m => m.regNo === s.admRegNo && m.term === reTermSelect && m.year == reYear);
-      const prev = examResults.find(e => e.regNo === s.admRegNo && e.term === reTermSelect && e.year == reYear);
-      const tgt = mq ? mq.targetRuku : 0;
+      const mq = miqdarList.find(m => (m.studentId && m.studentId === s.id) || (m.regNo && (m.regNo === s.admRegNo || m.regNo === s.roll_number)));
+      const prev = resultsList.find(e => (e.studentId && e.studentId === s.id) || (e.regNo && (e.regNo === s.admRegNo || e.regNo === s.roll_number)));
+      const tgt = mq ? (mq.targetRuku || 0) : 0;
       return {
         student: s,
         targetRuku: tgt,
-        achievedRuku: prev ? prev.achievedRuku : '',
+        achievedRuku: prev ? (prev.achievedRuku !== undefined ? prev.achievedRuku : '') : '',
         pct: prev && prev.pct !== undefined ? prev.pct : null
       };
     });
+
     setReStudents({
-      title: `${cls ? cls.name : ''} — ${reTermSelect === 'first' ? 'پہلی' : 'دوسری'} ششماہی ${reYear}`,
+      title: `${cls ? (cls.class_name || cls.name) : ''} — ${reTermSelect === 'first' ? 'پہلی' : 'دوسری'} ششماہی ${reYear}`,
       list: loadedStudents
     });
   };
@@ -231,82 +387,136 @@ export default function Exams() {
     newList[index].achievedRuku = value;
     const achieved = parseInt(value) || 0;
     const target = newList[index].targetRuku || 0;
-    newList[index].pct = target ? Math.round((achieved / target) * 100) : 0;
+    newList[index].pct = calculatePct(achieved, target);
     setReStudents({ ...reStudents, list: newList });
   };
 
-  const saveResultEntry = () => {
+  const saveResultEntry = async () => {
     if (!reStudents || !reStudents.list) return;
-    let newResults = [...examResults];
     const year = parseInt(reYear);
     const cls = classesList.find(c => c.id === reClassSelect);
     
-    reStudents.list.forEach(item => {
+    const payload = reStudents.list.map(item => {
       const target = item.targetRuku || 0;
       const achieved = parseInt(item.achievedRuku) || 0;
-      const pct = target ? Math.round((achieved / target) * 100) : 0;
-      const rec = {
-        regNo: item.student.admRegNo,
-        classId: reClassSelect,
+      const pct = calculatePct(achieved, target);
+      return {
+        student_id: item.student.id,
+        class_id: reClassSelect,
         term: reTermSelect,
         year: year,
-        targetRuku: target,
-        achievedRuku: achieved,
+        target_ruku: target,
+        achieved_ruku: achieved,
         pct: pct,
         studentName: item.student.name || '',
-        classNm: cls ? cls.name : ''
+        classNm: cls ? (cls.class_name || cls.name) : '',
+        regNo: item.student.admRegNo
       };
-      const idx = newResults.findIndex(e => e.regNo === rec.regNo && e.term === rec.term && e.year === rec.year);
-      if (idx >= 0) newResults[idx] = rec; else newResults.push(rec);
     });
-    
-    saveToLocalData(null, newResults);
-    alert('رزلٹ محفوظ ہو گیا');
+
+    try {
+      await upsertExamResultsToSupabase(payload);
+      // Update local state
+      const updatedMapped = payload.map(p => ({
+        studentId: p.student_id,
+        studentName: p.studentName,
+        regNo: p.regNo,
+        classId: p.class_id,
+        classNm: p.classNm,
+        term: p.term,
+        year: p.year,
+        targetRuku: p.target_ruku,
+        achievedRuku: p.achieved_ruku,
+        pct: p.pct
+      }));
+      setExamResults(prev => {
+        const next = [...prev];
+        updatedMapped.forEach(u => {
+          const idx = next.findIndex(e =>
+            (u.studentId && (e.studentId === u.studentId || e.student_id === u.studentId)) ||
+            (u.regNo && e.regNo === u.regNo) &&
+            e.term === u.term &&
+            String(e.year) === String(u.year)
+          );
+          if (idx >= 0) next[idx] = { ...next[idx], ...u };
+          else next.push(u);
+        });
+        return next;
+      });
+      alert('رزلٹ محفوظ ہو گیا');
+    } catch (e) {
+      console.error('Failed to save exam results:', e);
+      alert('رزلٹ محفوظ کرنے میں خرابی: ' + (e.message || e));
+    }
   };
 
   // Sub-tab 4: Class Exam Result
-  const renderClassExamResult = () => {
+  const renderClassExamResult = async () => {
     if (!crExamClass) { alert('کلاس منتخب کریں'); return; }
     const cls = classesList.find(c => c.id === crExamClass);
     const yr = parseInt(crExamYear);
-    let results = examResults.filter(e => e.classId === crExamClass && e.year === yr);
-    if (crExamTerm !== 'annual') results = results.filter(e => e.term === crExamTerm);
-    
+
+    let results = [];
+    try {
+      const filters = {
+        class_id: crExamClass,
+        year: yr
+      };
+      if (crExamTerm !== 'annual') {
+        filters.term = crExamTerm;
+      }
+      const fetched = await fetchExamResultsFromSupabase(filters);
+      results = (fetched || []).map(mapExamResultToUi).filter(Boolean);
+    } catch (e) {
+      console.warn('Failed to query class exam results from Supabase, checking local:', e);
+      results = examResults.filter(e => (e.classId === crExamClass || e.class_id === crExamClass) && Number(e.year) === yr);
+      if (crExamTerm !== 'annual') results = results.filter(e => e.term === crExamTerm);
+    }
+
     if (!results.length) { setCrResultsData('empty'); return; }
     const avg = results.reduce((s, r) => s + (r.pct || 0), 0) / results.length;
-    setCrResultsData({ clsName: cls ? cls.name : '', term: crExamTerm, year: yr, results, avg });
+    setCrResultsData({ clsName: cls ? (cls.class_name || cls.name) : '', term: crExamTerm, year: yr, results, avg });
   };
 
-  const printClassExamResult = () => {
+  const printClassExamResult = async () => {
     if (!crResultsData || crResultsData === 'empty') {
-      renderClassExamResult();
+      await renderClassExamResult();
     }
     setTimeout(() => window.print(), 100);
   };
 
   // Sub-tab 5: Individual Exam Result
-  const renderIndividualExamResult = () => {
+  const renderIndividualExamResult = async () => {
     const id = indExamId.trim();
     if (!id) { alert('رجسٹریشن نمبر درج کریں'); return; }
     const yr = parseInt(indExamYear);
-    const s = records.find(r => r.isAdmissionProfile && r.admRegNo === id);
+    const s = records.find(r => r.isAdmissionProfile && (String(r.admRegNo).trim() === id || String(r.roll_number || '').trim() === id || String(r.id).trim() === id));
     if (!s) { setIndResultsData('notfound'); return; }
     
-    const results = examResults.filter(e => e.regNo === id && e.year === yr);
+    let results = [];
+    try {
+      const fetched = await fetchExamResultsFromSupabase({
+        student_id: s.id,
+        year: yr
+      });
+      results = (fetched || []).map(mapExamResultToUi).filter(Boolean);
+    } catch (e) {
+      console.warn('Failed to query individual exam results from Supabase, checking local:', e);
+      results = examResults.filter(e => ((e.studentId && e.studentId === s.id) || e.regNo === id) && Number(e.year) === yr);
+    }
+
     if (!results.length) { setIndResultsData({ empty: true, student: s, year: yr }); return; }
     
     const avg = results.reduce((sum, r) => sum + (r.pct || 0), 0) / results.length;
     setIndResultsData({ student: s, results, avg, year: yr });
   };
 
-  const printIndividualExamResult = () => {
+  const printIndividualExamResult = async () => {
     if (!indResultsData || indResultsData === 'notfound') {
-      renderIndividualExamResult();
+      await renderIndividualExamResult();
     }
     setTimeout(() => window.print(), 100);
   };
-
-  const getPctColor = (pct) => pct >= 80 ? '#15803d' : pct >= 60 ? '#b45309' : '#dc2626';
 
   return (
     <div className="tab-content" id="tab-exams">
@@ -346,7 +556,7 @@ export default function Exams() {
                 <select id="mqClassSelect" value={mqClassSelect} onChange={e => setMqClassSelect(e.target.value)}>
                   <option value="">کلاس منتخب کریں...</option>
                   {classesList.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{c.name || c.className || c.class_name || c.id}</option>
                   ))}
                 </select>
               </div>
@@ -548,7 +758,7 @@ export default function Exams() {
                 <select id="reClassSelect" value={reClassSelect} onChange={e => setReClassSelect(e.target.value)}>
                   <option value="">کلاس منتخب کریں...</option>
                   {classesList.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{c.name || c.className || c.class_name || c.id}</option>
                   ))}
                 </select>
               </div>
@@ -637,7 +847,7 @@ export default function Exams() {
                 <select id="crExamClass" value={crExamClass} onChange={e => setCrExamClass(e.target.value)}>
                   <option value="">کلاس منتخب کریں...</option>
                   {classesList.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{c.name || c.className || c.class_name || c.id}</option>
                   ))}
                 </select>
               </div>

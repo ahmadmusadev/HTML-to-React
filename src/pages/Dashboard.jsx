@@ -1,15 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { DEFAULT_CLASSES } from '../constants/defaults';
+import {
+  calculateStudentCounts,
+  calculateStudentsByClass,
+  calculateRecentAdmissions,
+  calculateStaffCount,
+  calculateTodayAttendanceRate,
+  calculateMonthFeesRate,
+  calculateLatestExamAverage,
+  getTodayDateIso,
+  getCurrentMonthIso
+} from '../utils/DashboardMappers';
 import './Dashboard.css';
 
 export default function Dashboard() {
-  const { activeMadrasaId, loadMadrasaData } = useMadrasa();
+  const {
+    activeMadrasaId,
+    loadMadrasaData,
+    fetchStudentsFromSupabase,
+    fetchClassesFromSupabase,
+    fetchStaffFromSupabase,
+    fetchHifzRecordsFromSupabase,
+    fetchStudentAttendanceFromSupabase,
+    fetchStaffAttendanceFromSupabase,
+    fetchFeesFromSupabase,
+    fetchExamResultsFromSupabase
+  } = useMadrasa();
+
   const [currentDateStr, setCurrentDateStr] = useState('لوڈ ہو رہا ہے...');
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   
-  const [records, setRecords] = useState([]);
+  const [students, setStudents] = useState([]);
   const [classesList, setClassesList] = useState([]);
-  const [staffProfiles, setStaffProfiles] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [hifzRecords, setHifzRecords] = useState([]);
+
+  // Today's Snapshot state
+  const [todayStudentAttendance, setTodayStudentAttendance] = useState([]);
+  const [todayStaffAttendance, setTodayStaffAttendance] = useState([]);
+  const [currentMonthFees, setCurrentMonthFees] = useState([]);
+  const [examResults, setExamResults] = useState([]);
 
   useEffect(() => {
     // Clock
@@ -21,93 +52,109 @@ export default function Dashboard() {
     updateClock();
     const intervalId = setInterval(updateClock, 1000);
 
-    // Data Load per Active Madrasa
+    // Initial local fallback load
+    let isMounted = true;
     const d = loadMadrasaData('hf_records_v1') || {};
-    setRecords(d.records || []);
-    setClassesList(d.classes || []);
-    setStaffProfiles(d.staffProfiles || []);
+    const localAdmissions = (d.records || []).filter(r => r.isAdmissionProfile);
+    const localProgress = (d.records || []).filter(r => !r.isAdmissionProfile);
+    setStudents(localAdmissions);
+    setClassesList(d.classes && d.classes.length > 0 ? d.classes : DEFAULT_CLASSES);
+    setStaffList(d.staffProfiles || []);
+    setHifzRecords(localProgress);
 
-    return () => clearInterval(intervalId);
+    // Live fetch from Supabase
+    const todayIso = getTodayDateIso();
+    const currentMonthIso = getCurrentMonthIso();
+
+    const loadDashboardData = async () => {
+      try {
+        const [
+          fetchedStudents,
+          fetchedClasses,
+          fetchedStaff,
+          fetchedHifz,
+          fetchedStdAtt,
+          fetchedStaffAtt,
+          fetchedFees,
+          fetchedExams
+        ] = await Promise.all([
+          fetchStudentsFromSupabase(activeMadrasaId).catch(() => null),
+          fetchClassesFromSupabase(activeMadrasaId).catch(() => null),
+          fetchStaffFromSupabase(activeMadrasaId).catch(() => null),
+          fetchHifzRecordsFromSupabase ? fetchHifzRecordsFromSupabase(activeMadrasaId).catch(() => null) : null,
+          fetchStudentAttendanceFromSupabase ? fetchStudentAttendanceFromSupabase({ date: todayIso }, activeMadrasaId).catch(() => null) : null,
+          fetchStaffAttendanceFromSupabase ? fetchStaffAttendanceFromSupabase(activeMadrasaId, todayIso).catch(() => null) : null,
+          fetchFeesFromSupabase ? fetchFeesFromSupabase(activeMadrasaId, { month_year: currentMonthIso }).catch(() => null) : null,
+          fetchExamResultsFromSupabase ? fetchExamResultsFromSupabase({}, activeMadrasaId).catch(() => null) : null
+        ]);
+
+        if (isMounted) {
+          if (fetchedStudents && Array.isArray(fetchedStudents)) {
+            setStudents(fetchedStudents);
+          }
+          if (fetchedClasses && Array.isArray(fetchedClasses)) {
+            setClassesList(fetchedClasses);
+          }
+          if (fetchedStaff && Array.isArray(fetchedStaff)) {
+            setStaffList(fetchedStaff);
+          }
+          if (fetchedHifz && Array.isArray(fetchedHifz)) {
+            setHifzRecords(fetchedHifz);
+          }
+          if (fetchedStdAtt && Array.isArray(fetchedStdAtt)) {
+            setTodayStudentAttendance(fetchedStdAtt);
+          }
+          if (fetchedStaffAtt && Array.isArray(fetchedStaffAtt)) {
+            setTodayStaffAttendance(fetchedStaffAtt);
+          }
+          if (fetchedFees && Array.isArray(fetchedFees)) {
+            setCurrentMonthFees(fetchedFees);
+          }
+          if (fetchedExams && Array.isArray(fetchedExams)) {
+            setExamResults(fetchedExams);
+          }
+        }
+      } catch (err) {
+        console.warn('Dashboard data load warning:', err);
+      }
+    };
+
+    loadDashboardData();
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
   }, [activeMadrasaId]);
 
-  // --- Helpers ---
-  const getUniqueTeachers = () => {
-      const teachers = new Set();
-      staffProfiles.forEach(s => {
-          if (s.name) teachers.add(s.name.trim());
-      });
-      classesList.forEach(c => {
-          if (c.teacher) teachers.add(c.teacher.trim());
-      });
-      return Array.from(teachers);
-  };
-
-  const isStudentCompleted = (profile, progressRecords) => {
-      const statusText = [
-          profile?.status,
-          profile?.admStatus,
-          profile?.completionStatus,
-          profile?.studentStatus
-      ].filter(Boolean).join(' ').toLowerCase();
-
-      if (profile?.isCompleted || profile?.completed || profile?.isHafiz) return true;
-      if (/(hafiz|complete|completed|graduate|graduated|فارغ|مکمل|حافظ)/i.test(statusText)) return true;
-
-      return progressRecords.some(record => {
-          const joined = Object.values(record || {}).join(' ').toLowerCase();
-          return /(hafiz|complete|completed|فارغ|مکمل|حافظ)/i.test(joined);
-      });
-  };
-
   // --- Metrics Calculation ---
-  const admissionProfiles = records.filter(r => r.isAdmissionProfile);
-  const activeAdmissions = admissionProfiles.filter(r => !r.isWithdrawn);
-  const withdrawnAdmissions = admissionProfiles.filter(r => r.isWithdrawn);
-  const progressRecords = records.filter(r => !r.isAdmissionProfile);
+  const {
+    totalStudents,
+    completedStudents,
+    withdrawnStudents,
+    totalAdmitted,
+    activeRate,
+    completionRate
+  } = calculateStudentCounts(students);
 
-  const totalStudents = activeAdmissions.length;
-  const withdrawnStudents = withdrawnAdmissions.length;
-  const totalAdmitted = admissionProfiles.length;
-  const staffCount = getUniqueTeachers().length;
-  const completedStudents = admissionProfiles.filter(profile => {
-      const relatedRecords = progressRecords.filter(record =>
-          record.studentId === profile.admRegNo ||
-          record.studentName === profile.name ||
-          record.name === profile.name
-      );
-      return isStudentCompleted(profile, relatedRecords);
-  }).length;
-
-  const learningRecordsCount = progressRecords.length;
+  const staffCount = calculateStaffCount(staffList, classesList);
   const classCount = classesList.length;
-  const activeRate = totalAdmitted > 0 ? ((totalStudents / totalAdmitted) * 100).toFixed(1) : '0.0';
-  const completionRate = totalAdmitted > 0 ? ((completedStudents / totalAdmitted) * 100).toFixed(1) : '0.0';
+  const learningRecordsCount = hifzRecords.length;
+  const totalRecordsCount = students.length + hifzRecords.length;
 
-  const studentsByClass = classesList.map(cls => {
-      const count = activeAdmissions.filter(student => student.admClass === cls.id).length;
-      return {
-          id: cls.id,
-          name: cls.className || 'بلا نام کلاس',
-          teacher: cls.teacher || 'استاد درج نہیں',
-          count
-      };
-  }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ur'));
-
-  const recentAdmissions = [...admissionProfiles]
-      .sort((a, b) => {
-          const dA = new Date(a.admDate || 0).getTime();
-          const dB = new Date(b.admDate || 0).getTime();
-          if (dA !== dB) return dB - dA;
-          const regA = String(a.admRegNo || '').toLowerCase();
-          const regB = String(b.admRegNo || '').toLowerCase();
-          return regA.localeCompare(regB, undefined, { numeric: true, sensitivity: 'base' });
-      })
-      .slice(0, 5);
-
-  const totalRecordsCount = records.length;
+  const studentsByClass = calculateStudentsByClass(classesList, students);
   const highestClassStrength = Math.max(...studentsByClass.map(c => c.count), 1);
   const activeClassesCount = studentsByClass.filter(c => c.count > 0).length;
   const avgStudentsPerClass = classCount > 0 ? (totalStudents / classCount).toFixed(1) : '0.0';
+
+  const recentAdmissions = calculateRecentAdmissions(students, 5);
+
+  // Today's Snapshot metrics
+  const currentMonthIso = getCurrentMonthIso();
+  const todayStudentAttRate = calculateTodayAttendanceRate(todayStudentAttendance);
+  const todayStaffAttRate = calculateTodayAttendanceRate(todayStaffAttendance);
+  const currentMonthFeeRate = calculateMonthFeesRate(currentMonthFees, currentMonthIso);
+  const latestExamAvg = calculateLatestExamAverage(examResults);
 
   return (
     <div className="dashboard-wrapper">
@@ -202,6 +249,32 @@ export default function Dashboard() {
             </div>
         </div>
 
+        {/* آج کی جھلک (Today's Snapshot) */}
+        <div className="dashboard-grid-secondary" style={{ gridTemplateColumns: "1fr" }}>
+            <div className="dashboard-panel">
+                <h3>آج کی جھلک</h3>
+                
+                <div className="mini-stat-grid" id="todaySnapshot" style={{ marginTop: "14px" }}>
+                    <div className="mini-stat">
+                        <div className="mini-stat-label">آج طلباء کی حاضری</div>
+                        <div className="mini-stat-value">{todayStudentAttRate}</div>
+                    </div>
+                    <div className="mini-stat">
+                        <div className="mini-stat-label">آج عملے کی حاضری</div>
+                        <div className="mini-stat-value">{todayStaffAttRate}</div>
+                    </div>
+                    <div className="mini-stat">
+                        <div className="mini-stat-label">رواں ماہ فیس وصولی</div>
+                        <div className="mini-stat-value">{currentMonthFeeRate}</div>
+                    </div>
+                    <div className="mini-stat">
+                        <div className="mini-stat-label">تازہ ترین امتحانی نتائج</div>
+                        <div className="mini-stat-value">{latestExamAvg}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div className="dashboard-grid-secondary">
             <div className="dashboard-panel">
                 <h3>کلاس وار تقسیم</h3>
@@ -234,12 +307,12 @@ export default function Dashboard() {
                     ) : (
                         <div className="dashboard-list">
                             {recentAdmissions.map(student => (
-                                <div key={student.admRegNo} className="dashboard-list-item">
+                                <div key={student.id || student.roll_number || student.admRegNo} className="dashboard-list-item">
                                     <div className="dashboard-list-text">
                                         <strong>{student.name || '-'}</strong>
-                                        <small>{student.admFatherName || '-'} | داخلہ: {student.admDate || '-'}</small>
+                                        <small>{student.father_name || student.admFatherName || '-'} | داخلہ: {student.admission_date || student.admDate || '-'}</small>
                                     </div>
-                                    <div className="dashboard-pill">Reg # {student.admRegNo || '-'}</div>
+                                    <div className="dashboard-pill">Reg # {student.roll_number || student.admRegNo || '-'}</div>
                                 </div>
                             ))}
                         </div>

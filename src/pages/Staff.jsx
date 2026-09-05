@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { mapSupabaseToUi, mapUiToSupabase } from '../utils/StaffMappers';
+
+export { mapSupabaseToUi, mapUiToSupabase };
 
 export default function Staff() {
-  const { activeMadrasaId, loadMadrasaData, saveMadrasaData } = useMadrasa();
+  const {
+    activeMadrasaId,
+    fetchStaffFromSupabase,
+    addStaffToSupabase,
+    updateStaffInSupabase,
+    deleteStaffFromSupabase,
+    fetchClassesFromSupabase
+  } = useMadrasa();
+
   const [staffProfiles, setStaffProfiles] = useState([]);
   const [classes, setClasses] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCode, setEditingCode] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   const initialFormState = {
     name: '',
@@ -29,38 +41,48 @@ export default function Staff() {
 
   const [formData, setFormData] = useState(initialFormState);
 
-  // Load from local storage on mount and madrasa change
-  const loadLocalData = () => {
-    const storedData = loadMadrasaData('hf_records_v1') || {};
-    setStaffProfiles(storedData.staffProfiles || []);
-    setClasses(storedData.classes || []);
-  };
-
+  // Load from Supabase on mount and madrasa change
   useEffect(() => {
-    loadLocalData();
+    let isMounted = true;
+
+    const loadData = async () => {
+      try {
+        const [staffData, classesData] = await Promise.all([
+          fetchStaffFromSupabase(activeMadrasaId).catch(() => []),
+          fetchClassesFromSupabase(activeMadrasaId).catch(() => [])
+        ]);
+
+        if (isMounted) {
+          const loadedClasses = classesData || [];
+          setClasses(loadedClasses);
+
+          if (staffData && staffData.length > 0) {
+            const mapped = staffData.map(s => mapSupabaseToUi(s, loadedClasses));
+            setStaffProfiles(mapped);
+          } else {
+            setStaffProfiles([]);
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading staff data:', err);
+      }
+    };
+
+    loadData();
+    return () => { isMounted = false; };
   }, [activeMadrasaId]);
-
-  const saveToLocal = (newProfiles, updatedClasses) => {
-    let storedData = loadMadrasaData('hf_records_v1') || {};
-    storedData.staffProfiles = newProfiles;
-    
-    if (updatedClasses) {
-      storedData.classes = updatedClasses;
-      setClasses(updatedClasses);
-    }
-
-    const maxCode = newProfiles.reduce((max, s) => Math.max(max, Number(s.staffCode || 0)), 1000);
-    storedData.staffIdCounter = maxCode + 1;
-
-    saveMadrasaData('hf_records_v1', storedData);
-    setStaffProfiles(newProfiles);
-  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const saveStaffProfile = () => {
+  const getAssignedClassName = (classId) => {
+    if (!classId) return '';
+    const classObj = classes.find(c => String(c.id) === String(classId));
+    return classObj ? (classObj.name || classObj.className || classObj.class_name || classObj.id) : '';
+  };
+
+  const saveStaffProfile = async () => {
     const name = formData.name.trim();
     const fatherName = formData.fatherName.trim();
     const phone = formData.phone.trim();
@@ -70,62 +92,56 @@ export default function Staff() {
       return;
     }
 
-    const classObj = classes.find(c => String(c.id) === String(formData.assignedClass));
-    let newProfiles = [...staffProfiles];
-    let newClasses = [...classes];
+    try {
+      if (editingId || editingCode) {
+        const target = staffProfiles.find(s =>
+          (editingId && s.id === editingId) ||
+          (editingCode && String(s.staffCode) === String(editingCode))
+        );
+        const targetId = editingId || (target ? target.id : null);
 
-    if (editingCode) {
-      const index = newProfiles.findIndex(s => String(s.staffCode) === String(editingCode));
-      const updatedProfile = {
-        id: index > -1 ? newProfiles[index].id : `staff-${Date.now()}`,
-        staffCode: Number(editingCode),
-        ...formData,
-        assignedClassName: classObj ? (classObj.name || classObj.className || classObj.id) : '',
-        createdAt: index > -1 ? newProfiles[index].createdAt : new Date().toISOString()
-      };
-      
-      if (index > -1) {
-        newProfiles[index] = updatedProfile;
+        const payload = mapUiToSupabase({
+          ...formData,
+          id: targetId,
+          staffCode: editingCode
+        }, activeMadrasaId);
+
+        const updatedRow = await updateStaffInSupabase(targetId, payload, activeMadrasaId);
+        const updatedUi = mapSupabaseToUi(updatedRow, classes);
+
+        setStaffProfiles(prev => prev.map(s =>
+          (s.id === targetId || String(s.staffCode) === String(editingCode))
+            ? { ...s, ...updatedUi, assignedClassName: getAssignedClassName(formData.assignedClass) }
+            : s
+        ));
+        setEditingCode(null);
+        setEditingId(null);
       } else {
-        newProfiles.push(updatedProfile);
+        const payload = mapUiToSupabase(formData, activeMadrasaId);
+        const newRow = await addStaffToSupabase(payload, activeMadrasaId);
+        const newUi = mapSupabaseToUi(newRow, classes);
+        setStaffProfiles(prev => [...prev, { ...newUi, assignedClassName: getAssignedClassName(formData.assignedClass) }]);
       }
-      setEditingCode(null);
-    } else {
-      const maxCode = newProfiles.reduce((max, s) => Math.max(max, Number(s.staffCode || 0)), 1000);
-      const newCode = maxCode + 1;
-      
-      const profile = {
-        id: `staff-${Date.now()}`,
-        staffCode: newCode,
-        ...formData,
-        assignedClassName: classObj ? (classObj.name || classObj.className || classObj.id) : '',
-        createdAt: new Date().toISOString()
-      };
-      newProfiles.push(profile);
-    }
 
-    if (classObj) {
-      const classIndex = newClasses.findIndex(c => String(c.id) === String(classObj.id));
-      if (classIndex > -1) {
-        newClasses[classIndex] = { ...newClasses[classIndex], teacher: name };
-      }
+      setFormData(initialFormState);
+      setIsFormOpen(false);
+      alert('اسٹاف پروفائل کامیابی سے محفوظ ہو گیا۔');
+    } catch (err) {
+      console.error('Error saving staff profile:', err);
+      alert(err.message || 'پروفائل محفوظ کرنے میں خرابی پیش آگئی۔');
     }
-
-    saveToLocal(newProfiles, newClasses);
-    setFormData(initialFormState);
-    setIsFormOpen(false);
-    alert('اسٹاف پروفائل کامیابی سے محفوظ ہو گیا۔');
   };
 
   const editStaffProfile = (code) => {
-    const profile = staffProfiles.find(s => String(s.staffCode) === String(code));
+    const profile = staffProfiles.find(s => String(s.staffCode) === String(code) || String(s.id) === String(code));
     if (!profile) {
       alert('پروفائل نہیں ملا!');
       return;
     }
 
     setIsFormOpen(true);
-    setEditingCode(code);
+    setEditingCode(profile.staffCode);
+    setEditingId(profile.id);
     setFormData({
       name: profile.name || '',
       fatherName: profile.fatherName || '',
@@ -147,10 +163,18 @@ export default function Staff() {
     alert('ترمیم کریں اور "پروفائل محفوظ کریں" دبائیں۔');
   };
 
-  const deleteStaffProfile = (code) => {
+  const deleteStaffProfile = async (code) => {
     if (!window.confirm('کیا آپ یہ پروفائل حذف کرنا چاہتے ہیں؟')) return;
-    const newProfiles = staffProfiles.filter(s => String(s.staffCode) !== String(code));
-    saveToLocal(newProfiles);
+    const target = staffProfiles.find(s => String(s.staffCode) === String(code) || String(s.id) === String(code));
+    const targetId = target ? target.id : code;
+
+    try {
+      await deleteStaffFromSupabase(targetId, activeMadrasaId);
+      setStaffProfiles(prev => prev.filter(s => s.id !== targetId && String(s.staffCode) !== String(code)));
+    } catch (err) {
+      console.error('Error deleting staff profile:', err);
+      alert(err.message || 'پروفائل حذف کرنے میں خرابی پیش آگئی۔');
+    }
   };
 
   const clearStaffForm = () => {
@@ -190,6 +214,7 @@ export default function Staff() {
             if (isFormOpen) {
               setFormData(initialFormState);
               setEditingCode(null);
+              setEditingId(null);
             }
           }}
         >
@@ -229,7 +254,7 @@ export default function Staff() {
                 <select id="staffClass" value={formData.assignedClass} onChange={e => handleInputChange('assignedClass', e.target.value)}>
                   <option value="">کلاس منتخب کریں...</option>
                   {classes.map(c => (
-                    <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>
+                    <option key={c.id} value={c.id}>{c.name || c.className || c.class_name || c.id}</option>
                   ))}
                 </select>
               </div>
@@ -289,16 +314,18 @@ export default function Staff() {
               </div>
             </div>
             <div className="grid-row">
-              <div style={{ gridColumn: '1/-1' }}>
-                <label>مزید نوٹس</label>
-                <textarea id="staffNotes" rows="3" value={formData.notes} onChange={e => handleInputChange('notes', e.target.value)}></textarea>
+              <div>
+                <div style={{ gridColumn: '1/-1' }}>
+                  <label>مزید نوٹس</label>
+                  <textarea id="staffNotes" rows="3" value={formData.notes} onChange={e => handleInputChange('notes', e.target.value)}></textarea>
+                </div>
               </div>
             </div>
 
             <div className="staff-form-btns">
               <button className="staff-save-btn" onClick={saveStaffProfile}>پروفائل محفوظ کریں</button>
               <button className="staff-reset-btn" onClick={clearStaffForm}>فارم صاف کریں</button>
-              <button className="staff-cancel-btn" onClick={() => { setIsFormOpen(false); setEditingCode(null); }}>بند کریں</button>
+              <button className="staff-cancel-btn" onClick={() => { setIsFormOpen(false); setEditingCode(null); setEditingId(null); }}>بند کریں</button>
             </div>
           </div>
         </div>
@@ -321,7 +348,7 @@ export default function Staff() {
               const code = s.staffCode || (1000 + idx + 1);
 
               return (
-                <div key={code} className="staff-card-new">
+                <div key={s.id || code} className="staff-card-new">
                   <div className="staff-card-actions">
                     <button className="staff-action-btn staff-edit-btn" style={{ width: 'auto', padding: '0 8px' }} onClick={() => editStaffProfile(code)} title="ترمیم">ترمیم</button>
                     <button className="staff-action-btn staff-delete-btn" style={{ width: 'auto', padding: '0 8px' }} onClick={() => deleteStaffProfile(code)} title="حذف">حذف</button>
