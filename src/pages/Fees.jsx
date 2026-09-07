@@ -243,7 +243,11 @@ export default function Fees() {
       setPrintData(newUiFee);
       
       setTimeout(() => {
-        alert("فیس ریکارڈ محفوظ ہو گیا۔ پرنٹ ڈائیلاگ کھل رہا ہے...");
+        if (insertedRow?.queued) {
+          alert("انٹرنیٹ کنکشن دستیاب نہیں — یہ اندراج عارضی طور پر محفوظ کر لیا گیا ہے اور انٹرنیٹ بحال ہونے پر خود بخود سرور پر بھیج دیا جائے گا۔");
+        } else {
+          alert("فیس ریکارڈ محفوظ ہو گیا۔ پرنٹ ڈائیلاگ کھل رہا ہے...");
+        }
         window.print();
         
         setTimeout(() => {

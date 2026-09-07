@@ -278,6 +278,7 @@ function MainHeader({ theme, toggleTheme }) {
 function MainLayout({ theme, toggleTheme }) {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
+  const { pendingSyncCount } = useMadrasa();
 
   return (
     <div className="wrap" dir="rtl">
@@ -296,6 +297,25 @@ function MainLayout({ theme, toggleTheme }) {
             <NavLink to="/staff" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اسٹاف</NavLink>
             <NavLink to="/ai-listen" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
           </nav>
+        )}
+
+        {!isLoginPage && pendingSyncCount > 0 && (
+          <div
+            className="pending-sync-indicator"
+            style={{
+              backgroundColor: 'rgba(245, 158, 11, 0.12)',
+              color: '#b45309',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: '6px',
+              padding: '6px 14px',
+              margin: '10px 20px 0 20px',
+              fontSize: '13px',
+              fontWeight: 500,
+              textAlign: 'center'
+            }}
+          >
+            انٹرنیٹ رابطہ معطل ہے — {pendingSyncCount} اندراج خودکار ہم وقت سازی کی قطار میں ہیں
+          </div>
         )}
         
         <div className="tab-content">

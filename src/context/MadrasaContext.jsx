@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase, isValidUUID } from '../lib/supabaseClient';
 import { DEFAULT_CLASSES } from '../constants/defaults';
+import {
+  enqueueWrite,
+  getQueue,
+  isNetworkError,
+  flushQueue,
+  subscribeSyncQueue,
+  SYNC_QUEUE_STORAGE_KEY
+} from '../utils/syncQueue';
 
 const MadrasaContext = createContext();
 
@@ -32,6 +40,52 @@ export function MadrasaProvider({ children }) {
       return {};
     }
   });
+
+  const [pendingSyncCount, setPendingSyncCount] = useState(() => getQueue().length);
+
+  // Auto-flush effect: on mount if online, on 'online' event, and subscribe to queue changes
+  useEffect(() => {
+    const unsubscribe = subscribeSyncQueue((count) => {
+      setPendingSyncCount(count);
+    });
+
+    const triggerFlush = async () => {
+      if (supabase && typeof navigator !== 'undefined' && navigator.onLine) {
+        try {
+          await flushQueue(supabase);
+          setPendingSyncCount(getQueue().length);
+        } catch (flushErr) {
+          console.warn('[MadrasaContext] Auto-flush encountered error:', flushErr);
+        }
+      }
+    };
+
+    const handleOnline = () => {
+      triggerFlush();
+    };
+
+    const handleStorage = (e) => {
+      if (e.key === SYNC_QUEUE_STORAGE_KEY) {
+        setPendingSyncCount(getQueue().length);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('storage', handleStorage);
+    }
+
+    // Flush once on mount if online
+    triggerFlush();
+
+    return () => {
+      unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('storage', handleStorage);
+      }
+    };
+  }, []);
 
   // Auto-migrate legacy 'hf_records_v1' to 'hf_records_v1_madrasa_1'
   useEffect(() => {
@@ -273,19 +327,47 @@ export function MadrasaProvider({ children }) {
     const isRemote = isValidUUID(madrasaId);
 
     if (isRemote) {
-      try {
-        const payload = {
-          student_id: feeData.student_id,
-          madrasa_id: madrasaId,
-          invoice_id: feeData.invoice_id,
-          amount: Number(feeData.amount) || 0,
-          arrears: Number(feeData.arrears) || 0,
-          payment_method: feeData.payment_method || 'Cash',
-          month_year: feeData.month_year,
-          status: feeData.status || 'paid',
-          paid_at: feeData.paid_at || new Date().toISOString()
+      const payload = {
+        student_id: feeData.student_id,
+        madrasa_id: madrasaId,
+        invoice_id: feeData.invoice_id,
+        amount: Number(feeData.amount) || 0,
+        arrears: Number(feeData.arrears) || 0,
+        payment_method: feeData.payment_method || 'Cash',
+        month_year: feeData.month_year,
+        status: feeData.status || 'paid',
+        paid_at: feeData.paid_at || new Date().toISOString()
+      };
+
+      // If explicitly offline before call, queue directly without attempting fetch
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        enqueueWrite({
+          table: 'fees',
+          operation: 'insert',
+          payload,
+          madrasaId
+        });
+
+        const queuedRecord = {
+          id: `fee_offline_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          ...payload,
+          created_at: new Date().toISOString(),
+          students: feeData.students || null,
+          queued: true
         };
 
+        try {
+          const localData = loadMadrasaData('hf_fees_v1', madrasaId) || { fees: [] };
+          localData.fees = [queuedRecord, ...(localData.fees || [])];
+          saveMadrasaData('hf_fees_v1', localData, madrasaId);
+        } catch (syncErr) {
+          console.warn('Failed to sync offline fee to local cache:', syncErr);
+        }
+
+        return queuedRecord;
+      }
+
+      try {
         const { data, error } = await supabase
           .from('fees')
           .insert([payload])
@@ -305,6 +387,35 @@ export function MadrasaProvider({ children }) {
 
         return data;
       } catch (e) {
+        // Only queue on genuine network errors; database/app errors throw immediately as today
+        if (isNetworkError(e)) {
+          console.warn('Network error detected in addFeeToSupabase, enqueueing write for sync:', e);
+          enqueueWrite({
+            table: 'fees',
+            operation: 'insert',
+            payload,
+            madrasaId
+          });
+
+          const queuedRecord = {
+            id: `fee_offline_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            ...payload,
+            created_at: new Date().toISOString(),
+            students: feeData.students || null,
+            queued: true
+          };
+
+          try {
+            const localData = loadMadrasaData('hf_fees_v1', madrasaId) || { fees: [] };
+            localData.fees = [queuedRecord, ...(localData.fees || [])];
+            saveMadrasaData('hf_fees_v1', localData, madrasaId);
+          } catch (syncErr) {
+            console.warn('Failed to sync offline fee to local cache:', syncErr);
+          }
+
+          return queuedRecord;
+        }
+
         console.error('Supabase add fee error:', e.message || e);
         throw new Error(e.message || FETCH_ERROR_URDU);
       }
@@ -1706,6 +1817,8 @@ export function MadrasaProvider({ children }) {
       fetchHifzRecordsFromSupabase,
       fetchFeesFromSupabase,
       addFeeToSupabase,
+      pendingSyncCount,
+      flushOfflineQueue: () => flushQueue(supabase),
       fetchClassesFromSupabase,
       addStudentToSupabase,
       updateStudentInSupabase,
