@@ -16,6 +16,12 @@ export default function Login() {
 
   const from = location.state?.from?.pathname || '/';
 
+  const fillDemoCreds = (demoEmail, demoPass) => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    setErrorMsg('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -37,10 +43,19 @@ export default function Login() {
 
       let userFriendlyMsg = 'غلط ای میل یا پاس ورڈ! براہ کرم درست معلومات درج کریں۔';
 
-      if (rawMsg.includes('Invalid login credentials') || rawMsg.includes('invalid_credentials')) {
+      if (
+        rawMsg === 'SERVER_CONNECTION_ERROR' ||
+        rawMsg.includes('Failed to fetch') ||
+        rawMsg.includes('AuthRetryableFetchError') ||
+        (typeof navigator !== 'undefined' && !navigator.onLine)
+      ) {
+        userFriendlyMsg = 'سرور یا ڈیٹا بیس سے رابطہ نہیں ہو سکا۔ برائے مہربانی انٹرنیٹ چیک کریں یا نیچے دیے گئے ڈیفالٹ اکاؤنٹ سے لاگ ان کریں۔';
+      } else if (
+        rawMsg === 'INVALID_CREDENTIALS' ||
+        rawMsg.includes('Invalid login credentials') ||
+        rawMsg.includes('invalid_credentials')
+      ) {
         userFriendlyMsg = 'غلط ای میل یا پاس ورڈ! براہ کرم درست معلومات درج کریں۔';
-      } else if (rawMsg.includes('Failed to fetch') || rawMsg.includes('AuthRetryableFetchError') || !navigator.onLine) {
-        userFriendlyMsg = 'سرور یا نیٹ ورک سے رابطہ قائم نہیں ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ کنیکشن یا لاگ ان معلومات چیک کریں۔';
       } else if (rawMsg && rawMsg !== '{}' && rawMsg !== '[object Object]') {
         userFriendlyMsg = rawMsg;
       }
@@ -140,6 +155,27 @@ export default function Login() {
             )}
           </button>
         </form>
+
+        {/* Quick Demo Credentials Assistant */}
+        <div className="login-demo-section">
+          <p className="login-demo-title">ٹیسٹ ڈیفالٹ اکاؤنٹس (فوری لاگ ان):</p>
+          <div className="login-demo-btns">
+            <button
+              type="button"
+              className="login-demo-btn"
+              onClick={() => fillDemoCreds('admin@madrasa.com', 'AdminPass123!')}
+            >
+              مہتمم / ایڈمن لاگ ان
+            </button>
+            <button
+              type="button"
+              className="login-demo-btn"
+              onClick={() => fillDemoCreds('teacher@madrasa.com', 'TeacherPass123!')}
+            >
+              استاد / ٹیچر لاگ ان
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
