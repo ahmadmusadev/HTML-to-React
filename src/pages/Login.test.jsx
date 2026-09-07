@@ -42,7 +42,9 @@ describe('Login Component', () => {
     expect(screen.getByRole('button', { name: /استاد \/ ٹیچر لاگ ان/i })).toBeInTheDocument();
   });
 
-  it('fills admin credentials when clicking admin demo button', () => {
+  it('signs in admin immediately when clicking admin demo button', async () => {
+    mockSignIn.mockResolvedValue({ user: { id: 'admin-id' } });
+
     render(
       <MemoryRouter>
         <Login />
@@ -52,11 +54,10 @@ describe('Login Component', () => {
     const adminBtn = screen.getByRole('button', { name: /مہتمم \/ ایڈمن لاگ ان/i });
     fireEvent.click(adminBtn);
 
-    const emailInput = screen.getByLabelText(/ای میل ایڈریس/i);
-    const passwordInput = screen.getByPlaceholderText('پاس ورڈ درج کریں');
-
-    expect(emailInput.value).toBe('admin@madrasa.com');
-    expect(passwordInput.value).toBe('AdminPass123!');
+    expect(mockSignIn).toHaveBeenCalledWith('admin@madrasa.com', 'AdminPass123!');
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+    });
   });
 
   it('handles server error gracefully with clear message', async () => {
@@ -68,8 +69,11 @@ describe('Login Component', () => {
       </MemoryRouter>
     );
 
-    const adminBtn = screen.getByRole('button', { name: /مہتمم \/ ایڈمن لاگ ان/i });
-    fireEvent.click(adminBtn);
+    const emailInput = screen.getByLabelText(/ای میل ایڈریس/i);
+    const passwordInput = screen.getByPlaceholderText('پاس ورڈ درج کریں');
+
+    fireEvent.change(emailInput, { target: { value: 'custom@test.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'pass123' } });
 
     const submitBtn = screen.getByRole('button', { name: /سسٹم میں لاگ ان کریں/i });
     fireEvent.click(submitBtn);
@@ -100,5 +104,22 @@ describe('Login Component', () => {
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/غلط ای میل یا پاس ورڈ/i);
     });
+  });
+
+  it('redirects to target when isAuthenticated is true', () => {
+    vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
+      signIn: mockSignIn,
+      user: { id: 'test-user' },
+      isAuthenticated: true,
+      loading: false,
+    });
+
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 });

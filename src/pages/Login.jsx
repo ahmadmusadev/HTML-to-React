@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
@@ -10,16 +10,32 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { signIn } = useAuth();
+  const { signIn, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = location.state?.from?.pathname || '/';
 
-  const fillDemoCreds = (demoEmail, demoPass) => {
+  // If already authenticated, redirect to home/target
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
+
+  const handleQuickLogin = async (demoEmail, demoPass) => {
     setEmail(demoEmail);
     setPassword(demoPass);
     setErrorMsg('');
+    setIsSubmitting(true);
+    try {
+      await signIn(demoEmail, demoPass);
+      navigate(from, { replace: true });
+    } catch (err) {
+      console.error('Quick login error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -158,19 +174,21 @@ export default function Login() {
 
         {/* Quick Demo Credentials Assistant */}
         <div className="login-demo-section">
-          <p className="login-demo-title">ٹیسٹ ڈیفالٹ اکاؤنٹس (فوری لاگ ان):</p>
+          <p className="login-demo-title">ٹیسٹ ڈیفالٹ اکاؤنٹس (فوری 1-کلک لاگ ان):</p>
           <div className="login-demo-btns">
             <button
               type="button"
               className="login-demo-btn"
-              onClick={() => fillDemoCreds('admin@madrasa.com', 'AdminPass123!')}
+              onClick={() => handleQuickLogin('admin@madrasa.com', 'AdminPass123!')}
+              disabled={isSubmitting}
             >
               مہتمم / ایڈمن لاگ ان
             </button>
             <button
               type="button"
               className="login-demo-btn"
-              onClick={() => fillDemoCreds('teacher@madrasa.com', 'TeacherPass123!')}
+              onClick={() => handleQuickLogin('teacher@madrasa.com', 'TeacherPass123!')}
+              disabled={isSubmitting}
             >
               استاد / ٹیچر لاگ ان
             </button>
