@@ -28,7 +28,7 @@ describe('Login Component', () => {
     });
   });
 
-  it('renders login form and demo fill buttons', () => {
+  it('renders login form and forgot password link without demo buttons', () => {
     render(
       <MemoryRouter>
         <Login />
@@ -38,11 +38,15 @@ describe('Login Component', () => {
     expect(screen.getByText('جامعہ حفظ منیجر')).toBeInTheDocument();
     expect(screen.getByLabelText(/ای میل ایڈریس/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/پاس ورڈ/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /مہتمم \/ ایڈمن لاگ ان/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /استاد \/ ٹیچر لاگ ان/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /پاسورڈ بھول گئے؟/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /سسٹم میں لاگ ان کریں/i })).toBeInTheDocument();
+
+    // Ensure demo buttons are completely gone
+    expect(screen.queryByRole('button', { name: /مہتمم \/ ایڈمن لاگ ان/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /استاد \/ ٹیچر لاگ ان/i })).not.toBeInTheDocument();
   });
 
-  it('signs in admin immediately when clicking admin demo button', async () => {
+  it('submits user credentials to signIn and navigates on success', async () => {
     mockSignIn.mockResolvedValue({ user: { id: 'admin-id' } });
 
     render(
@@ -51,10 +55,16 @@ describe('Login Component', () => {
       </MemoryRouter>
     );
 
-    const adminBtn = screen.getByRole('button', { name: /مہتمم \/ ایڈمن لاگ ان/i });
-    fireEvent.click(adminBtn);
+    const emailInput = screen.getByLabelText(/ای میل ایڈریس/i);
+    const passwordInput = screen.getByPlaceholderText('پاس ورڈ درج کریں');
 
-    expect(mockSignIn).toHaveBeenCalledWith('admin@madrasa.com', 'AdminPass123!');
+    fireEvent.change(emailInput, { target: { value: 'admin@jamia.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'Secret123!' } });
+
+    const submitBtn = screen.getByRole('button', { name: /سسٹم میں لاگ ان کریں/i });
+    fireEvent.click(submitBtn);
+
+    expect(mockSignIn).toHaveBeenCalledWith('admin@jamia.com', 'Secret123!');
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
     });

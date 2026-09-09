@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import { mapSupabaseToUi, mapUiToSupabase } from '../utils/StaffMappers';
+import { validateInvitePayload } from '../utils/accountInviteValidation';
 
 export { mapSupabaseToUi, mapUiToSupabase };
 
@@ -14,10 +17,68 @@ export default function Staff() {
     fetchClassesFromSupabase
   } = useMadrasa();
 
+  const { role } = useAuth();
+  const isAuthorizedToInvite = role === 'admin' || role === 'super_admin';
+
   const [staffProfiles, setStaffProfiles] = useState([]);
   const [classes, setClasses] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  // Teacher Invite State
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
+  const [inviteErrors, setInviteErrors] = useState({});
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteSuccessMsg, setInviteSuccessMsg] = useState('');
+  const [inviteErrorMsg, setInviteErrorMsg] = useState('');
+
+  const handleSendTeacherInvite = async (e) => {
+    e.preventDefault();
+    setInviteErrors({});
+    setInviteSuccessMsg('');
+    setInviteErrorMsg('');
+
+    const payload = {
+      email: inviteEmail,
+      fullName: inviteName,
+      role: 'teacher',
+      madrasaId: activeMadrasaId,
+      phone: invitePhone
+    };
+
+    const validation = validateInvitePayload(payload);
+    if (!validation.isValid) {
+      setInviteErrors(validation.errors);
+      return;
+    }
+
+    setIsInviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-account-invite', {
+        body: payload
+      });
+
+      if (error) {
+        throw error;
+      }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      setInviteSuccessMsg(`استاد "${inviteName}" کو دعوتی ای میل کامیابی سے بھیج دی گئی ہے۔`);
+      setInviteName('');
+      setInviteEmail('');
+      setInvitePhone('');
+    } catch (err) {
+      console.error('Teacher invite error:', err);
+      setInviteErrorMsg(err.message || 'دعوت نامہ ارسال کرنے میں مسئلہ پیش آیا۔');
+    } finally {
+      setIsInviting(false);
+    }
+  };
   const [editingCode, setEditingCode] = useState(null);
   const [editingId, setEditingId] = useState(null);
 
@@ -205,8 +266,8 @@ export default function Staff() {
 
   return (
     <div className="tab-content" id="tab-staff">
-      {/* Collapsible Staff Add Trigger */}
-      <div className="staff-add-trigger">
+      {/* Trigger Buttons Row */}
+      <div className="staff-add-trigger" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button 
           className="staff-add-open-btn" 
           onClick={() => {
@@ -221,7 +282,139 @@ export default function Staff() {
           <span id="staffFormToggleIcon"></span>
           <span id="staffFormToggleText">{isFormOpen ? 'فارم بند کریں' : 'نیا استاد شامل کریں'}</span>
         </button>
+
+        {isAuthorizedToInvite && (
+          <button
+            type="button"
+            className="staff-add-open-btn"
+            style={{ backgroundColor: '#0284c7', borderColor: '#0284c7', color: '#ffffff' }}
+            onClick={() => {
+              setIsInviteModalOpen(true);
+              setInviteSuccessMsg('');
+              setInviteErrorMsg('');
+              setInviteErrors({});
+            }}
+          >
+            <span>استاد کو لاگ ان دعوت نامہ بھیجیں</span>
+          </button>
+        )}
       </div>
+
+      {/* Teacher Invite Modal */}
+      {isInviteModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px'
+          }}
+          onClick={() => setIsInviteModalOpen(false)}
+        >
+          <div
+            style={{
+              background: 'var(--card, #ffffff)',
+              color: 'var(--text, #1e293b)',
+              border: '1px solid var(--border, #e2e8f0)',
+              borderRadius: '12px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '460px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              direction: 'rtl'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>استاد کو لاگ ان دعوت نامہ بھیجیں</h3>
+              <button
+                type="button"
+                onClick={() => setIsInviteModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--muted)' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
+              استاد کے ای میل پر محفوظ سائن اپ / لاگ ان کا دعوت نامہ ارسال کیا جائے گا۔
+            </p>
+
+            {inviteSuccessMsg && (
+              <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', padding: '10px 12px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '14px' }}>
+                {inviteSuccessMsg}
+              </div>
+            )}
+
+            {inviteErrorMsg && (
+              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 12px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '14px' }}>
+                {inviteErrorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleSendTeacherInvite} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>استاد کا مکمل نام *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="مثال: قاری بلال احمد"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border, #cbd5e1)', fontSize: '0.9rem' }}
+                />
+                {inviteErrors.fullName && <span style={{ color: '#dc2626', fontSize: '0.78rem' }}>{inviteErrors.fullName}</span>}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>ای میل ایڈریس *</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="مثال: teacher@madrasa.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border, #cbd5e1)', fontSize: '0.9rem' }}
+                />
+                {inviteErrors.email && <span style={{ color: '#dc2626', fontSize: '0.78rem' }}>{inviteErrors.email}</span>}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>فون نمبر (اختیاری)</label>
+                <input
+                  type="tel"
+                  placeholder="مثال: 0300-1234567"
+                  value={invitePhone}
+                  onChange={(e) => setInvitePhone(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border, #cbd5e1)', fontSize: '0.9rem' }}
+                />
+                {inviteErrors.phone && <span style={{ color: '#dc2626', fontSize: '0.78rem' }}>{inviteErrors.phone}</span>}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsInviteModalOpen(false)}
+                  style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--border, #cbd5e1)', background: 'transparent', cursor: 'pointer', color: 'var(--text)' }}
+                >
+                  منسوخ کریں
+                </button>
+                <button
+                  type="submit"
+                  disabled={isInviting}
+                  style={{ padding: '8px 18px', borderRadius: '6px', border: 'none', background: '#0284c7', color: '#ffffff', fontWeight: 600, cursor: isInviting ? 'not-allowed' : 'pointer' }}
+                >
+                  {isInviting ? 'ارسال ہو رہا ہے...' : 'دعوت نامہ بھیجیں'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {isFormOpen && (
         <div id="staffFormCollapse" className="staff-collapse-panel slide-down" style={{ display: 'block' }}>

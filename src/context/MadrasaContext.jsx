@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase, isValidUUID } from '../lib/supabaseClient';
 import { DEFAULT_CLASSES } from '../constants/defaults';
+import { useAuth } from './AuthContext';
 import {
   enqueueWrite,
   getQueue,
@@ -12,25 +13,13 @@ import {
 
 const MadrasaContext = createContext();
 
-const DEFAULT_MADRASAS = [
-  { id: 'madrasa_1', name: 'جامعہ حفظ منیجر — مرکزی شاخ' },
-  { id: 'madrasa_2', name: 'جامعہ حفظ منیجر — فرعی شاخ 2' },
-  { id: 'madrasa_3', name: 'جامعہ حفظ منیجر — فرعی شاخ 3' }
-];
-
 export function MadrasaProvider({ children }) {
-  const [madrasas, setMadrasas] = useState(() => {
-    try {
-      const stored = localStorage.getItem('hf_madrasas_v1');
-      return stored ? JSON.parse(stored) : DEFAULT_MADRASAS;
-    } catch (e) {
-      return DEFAULT_MADRASAS;
-    }
-  });
+  const { profile, user, role, loading: authLoading } = useAuth();
 
-  const [activeMadrasaId, setActiveMadrasaId] = useState(() => {
-    return localStorage.getItem('hf_active_madrasa_id') || 'madrasa_1';
-  });
+  const activeMadrasaId = profile?.madrasa_id || null;
+  const [activeMadrasa, setActiveMadrasa] = useState(null);
+  const [madrasaLoading, setMadrasaLoading] = useState(false);
+  const [madrasaError, setMadrasaError] = useState(null);
 
   const [logos, setLogos] = useState(() => {
     try {
@@ -42,6 +31,87 @@ export function MadrasaProvider({ children }) {
   });
 
   const [pendingSyncCount, setPendingSyncCount] = useState(() => getQueue().length);
+
+  // Fetch active madrasa record from Supabase
+  const fetchActiveMadrasa = async (mId) => {
+    if (!mId || !isValidUUID(mId)) {
+      setActiveMadrasa(null);
+      return null;
+    }
+    setMadrasaLoading(true);
+    setMadrasaError(null);
+    try {
+      const { data, error } = await supabase
+        .from('madrasas')
+        .select('*')
+        .eq('id', mId)
+        .single();
+
+      if (error) {
+        console.warn('[MadrasaContext] Failed to fetch madrasa metadata:', error.message);
+        const cached = localStorage.getItem(`hf_madrasa_meta_${mId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setActiveMadrasa(parsed);
+          return parsed;
+        }
+        setMadrasaError('مدرسے کی معلومات لوڈ نہیں ہو سکیں۔ برائے مہربانی انٹرنیٹ چیک کریں۔');
+        return null;
+      }
+
+      if (data) {
+        setActiveMadrasa(data);
+        try {
+          localStorage.setItem(`hf_madrasa_meta_${mId}`, JSON.stringify(data));
+        } catch (e) {}
+        return data;
+      }
+    } catch (err) {
+      console.error('[MadrasaContext] Error fetching madrasa:', err);
+      const cached = localStorage.getItem(`hf_madrasa_meta_${mId}`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          setActiveMadrasa(parsed);
+          return parsed;
+        } catch (e) {}
+      }
+      setMadrasaError('مدرسے کی معلومات لوڈ نہیں ہو سکیں۔');
+    } finally {
+      setMadrasaLoading(false);
+    }
+    return null;
+  };
+
+  // Synchronize madrasa state whenever auth/profile changes
+  useEffect(() => {
+    // Purge legacy multi-branch keys
+    try {
+      localStorage.removeItem('hf_madrasas_v1');
+      localStorage.removeItem('hf_active_madrasa_id');
+      localStorage.removeItem('hf_records_v1_madrasa_1');
+    } catch (e) {}
+
+    if (authLoading) return;
+
+    if (!user) {
+      setActiveMadrasa(null);
+      setMadrasaError(null);
+      return;
+    }
+
+    if (activeMadrasaId) {
+      fetchActiveMadrasa(activeMadrasaId);
+    } else {
+      if (role === 'super_admin') {
+        setActiveMadrasa({ id: null, name: 'جامعہ حفظ منیجر — پورٹل' });
+        setMadrasaError(null);
+      } else {
+        setActiveMadrasa(null);
+        setMadrasaError('آپ کے اکاؤنٹ کے ساتھ کوئی مدرسہ منسلک نہیں ہے۔ براہ کرم سپر ایڈمن سے رابطہ کریں۔');
+      }
+    }
+  }, [user, activeMadrasaId, role, authLoading]);
 
   // Auto-flush effect: on mount if online, on 'online' event, and subscribe to queue changes
   useEffect(() => {
@@ -87,30 +157,9 @@ export function MadrasaProvider({ children }) {
     };
   }, []);
 
-  // Auto-migrate legacy 'hf_records_v1' to 'hf_records_v1_madrasa_1'
-  useEffect(() => {
-    try {
-      const legacy = localStorage.getItem('hf_records_v1');
-      const primaryKey = 'hf_records_v1_madrasa_1';
-      if (legacy && !localStorage.getItem(primaryKey)) {
-        localStorage.setItem(primaryKey, legacy);
-      }
-    } catch (e) {
-      console.error('Migration error', e);
-    }
-  }, []);
-
   // Helper to resolve storage key scoped to a madrasa
   const getStorageKey = (baseKey = 'hf_records_v1', madrasaId = activeMadrasaId) => {
-    const key = `${baseKey}_${madrasaId}`;
-    if (madrasaId === 'madrasa_1') {
-      try {
-        if (!localStorage.getItem(key) && localStorage.getItem(baseKey)) {
-          localStorage.setItem(key, localStorage.getItem(baseKey));
-        }
-      } catch (e) {}
-    }
-    return key;
+    return `${baseKey}_${madrasaId || 'tenant'}`;
   };
 
   // Helper to load scoped data
@@ -119,10 +168,6 @@ export function MadrasaProvider({ children }) {
       const key = getStorageKey(baseKey, madrasaId);
       const raw = localStorage.getItem(key);
       if (raw) return JSON.parse(raw);
-      if (madrasaId === 'madrasa_1') {
-        const legacy = localStorage.getItem(baseKey);
-        if (legacy) return JSON.parse(legacy);
-      }
       return null;
     } catch (e) {
       return null;
@@ -134,28 +179,11 @@ export function MadrasaProvider({ children }) {
     try {
       const key = getStorageKey(baseKey, madrasaId);
       localStorage.setItem(key, JSON.stringify(data));
-      if (madrasaId === 'madrasa_1') {
-        localStorage.setItem(baseKey, JSON.stringify(data));
-      }
     } catch (e) {
       console.error('Failed to save data to localStorage (possible quota exceeded):', e);
       alert('⚠️ ڈیٹا محفوظ نہیں ہو سکا — براؤزر اسٹوریج بھر چکا ہے یا پرائیویٹ موڈ میں ہے۔');
     }
   };
-
-  // Save madrasa list to local storage
-  useEffect(() => {
-    try {
-      localStorage.setItem('hf_madrasas_v1', JSON.stringify(madrasas));
-    } catch (e) {}
-  }, [madrasas]);
-
-  // Save active madrasa ID to local storage
-  useEffect(() => {
-    try {
-      localStorage.setItem('hf_active_madrasa_id', activeMadrasaId);
-    } catch (e) {}
-  }, [activeMadrasaId]);
 
   // Save logos to local storage
   useEffect(() => {
@@ -164,8 +192,7 @@ export function MadrasaProvider({ children }) {
     } catch (e) {}
   }, [logos]);
 
-  const activeMadrasa = madrasas.find(m => m.id === activeMadrasaId) || madrasas[0] || DEFAULT_MADRASAS[0];
-  const activeLogo = logos[activeMadrasaId] || null;
+  const activeLogo = activeMadrasaId ? (logos[activeMadrasaId] || null) : null;
 
   const uploadLogo = (file, madrasaId = activeMadrasaId) => {
     return new Promise((resolve, reject) => {
@@ -182,7 +209,7 @@ export function MadrasaProvider({ children }) {
       reader.onload = (e) => {
         const base64Url = e.target.result;
         setLogos(prev => {
-          const next = { ...prev, [madrasaId]: base64Url };
+          const next = { ...prev, [madrasaId || 'default']: base64Url };
           try {
             localStorage.setItem('hf_madrasa_logos_v1', JSON.stringify(next));
           } catch (err) {}
@@ -198,7 +225,7 @@ export function MadrasaProvider({ children }) {
   const removeLogo = (madrasaId = activeMadrasaId) => {
     setLogos(prev => {
       const next = { ...prev };
-      delete next[madrasaId];
+      delete next[madrasaId || 'default'];
       try {
         localStorage.setItem('hf_madrasa_logos_v1', JSON.stringify(next));
       } catch (err) {}
@@ -206,33 +233,7 @@ export function MadrasaProvider({ children }) {
     });
   };
 
-  const switchMadrasa = (id) => {
-    setActiveMadrasaId(id);
-  };
-
-  const addMadrasa = (name) => {
-    if (!name.trim()) return;
-    const newId = `madrasa_${Date.now()}`;
-    const newMadrasa = { id: newId, name: name.trim() };
-    setMadrasas(prev => [...prev, newMadrasa]);
-    setActiveMadrasaId(newId);
-  };
-
-  const deleteMadrasa = (id) => {
-    if (madrasas.length <= 1) return;
-    setMadrasas(prev => {
-      const remaining = prev.filter(m => m.id !== id);
-      if (activeMadrasaId === id) {
-        setActiveMadrasaId(remaining[0]?.id || 'madrasa_1');
-      }
-      return remaining;
-    });
-  };
-
-  const renameMadrasa = (id, newName) => {
-    if (!id || !newName || !newName.trim()) return;
-    setMadrasas(prev => prev.map(m => m.id === id ? { ...m, name: newName.trim() } : m));
-  };
+  const madrasas = activeMadrasa ? [activeMadrasa] : [];
 
   // --- SUPABASE LIVE DATA FETCHERS WITH RESILIENT LOCAL FALLBACK ---
   const FETCH_ERROR_URDU = 'سرور سے رابطہ نہ ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ کنکشن چیک کریں یا دوبارہ کوشش کریں۔';
@@ -1806,10 +1807,9 @@ export function MadrasaProvider({ children }) {
       logos,
       uploadLogo,
       removeLogo,
-      switchMadrasa,
-      addMadrasa,
-      deleteMadrasa,
-      renameMadrasa,
+      refreshMadrasa: () => fetchActiveMadrasa(activeMadrasaId),
+      madrasaLoading,
+      madrasaError,
       getStorageKey,
       loadMadrasaData,
       saveMadrasaData,

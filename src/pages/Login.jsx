@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
 
@@ -22,21 +22,6 @@ export default function Login() {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, from]);
-
-  const handleQuickLogin = async (demoEmail, demoPass) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMsg('');
-    setIsSubmitting(true);
-    try {
-      await signIn(demoEmail, demoPass);
-      navigate(from, { replace: true });
-    } catch (err) {
-      console.error('Quick login error:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,11 +50,12 @@ export default function Login() {
         rawMsg.includes('AuthRetryableFetchError') ||
         (typeof navigator !== 'undefined' && !navigator.onLine)
       ) {
-        userFriendlyMsg = 'سرور یا ڈیٹا بیس سے رابطہ نہیں ہو سکا۔ برائے مہربانی انٹرنیٹ چیک کریں یا نیچے دیے گئے ڈیفالٹ اکاؤنٹ سے لاگ ان کریں۔';
+        userFriendlyMsg = 'سرور یا ڈیٹا بیس سے رابطہ نہیں ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔';
       } else if (
         rawMsg === 'INVALID_CREDENTIALS' ||
         rawMsg.includes('Invalid login credentials') ||
-        rawMsg.includes('invalid_credentials')
+        rawMsg.includes('invalid_credentials') ||
+        rawMsg.includes('invalid_grant')
       ) {
         userFriendlyMsg = 'غلط ای میل یا پاس ورڈ! براہ کرم درست معلومات درج کریں۔';
       } else if (rawMsg && rawMsg !== '{}' && rawMsg !== '[object Object]') {
@@ -128,7 +114,12 @@ export default function Login() {
           </div>
 
           <div className="login-field-group">
-            <label className="login-label" htmlFor="loginPassword">پاس ورڈ (Password):</label>
+            <div className="login-label-row">
+              <label className="login-label" htmlFor="loginPassword">پاس ورڈ (Password):</label>
+              <Link to="/forgot-password" className="login-forgot-password-link">
+                پاسورڈ بھول گئے؟
+              </Link>
+            </div>
             <div className="login-password-wrapper">
               <input
                 id="loginPassword"
@@ -171,29 +162,6 @@ export default function Login() {
             )}
           </button>
         </form>
-
-        {/* Quick Demo Credentials Assistant */}
-        <div className="login-demo-section">
-          <p className="login-demo-title">ٹیسٹ ڈیفالٹ اکاؤنٹس (فوری 1-کلک لاگ ان):</p>
-          <div className="login-demo-btns">
-            <button
-              type="button"
-              className="login-demo-btn"
-              onClick={() => handleQuickLogin('admin@madrasa.com', 'AdminPass123!')}
-              disabled={isSubmitting}
-            >
-              مہتمم / ایڈمن لاگ ان
-            </button>
-            <button
-              type="button"
-              className="login-demo-btn"
-              onClick={() => handleQuickLogin('teacher@madrasa.com', 'TeacherPass123!')}
-              disabled={isSubmitting}
-            >
-              استاد / ٹیچر لاگ ان
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

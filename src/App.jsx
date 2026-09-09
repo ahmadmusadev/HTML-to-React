@@ -17,35 +17,13 @@ import AiListen from './pages/AiListen';
 import Fees from './pages/Fees';
 import Attendance from './pages/Attendance';
 import Login from './pages/Login';
+import SuperAdmin from './pages/SuperAdmin';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function MainHeader({ theme, toggleTheme }) {
-  const { madrasas, activeMadrasaId, activeMadrasa, activeLogo, uploadLogo, removeLogo, switchMadrasa, addMadrasa, renameMadrasa } = useMadrasa();
+  const { activeMadrasa, activeLogo, uploadLogo, removeLogo } = useMadrasa();
   const { user, profile, role, signOut } = useAuth();
-
-  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  const [targetBranchId, setTargetBranchId] = useState(activeMadrasaId);
-  const [newBranchName, setNewBranchName] = useState('');
-
-  const handleOpenRenameModal = () => {
-    setTargetBranchId(activeMadrasaId);
-    setNewBranchName(activeMadrasa?.name || '');
-    setIsRenameModalOpen(true);
-  };
-
-  const handleSelectBranchToRename = (e) => {
-    const selectedId = e.target.value;
-    setTargetBranchId(selectedId);
-    const targetMadrasa = madrasas.find(m => m.id === selectedId);
-    setNewBranchName(targetMadrasa?.name || '');
-  };
-
-  const handleSaveBranchName = (e) => {
-    e.preventDefault();
-    if (newBranchName && newBranchName.trim()) {
-      renameMadrasa(targetBranchId, newBranchName.trim());
-      setIsRenameModalOpen(false);
-    }
-  };
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -58,13 +36,6 @@ function MainHeader({ theme, toggleTheme }) {
     }
   };
 
-  const handleAddBranch = () => {
-    const name = prompt('نئی شاخ / مدرسہ کا نام درج کریں:');
-    if (name && name.trim()) {
-      addMadrasa(name.trim());
-    }
-  };
-
   const getRoleLabel = (r) => {
     switch (r) {
       case 'super_admin': return 'سپر ایڈمن';
@@ -74,6 +45,8 @@ function MainHeader({ theme, toggleTheme }) {
     }
   };
 
+  const displayName = activeMadrasa?.name || (role === 'super_admin' ? 'جامعہ حفظ منیجر — پورٹل' : 'جامعہ حفظ منیجر');
+
   return (
     <div className="card-header-top">
       <div className="header-main-flex">
@@ -82,7 +55,7 @@ function MainHeader({ theme, toggleTheme }) {
         <div className="header-branding">
           <div className="madrasa-logo-wrapper">
             {activeLogo ? (
-              <img src={activeLogo} alt={activeMadrasa.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
+              <img src={activeLogo} alt={displayName} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
             ) : (
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
@@ -94,40 +67,13 @@ function MainHeader({ theme, toggleTheme }) {
           </div>
 
           <div>
-            <h1 className="madrasa-title">{activeMadrasa.name || 'حفظ منیجر'}</h1>
+            <h1 className="madrasa-title">{displayName}</h1>
             <div className="madrasa-subtitle">تعلیمی و حاضری ریکارڈ سسٹم</div>
           </div>
         </div>
 
-        {/* Controls Section: Branch Dropdown with Edit Button & Profile/Logout */}
+        {/* Controls Section: Theme Toggle, User Profile/Logout & Logo Controls */}
         <div className="header-controls-container">
-          {/* Row 1: Branch Select Dropdown & Small Edit Button */}
-          <div className="madrasa-select-wrapper">
-            <select 
-              value={activeMadrasaId} 
-              onChange={(e) => switchMadrasa(e.target.value)}
-              className="madrasa-select-dropdown"
-            >
-              {madrasas.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-
-            <button 
-              type="button" 
-              className="edit-branch-name-btn"
-              onClick={handleOpenRenameModal}
-              title="شاخ کا نام تبدیل کریں"
-              aria-label="شاخ کا نام تبدیل کریں"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-            </button>
-          </div>
-
-          {/* Row 2: Controls — Theme Toggle, User Profile/Logout & Action Buttons */}
           <div className="header-actions-row">
             
             {/* Dark/Light Mode Toggle Button */}
@@ -174,119 +120,59 @@ function MainHeader({ theme, toggleTheme }) {
               </div>
             ) : null}
 
-            {/* Action Buttons */}
-            <div className="header-btn-group">
-              <button 
-                type="button" 
-                onClick={handleAddBranch}
-                className="add-branch-header-btn"
-                title="نئی شاخ شامل کریں"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>نئی شاخ</span>
-              </button>
-
-              <label className="logo-upload-btn" htmlFor="madrasaHeaderLogoInput">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-                <span>لوگو اپ لوڈ</span>
-                <input type="file" id="madrasaHeaderLogoInput" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} />
-              </label>
-
-              {activeLogo && (
-                <button 
-                  type="button" 
-                  onClick={() => removeLogo()} 
-                  className="delete-logo-btn"
-                  title="لوگو حذف کریں"
-                >
+            {/* Logo Actions (admin / super_admin) */}
+            {(role === 'admin' || role === 'super_admin') && (
+              <div className="header-btn-group">
+                <label className="logo-upload-btn" htmlFor="madrasaHeaderLogoInput">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
                   </svg>
-                </button>
-              )}
-            </div>
+                  <span>لوگو اپ لوڈ</span>
+                  <input type="file" id="madrasaHeaderLogoInput" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} />
+                </label>
+
+                {activeLogo && (
+                  <button 
+                    type="button" 
+                    onClick={() => removeLogo()} 
+                    className="delete-logo-btn"
+                    title="لوگو حذف کریں"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )}
 
           </div>
         </div>
 
       </div>
-
-      {/* Rename Branch Modal */}
-      {isRenameModalOpen && (
-        <div className="branch-rename-modal-overlay" onClick={() => setIsRenameModalOpen(false)}>
-          <div className="branch-rename-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="branch-rename-modal-header">
-              <h3>شاخ کا نام تبدیل کریں</h3>
-              <button type="button" className="close-modal-btn" onClick={() => setIsRenameModalOpen(false)} aria-label="بند کریں">
-                &times;
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveBranchName}>
-              <div className="branch-rename-modal-body">
-                <div className="modal-form-group">
-                  <label className="modal-form-label">شاخ منتخب کریں:</label>
-                  <select
-                    value={targetBranchId}
-                    onChange={handleSelectBranchToRename}
-                    className="modal-select-input"
-                  >
-                    {madrasas.map(m => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="modal-form-group">
-                  <label className="modal-form-label">شاخ کا نیا نام:</label>
-                  <input
-                    type="text"
-                    value={newBranchName}
-                    onChange={(e) => setNewBranchName(e.target.value)}
-                    className="modal-text-input"
-                    placeholder="شاخ کا نیا نام درج کریں"
-                    autoFocus
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="branch-rename-modal-footer">
-                <button type="button" className="modal-btn-cancel" onClick={() => setIsRenameModalOpen(false)}>
-                  منسوخ کریں
-                </button>
-                <button type="submit" className="modal-btn-save" disabled={!newBranchName.trim()}>
-                  محفوظ کریں
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 function MainLayout({ theme, toggleTheme }) {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
-  const { pendingSyncCount } = useMadrasa();
+  const isAuthPage = ['/login', '/forgot-password', '/reset-password'].includes(location.pathname);
+  const { pendingSyncCount, madrasaError } = useMadrasa();
+  const { role } = useAuth();
 
   return (
     <div className="wrap" dir="rtl">
       <div className="card">
-        {!isLoginPage && <MainHeader theme={theme} toggleTheme={toggleTheme} />}
+        {!isAuthPage && <MainHeader theme={theme} toggleTheme={toggleTheme} />}
 
-        {!isLoginPage && (
+        {!isAuthPage && (
           <nav className="tabs">
+            {role === 'super_admin' && (
+              <NavLink to="/super-admin" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>سپر ایڈمن</NavLink>
+            )}
             <NavLink to="/" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>ڈیش بورڈ</NavLink>
             <NavLink to="/admissions" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>داخلہ جات</NavLink>
             <NavLink to="/fees" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>فیس ریکارڈ</NavLink>
@@ -299,7 +185,26 @@ function MainLayout({ theme, toggleTheme }) {
           </nav>
         )}
 
-        {!isLoginPage && pendingSyncCount > 0 && (
+        {!isAuthPage && madrasaError && (
+          <div
+            className="madrasa-error-indicator"
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              color: '#dc2626',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '6px',
+              padding: '8px 14px',
+              margin: '10px 20px 0 20px',
+              fontSize: '13px',
+              fontWeight: 600,
+              textAlign: 'center'
+            }}
+          >
+            {madrasaError}
+          </div>
+        )}
+
+        {!isAuthPage && pendingSyncCount > 0 && (
           <div
             className="pending-sync-indicator"
             style={{
@@ -321,7 +226,10 @@ function MainLayout({ theme, toggleTheme }) {
         <div className="tab-content">
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
+            <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdmin /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/admissions" element={<ProtectedRoute><Admissions /></ProtectedRoute>} />
             <Route path="/entry" element={<ProtectedRoute><Entry /></ProtectedRoute>} />
@@ -335,7 +243,7 @@ function MainLayout({ theme, toggleTheme }) {
           </Routes>
         </div>
       </div>
-      {!isLoginPage && <AiChatbot />}
+      {!isAuthPage && <AiChatbot />}
     </div>
   );
 }

@@ -76,10 +76,29 @@
   gap: 6px;
 }
 
+.login-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .login-label {
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--text, #334155);
+}
+
+.login-forgot-password-link {
+  font-size: 0.82rem;
+  color: #0284c7;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.login-forgot-password-link:hover {
+  text-decoration: underline;
+  color: #0369a1;
 }
 
 .login-input {
