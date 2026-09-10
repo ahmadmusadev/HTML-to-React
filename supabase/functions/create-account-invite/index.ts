@@ -13,6 +13,8 @@ const corsHeaders = {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+import { generateSecurePassword } from './passwordGenerator.ts';
+
 serve(async (req) => {
   // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
@@ -22,7 +24,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
 
     if (!supabaseUrl || !supabaseServiceRoleKey) {
       return new Response(
@@ -172,51 +173,60 @@ serve(async (req) => {
         }
       } else {
         return new Response(
-          JSON.stringify({ error: 'آپ کے پاس استاد کو مدعو کرنے کا اختیار نہیں ہے۔' }),
+          JSON.stringify({ error: 'آپ کے پاس استاد کا اکاؤنٹ بنانے کا اختیار نہیں ہے۔' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
-    // 6. Invite user via Supabase Auth Admin API
-    const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      email,
-      {
-        data: {
-          full_name: fullName,
-          role: targetRole,
-          madrasa_id: targetMadrasaId,
-          phone: phone || null
-        }
-      }
-    );
+    // 6. Create user directly via Supabase Auth Admin API with generated password
+    const generatedPassword = generateSecurePassword(12);
 
-    if (inviteErr || !inviteData?.user) {
-      // Rollback newly created madrasa if user invite failed (e.g. email already exists)
+    const { data: createData, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: generatedPassword,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        role: targetRole,
+        madrasa_id: targetMadrasaId,
+        phone: phone || null
+      }
+    });
+
+    if (createErr || !createData?.user) {
+      // Rollback newly created madrasa if user creation failed (e.g. email already exists)
       if (createdMadrasaId) {
         await supabaseAdmin.from('madrasas').delete().eq('id', createdMadrasaId);
       }
 
-      let errorUrdu = 'دعوت نامہ بھیجنے میں مسئلہ پیش آیا۔';
-      if (inviteErr?.message?.includes('already been registered') || inviteErr?.status === 422) {
+      let errorUrdu = 'اکاؤنٹ بنانے میں مسئلہ پیش آیا۔';
+      const errMsg = (createErr?.message || '').toLowerCase();
+      if (
+        errMsg.includes('already been registered') ||
+        errMsg.includes('already registered') ||
+        errMsg.includes('already exists') ||
+        createErr?.code === 'email_exists' ||
+        createErr?.status === 422
+      ) {
         errorUrdu = 'یہ ای میل ایڈریس پہلے سے سسٹم میں رجسٹرڈ ہے۔';
-      } else if (inviteErr?.message) {
-        errorUrdu = `خرابی: ${inviteErr.message}`;
+      } else if (createErr?.message) {
+        errorUrdu = `خرابی: ${createErr.message}`;
       }
 
       return new Response(
         JSON.stringify({ error: errorUrdu }),
-        { status: inviteErr?.status || 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: createErr?.status || 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const invitedUser = inviteData.user;
+    const createdUser = createData.user;
 
     // 7. Reinforce public.profiles upsert (in case database trigger doesn't execute or metadata is delayed)
     const { error: upsertErr } = await supabaseAdmin
       .from('profiles')
       .upsert({
-        id: invitedUser.id,
+        id: createdUser.id,
         full_name: fullName,
         role: targetRole,
         madrasa_id: targetMadrasaId,
@@ -225,18 +235,19 @@ serve(async (req) => {
       }, { onConflict: 'id' });
 
     if (upsertErr) {
-      console.warn('Profile upsert warning after invite:', upsertErr.message);
+      console.warn('Profile upsert warning after account creation:', upsertErr.message);
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'دعوت نامہ کامیابی کے ساتھ ارسال کر دیا گیا ہے۔',
+        message: 'اکاؤنٹ کامیابی سے بن گیا ہے۔ نیچے دیا گیا پاسورڈ صارف کو فراہم کریں۔',
         user: {
-          id: invitedUser.id,
-          email: invitedUser.email
+          id: createdUser.id,
+          email: createdUser.email
         },
-        madrasa_id: targetMadrasaId
+        madrasa_id: targetMadrasaId,
+        password: generatedPassword
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

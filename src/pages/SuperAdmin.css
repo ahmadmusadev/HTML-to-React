@@ -275,3 +275,149 @@
   border-color: #7f1d1d !important;
   color: #fca5a5 !important;
 }
+
+/* Generated Credentials Display Box */
+.super-admin-credentials-box {
+  background: var(--card, #ffffff);
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.12);
+}
+
+.credentials-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.credentials-box-title {
+  color: #065f46;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.credentials-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--muted, #64748b);
+  padding: 0 6px;
+  line-height: 1;
+}
+
+.credentials-close-btn:hover {
+  color: var(--text, #1e293b);
+}
+
+.credentials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.credentials-item {
+  background: var(--card-inner, #f8fafc);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.credentials-item-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+}
+
+.credentials-item-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text, #1e293b);
+}
+
+.credentials-email-val {
+  direction: ltr;
+  text-align: right;
+  word-break: break-all;
+}
+
+.credentials-pwd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.credentials-pwd-val {
+  font-family: Consolas, Monaco, "Courier New", monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #0284c7;
+  user-select: all;
+  direction: ltr;
+}
+
+.credentials-copy-btn {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.credentials-copy-btn:hover {
+  background: #0369a1;
+}
+
+.credentials-copy-btn:active {
+  transform: scale(0.97);
+}
+
+.credentials-warning-alert {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #92400e;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Dark mode overrides for credentials */
+[data-theme="dark"] .super-admin-credentials-box {
+  background: #18181b !important;
+  border-color: #059669 !important;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.2) !important;
+}
+
+[data-theme="dark"] .credentials-box-title {
+  color: #34d399 !important;
+}
+
+[data-theme="dark"] .credentials-item {
+  background: #09090b !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] .credentials-pwd-val {
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .credentials-warning-alert {
+  background: #451a03 !important;
+  border-color: #78350f !important;
+  color: #fde68a !important;
+}

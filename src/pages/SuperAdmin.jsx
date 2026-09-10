@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { validateInvitePayload } from '../utils/accountInviteValidation';
+import { validateInvitePayload, extractEdgeFunctionError } from '../utils/accountInviteValidation';
 import './SuperAdmin.css';
 
 export default function SuperAdmin() {
@@ -14,10 +14,23 @@ export default function SuperAdmin() {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
 
+  const [createdAccount, setCreatedAccount] = useState(null);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const handleCopyPassword = (pwd) => {
+    if (!pwd) return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(pwd).then(() => {
+        setCopiedPassword(true);
+        setTimeout(() => setCopiedPassword(false), 2500);
+      }).catch(() => {});
+    }
+  };
 
   // Fetch all madrasas and their associated admins
   const loadMadrasas = async () => {
@@ -49,6 +62,7 @@ export default function SuperAdmin() {
     setSuccessMsg('');
     setErrorMsg('');
     setErrors({});
+    setCreatedAccount(null);
 
     const payload = {
       madrasaName,
@@ -71,22 +85,29 @@ export default function SuperAdmin() {
       });
 
       if (error) {
-        throw error;
+        const errorDetail = await extractEdgeFunctionError(error);
+        throw new Error(errorDetail || error.message);
       }
 
       if (data?.error) {
         throw new Error(data.error);
       }
 
-      setSuccessMsg(`نیا مدرسہ "${madrasaName}" شامل ہو گیا ہے اور منتظم (${adminEmail}) کو دعوتی ای میل بھیج دی گئی ہے۔`);
+      setCreatedAccount({
+        email: adminEmail,
+        password: data?.password || '',
+        fullName: adminFullName,
+        madrasaName: madrasaName
+      });
+      setSuccessMsg(data?.message || 'اکاؤنٹ کامیابی سے بن گیا ہے۔ نیچے دیا گیا پاسورڈ صارف کو فراہم کریں۔');
       setMadrasaName('');
       setAdminFullName('');
       setAdminEmail('');
       setAdminPhone('');
       await loadMadrasas();
     } catch (err) {
-      console.error('Invite admin error:', err);
-      const msg = err.message || 'دعوت نامہ ارسال نہیں ہو سکا۔ برائے مہربانی دوبارہ کوشش کریں۔';
+      console.error('Create admin error:', err);
+      const msg = err.message || 'اکاؤنٹ بنانے میں مسئلہ پیش آیا۔ برائے مہربانی دوبارہ کوشش کریں۔';
       setErrorMsg(msg);
     } finally {
       setIsSubmitting(false);
@@ -133,7 +154,52 @@ export default function SuperAdmin() {
           <h3>نیا مدرسہ اور منتظم (مہتمم) شامل کریں</h3>
         </div>
 
-        {successMsg && (
+        {/* Prominently displayed generated credentials */}
+        {createdAccount && (
+          <div className="super-admin-credentials-box" role="region" aria-label="اکاؤنٹ کی تفصیلات">
+            <div className="credentials-box-header">
+              <div className="credentials-box-title">
+                <strong>نیا منتظم اکاؤنٹ کامیابی سے بن گیا ہے</strong>
+              </div>
+              <button
+                type="button"
+                className="credentials-close-btn"
+                onClick={() => setCreatedAccount(null)}
+                title="بند کریں"
+                aria-label="بند کریں"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="credentials-grid">
+              <div className="credentials-item">
+                <span className="credentials-item-label">صارف کا ای میل ایڈریس (Email)</span>
+                <span className="credentials-item-val credentials-email-val">{createdAccount.email}</span>
+              </div>
+
+              <div className="credentials-item">
+                <span className="credentials-item-label">پیدا شدہ پاسورڈ (Generated Password)</span>
+                <div className="credentials-pwd-row">
+                  <span className="credentials-pwd-val">{createdAccount.password}</span>
+                  <button
+                    type="button"
+                    className="credentials-copy-btn"
+                    onClick={() => handleCopyPassword(createdAccount.password)}
+                  >
+                    {copiedPassword ? 'کاپی ہو گیا!' : 'کاپی کریں'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="credentials-warning-alert">
+              <span><strong>تنبیہ:</strong> یہ پاسورڈ دوبارہ نہیں دکھایا جائے گا — ابھی محفوظ کر لیں یا صارف کو بھیج دیں۔</span>
+            </div>
+          </div>
+        )}
+
+        {successMsg && !createdAccount && (
           <div className="super-admin-alert-success" role="status">
             {successMsg}
           </div>
@@ -208,7 +274,7 @@ export default function SuperAdmin() {
             className="super-admin-btn-primary"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'دعوت نامہ ارسال ہو رہا ہے...' : 'نیا مدرسہ و منتظم شامل کریں (دعوت نامہ بھیجیں)'}
+            {isSubmitting ? 'اکاؤنٹ بنایا جا رہا ہے...' : 'نیا مدرسہ و منتظم شامل کریں'}
           </button>
         </form>
       </div>

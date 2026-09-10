@@ -3,7 +3,7 @@ import { useMadrasa } from '../context/MadrasaContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { mapSupabaseToUi, mapUiToSupabase } from '../utils/StaffMappers';
-import { validateInvitePayload } from '../utils/accountInviteValidation';
+import { validateInvitePayload, extractEdgeFunctionError } from '../utils/accountInviteValidation';
 
 export { mapSupabaseToUi, mapUiToSupabase };
 
@@ -35,11 +35,25 @@ export default function Staff() {
   const [inviteSuccessMsg, setInviteSuccessMsg] = useState('');
   const [inviteErrorMsg, setInviteErrorMsg] = useState('');
 
+  const [createdTeacherAccount, setCreatedTeacherAccount] = useState(null);
+  const [copiedTeacherPassword, setCopiedTeacherPassword] = useState(false);
+
+  const handleCopyTeacherPassword = (pwd) => {
+    if (!pwd) return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(pwd).then(() => {
+        setCopiedTeacherPassword(true);
+        setTimeout(() => setCopiedTeacherPassword(false), 2500);
+      }).catch(() => {});
+    }
+  };
+
   const handleSendTeacherInvite = async (e) => {
     e.preventDefault();
     setInviteErrors({});
     setInviteSuccessMsg('');
     setInviteErrorMsg('');
+    setCreatedTeacherAccount(null);
 
     const payload = {
       email: inviteEmail,
@@ -62,19 +76,25 @@ export default function Staff() {
       });
 
       if (error) {
-        throw error;
+        const errorDetail = await extractEdgeFunctionError(error);
+        throw new Error(errorDetail || error.message);
       }
       if (data?.error) {
         throw new Error(data.error);
       }
 
-      setInviteSuccessMsg(`استاد "${inviteName}" کو دعوتی ای میل کامیابی سے بھیج دی گئی ہے۔`);
+      setCreatedTeacherAccount({
+        email: inviteEmail,
+        password: data?.password || '',
+        fullName: inviteName
+      });
+      setInviteSuccessMsg(data?.message || 'اکاؤنٹ کامیابی سے بن گیا ہے۔ نیچے دیا گیا پاسورڈ صارف کو فراہم کریں۔');
       setInviteName('');
       setInviteEmail('');
       setInvitePhone('');
     } catch (err) {
-      console.error('Teacher invite error:', err);
-      setInviteErrorMsg(err.message || 'دعوت نامہ ارسال کرنے میں مسئلہ پیش آیا۔');
+      console.error('Teacher account creation error:', err);
+      setInviteErrorMsg(err.message || 'اکاؤنٹ بنانے میں مسئلہ پیش آیا۔');
     } finally {
       setIsInviting(false);
     }
@@ -293,14 +313,15 @@ export default function Staff() {
               setInviteSuccessMsg('');
               setInviteErrorMsg('');
               setInviteErrors({});
+              setCreatedTeacherAccount(null);
             }}
           >
-            <span>استاد کو لاگ ان دعوت نامہ بھیجیں</span>
+            <span>استاد کا لاگ ان اکاؤنٹ بنائیں</span>
           </button>
         )}
       </div>
 
-      {/* Teacher Invite Modal */}
+      {/* Teacher Creation Modal */}
       {isInviteModalOpen && (
         <div
           style={{
@@ -330,7 +351,7 @@ export default function Staff() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>استاد کو لاگ ان دعوت نامہ بھیجیں</h3>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>استاد کا لاگ ان اکاؤنٹ بنائیں</h3>
               <button
                 type="button"
                 onClick={() => setIsInviteModalOpen(false)}
@@ -341,10 +362,106 @@ export default function Staff() {
             </div>
 
             <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
-              استاد کے ای میل پر محفوظ سائن اپ / لاگ ان کا دعوت نامہ ارسال کیا جائے گا۔
+              استاد کے لیے براہ راست اکاؤنٹ بنا کر لاگ ان کی تفصیلات حاصل کریں۔
             </p>
 
-            {inviteSuccessMsg && (
+            {/* Prominently displayed generated credentials */}
+            {createdTeacherAccount && (
+              <div
+                style={{
+                  backgroundColor: 'var(--card-inner, #f8fafc)',
+                  border: '2px solid #10b981',
+                  borderRadius: '10px',
+                  padding: '16px',
+                  marginBottom: '16px'
+                }}
+                role="region"
+                aria-label="استاد کے اکاؤنٹ کی تفصیلات"
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ color: '#065f46', fontWeight: 700, fontSize: '0.95rem' }}>
+                    <strong>استاد کا اکاؤنٹ کامیابی سے بن گیا ہے</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCreatedTeacherAccount(null)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '1.2rem',
+                      cursor: 'pointer',
+                      color: 'var(--muted, #64748b)',
+                      padding: '0 4px',
+                      lineHeight: 1
+                    }}
+                    title="بند کریں"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ background: 'var(--card, #ffffff)', border: '1px solid var(--border, #e2e8f0)', padding: '8px 12px', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--muted, #64748b)', marginBottom: '2px' }}>صارف کا ای میل ایڈریس (Email)</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', direction: 'ltr', textAlign: 'right', wordBreak: 'break-all' }}>
+                      {createdTeacherAccount.email}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--card, #ffffff)', border: '1px solid var(--border, #e2e8f0)', padding: '8px 12px', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--muted, #64748b)', marginBottom: '2px' }}>پیدا شدہ پاسورڈ (Generated Password)</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <span
+                        style={{
+                          fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                          fontSize: '1.1rem',
+                          fontWeight: 700,
+                          letterSpacing: '1px',
+                          color: '#0284c7',
+                          userSelect: 'all',
+                          direction: 'ltr'
+                        }}
+                      >
+                        {createdTeacherAccount.password}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyTeacherPassword(createdTeacherAccount.password)}
+                        style={{
+                          backgroundColor: copiedTeacherPassword ? '#10b981' : '#0284c7',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '5px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {copiedTeacherPassword ? 'کاپی ہو گیا!' : 'کاپی کریں'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: '#fffbeb',
+                    border: '1px solid #fef3c7',
+                    color: '#92400e',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600
+                  }}
+                >
+                  <span><strong>تنبیہ:</strong> یہ پاسورڈ دوبارہ نہیں دکھایا جائے گا — ابھی محفوظ کر لیں یا صارف کو بھیج دیں۔</span>
+                </div>
+              </div>
+            )}
+
+            {inviteSuccessMsg && !createdTeacherAccount && (
               <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', padding: '10px 12px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '14px' }}>
                 {inviteSuccessMsg}
               </div>
@@ -408,7 +525,7 @@ export default function Staff() {
                   disabled={isInviting}
                   style={{ padding: '8px 18px', borderRadius: '6px', border: 'none', background: '#0284c7', color: '#ffffff', fontWeight: 600, cursor: isInviting ? 'not-allowed' : 'pointer' }}
                 >
-                  {isInviting ? 'ارسال ہو رہا ہے...' : 'دعوت نامہ بھیجیں'}
+                  {isInviting ? 'اکاؤنٹ بنایا جا رہا ہے...' : 'اکاؤنٹ بنائیں'}
                 </button>
               </div>
             </form>

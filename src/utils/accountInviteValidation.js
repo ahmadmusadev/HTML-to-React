@@ -97,3 +97,31 @@ export function validateInvitePayload(payload = {}) {
     errors
   };
 }
+
+/**
+ * Extracts the specific error message from an Edge Function invocation error.
+ * When supabase.functions.invoke() returns a non-2xx status, error.message is generic,
+ * but error.context contains the fetch Response object with the custom JSON error body.
+ *
+ * @param {any} error - The error returned or thrown by supabase.functions.invoke
+ * @returns {Promise<string>} - The extracted error string, falling back to error.message
+ */
+export async function extractEdgeFunctionError(error) {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+
+  if (error.context && typeof error.context.json === 'function') {
+    try {
+      const parsedBody = await error.context.json();
+      if (parsedBody && parsedBody.error) {
+        return typeof parsedBody.error === 'string'
+          ? parsedBody.error
+          : JSON.stringify(parsedBody.error);
+      }
+    } catch {
+      // Fall back to error.message if extraction fails for any reason
+    }
+  }
+
+  return error.message || '';
+}
