@@ -238,6 +238,62 @@ Do not guess or fabricate information outside the application features.`;
   return null;
 }
 
+// Helper for screen viewport boundary clamping
+function clampPosition(x, y, elemWidth = 0, elemHeight = 0) {
+  const margin = 12;
+  const winW = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const winH = typeof window !== 'undefined' ? window.innerHeight : 768;
+  const maxX = Math.max(margin, winW - elemWidth - margin);
+  const maxY = Math.max(margin, winH - elemHeight - margin);
+  return {
+    x: Math.round(Math.min(Math.max(margin, x), maxX)),
+    y: Math.round(Math.min(Math.max(margin, y), maxY))
+  };
+}
+
+function getInitialTriggerPos() {
+  const winH = typeof window !== 'undefined' ? window.innerHeight : 768;
+  try {
+    const saved = localStorage.getItem('hifz_chatbot_trigger_pos') || localStorage.getItem('hifz_chatbot_pos');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const pos = parsed?.trigger || parsed;
+      if (typeof pos?.x === 'number' && typeof pos?.y === 'number') {
+        return clampPosition(pos.x, pos.y, 160, 50);
+      }
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return {
+    x: 24,
+    y: Math.max(12, winH - 76)
+  };
+}
+
+function getInitialDrawerPos() {
+  const winW = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const winH = typeof window !== 'undefined' ? window.innerHeight : 768;
+  const drawerW = Math.min(410, winW - 24);
+  const drawerH = Math.min(600, winH - 32);
+  try {
+    const saved = localStorage.getItem('hifz_chatbot_drawer_pos') || localStorage.getItem('hifz_chatbot_pos');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const pos = parsed?.drawer || parsed;
+      if (typeof pos?.x === 'number' && typeof pos?.y === 'number') {
+        return clampPosition(pos.x, pos.y, drawerW, drawerH);
+      }
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return {
+    x: 24,
+    y: Math.max(12, winH - drawerH - 24)
+  };
+}
+
 export default function AiChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -251,7 +307,66 @@ export default function AiChatbot() {
     }
   ]);
 
+  // Draggable state
+  const [triggerPos, setTriggerPos] = useState(getInitialTriggerPos);
+  const [drawerPos, setDrawerPos] = useState(getInitialDrawerPos);
+  const [isDragging, setIsDragging] = useState(false);
+  const [activeDragTarget, setActiveDragTarget] = useState(null); // 'trigger' | 'drawer' | null
+
+  const hasCustomDrawerPos = useRef(false);
+  const triggerRef = useRef(null);
+  const drawerRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const justDraggedRef = useRef(false);
+
+  const dragInfoRef = useRef({
+    isDown: false,
+    targetType: null,
+    startX: 0,
+    startY: 0,
+    elemStartX: 0,
+    elemStartY: 0,
+    elemWidth: 0,
+    elemHeight: 0,
+    hasMoved: false,
+    pointerId: null,
+    targetElem: null
+  });
+
+  // Track if drawer has been positioned by the user previously
+  useEffect(() => {
+    try {
+      const savedDrawer = localStorage.getItem('hifz_chatbot_drawer_pos');
+      const savedComposite = localStorage.getItem('hifz_chatbot_pos');
+      if (savedDrawer) {
+        hasCustomDrawerPos.current = true;
+      } else if (savedComposite) {
+        const parsed = JSON.parse(savedComposite);
+        if (parsed?.drawer) {
+          hasCustomDrawerPos.current = true;
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  // Re-clamp positions if window is resized or orientation changes
+  useEffect(() => {
+    const handleResize = () => {
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setTriggerPos(prev => clampPosition(prev.x, prev.y, rect.width, rect.height));
+      }
+      if (drawerRef.current) {
+        const rect = drawerRef.current.getBoundingClientRect();
+        setDrawerPos(prev => clampPosition(prev.x, prev.y, rect.width, rect.height));
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
@@ -265,8 +380,187 @@ export default function AiChatbot() {
     }
   }, [messages, isOpen, isTyping]);
 
+  // Unified Pointer Drag Event Handlers
+  const handlePointerDown = (e, targetType) => {
+    if (e.button !== 0 && e.button !== undefined) return;
+
+    // For drawer: ignore drag if clicked inside interactive controls or messages scroll container
+    if (targetType === 'drawer') {
+      if (e.target.closest('button, input, textarea, .prompt-chip, a, .ai-chatbot-messages')) {
+        return;
+      }
+    }
+
+    const currentPos = targetType === 'trigger' ? triggerPos : drawerPos;
+    const targetElem = targetType === 'trigger' ? triggerRef.current : drawerRef.current;
+    const rect = targetElem?.getBoundingClientRect();
+    const elemWidth = (rect?.width && rect.width > 0) ? rect.width : (targetType === 'trigger' ? 160 : 410);
+    const elemHeight = (rect?.height && rect.height > 0) ? rect.height : (targetType === 'trigger' ? 50 : 600);
+
+    dragInfoRef.current = {
+      isDown: true,
+      targetType,
+      startX: e.clientX,
+      startY: e.clientY,
+      elemStartX: currentPos.x,
+      elemStartY: currentPos.y,
+      elemWidth,
+      elemHeight,
+      hasMoved: false,
+      pointerId: e.pointerId,
+      targetElem
+    };
+
+    if (typeof e.currentTarget.setPointerCapture === 'function') {
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // Ignore mock/environment errors
+      }
+    }
+  };
+
+  const handlePointerMove = (e) => {
+    if (!dragInfoRef.current.isDown) return;
+
+    const dx = e.clientX - dragInfoRef.current.startX;
+    const dy = e.clientY - dragInfoRef.current.startY;
+
+    // Movement threshold to distinguish tap/click from drag
+    if (!dragInfoRef.current.hasMoved && Math.hypot(dx, dy) >= 6) {
+      dragInfoRef.current.hasMoved = true;
+      setIsDragging(true);
+      setActiveDragTarget(dragInfoRef.current.targetType);
+    }
+
+    if (dragInfoRef.current.hasMoved) {
+      const nextX = dragInfoRef.current.elemStartX + dx;
+      const nextY = dragInfoRef.current.elemStartY + dy;
+      const clamped = clampPosition(
+        nextX,
+        nextY,
+        dragInfoRef.current.elemWidth,
+        dragInfoRef.current.elemHeight
+      );
+
+      if (dragInfoRef.current.targetType === 'trigger') {
+        setTriggerPos(clamped);
+      } else {
+        setDrawerPos(clamped);
+      }
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (!dragInfoRef.current.isDown) return;
+
+    const { targetType, hasMoved, pointerId, targetElem } = dragInfoRef.current;
+
+    if (targetElem && typeof targetElem.releasePointerCapture === 'function' && pointerId !== null) {
+      try {
+        if (typeof targetElem.hasPointerCapture === 'function') {
+          if (targetElem.hasPointerCapture(pointerId)) {
+            targetElem.releasePointerCapture(pointerId);
+          }
+        } else {
+          targetElem.releasePointerCapture(pointerId);
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    if (hasMoved) {
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 120);
+
+      try {
+        if (targetType === 'trigger') {
+          setTriggerPos(current => {
+            localStorage.setItem('hifz_chatbot_trigger_pos', JSON.stringify(current));
+            try {
+              const composite = JSON.parse(localStorage.getItem('hifz_chatbot_pos') || '{}');
+              composite.trigger = current;
+              localStorage.setItem('hifz_chatbot_pos', JSON.stringify(composite));
+            } catch {
+              // Ignore
+            }
+            return current;
+          });
+        } else {
+          hasCustomDrawerPos.current = true;
+          setDrawerPos(current => {
+            localStorage.setItem('hifz_chatbot_drawer_pos', JSON.stringify(current));
+            try {
+              const composite = JSON.parse(localStorage.getItem('hifz_chatbot_pos') || '{}');
+              composite.drawer = current;
+              localStorage.setItem('hifz_chatbot_pos', JSON.stringify(composite));
+            } catch {
+              // Ignore
+            }
+            return current;
+          });
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
+    dragInfoRef.current.isDown = false;
+    setIsDragging(false);
+    setActiveDragTarget(null);
+  };
+
   const handleToggle = () => {
-    setIsOpen(prev => !prev);
+    setIsOpen(prev => {
+      const nextState = !prev;
+      if (nextState && !hasCustomDrawerPos.current) {
+        // Intelligently place the drawer near current trigger location
+        const winW = typeof window !== 'undefined' ? window.innerWidth : 1024;
+        const winH = typeof window !== 'undefined' ? window.innerHeight : 768;
+        const drawerW = Math.min(410, winW - 24);
+        const drawerH = Math.min(600, winH - 32);
+
+        let targetY = triggerPos.y - drawerH - 12;
+        if (targetY < 12) {
+          targetY = Math.min(triggerPos.y + 54, winH - drawerH - 12);
+        }
+        let targetX = triggerPos.x;
+        const clamped = clampPosition(targetX, targetY, drawerW, drawerH);
+        setDrawerPos(clamped);
+      }
+      return nextState;
+    });
+  };
+
+  const handleTriggerClick = (e) => {
+    if (justDraggedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    handleToggle();
+  };
+
+  const handleResetPosition = (e) => {
+    if (e) e.stopPropagation();
+    const winH = typeof window !== 'undefined' ? window.innerHeight : 768;
+    const defaultTrigger = { x: 24, y: Math.max(12, winH - 76) };
+    const drawerH = Math.min(600, winH - 32);
+    const defaultDrawer = { x: 24, y: Math.max(12, winH - drawerH - 24) };
+
+    setTriggerPos(defaultTrigger);
+    setDrawerPos(defaultDrawer);
+    hasCustomDrawerPos.current = false;
+    try {
+      localStorage.removeItem('hifz_chatbot_trigger_pos');
+      localStorage.removeItem('hifz_chatbot_drawer_pos');
+      localStorage.removeItem('hifz_chatbot_pos');
+    } catch {
+      // Ignore
+    }
   };
 
   const handleSend = async (queryText) => {
@@ -336,7 +630,6 @@ export default function AiChatbot() {
     if (!text) return null;
     const lines = text.split('\n');
     return lines.map((line, lineIdx) => {
-      // Split line by ** patterns
       const parts = line.split(/(\*\*.*?\*\*)/g);
       return (
         <React.Fragment key={lineIdx}>
@@ -357,10 +650,21 @@ export default function AiChatbot() {
       {/* Floating Trigger Button (Only rendered when drawer is closed) */}
       {!isOpen && (
         <button
+          ref={triggerRef}
           type="button"
-          className="ai-chatbot-trigger"
-          onClick={handleToggle}
-          title="اے آئی رہنما"
+          className={`ai-chatbot-trigger ${isDragging && activeDragTarget === 'trigger' ? 'is-dragging' : ''}`}
+          style={{
+            left: `${triggerPos.x}px`,
+            top: `${triggerPos.y}px`,
+            bottom: 'auto',
+            right: 'auto'
+          }}
+          onPointerDown={(e) => handlePointerDown(e, 'trigger')}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onClick={handleTriggerClick}
+          title="اے آئی رہنما (کھینچ کر کہیں بھی منتقل کر سکتے ہیں)"
           aria-label="Toggle AI Rehnuma Assistant"
         >
           <span className="chatbot-icon-wrapper">
@@ -372,15 +676,52 @@ export default function AiChatbot() {
             </svg>
           </span>
           <span className="chatbot-badge">اے آئی رہنما</span>
+          <span className="drag-pill-indicator" title="کھینچ کر منتقل کریں (Drag to move)">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" opacity="0.65">
+              <circle cx="9" cy="6" r="2" />
+              <circle cx="15" cy="6" r="2" />
+              <circle cx="9" cy="12" r="2" />
+              <circle cx="15" cy="12" r="2" />
+              <circle cx="9" cy="18" r="2" />
+              <circle cx="15" cy="18" r="2" />
+            </svg>
+          </span>
         </button>
       )}
 
       {/* Slide-out Drawer Popup Modal */}
       {isOpen && (
-        <div className="ai-chatbot-drawer">
-          {/* Header */}
-          <div className="ai-chatbot-header">
+        <div
+          ref={drawerRef}
+          className={`ai-chatbot-drawer ${isDragging && activeDragTarget === 'drawer' ? 'is-dragging' : ''}`}
+          style={{
+            left: `${drawerPos.x}px`,
+            top: `${drawerPos.y}px`,
+            bottom: 'auto',
+            right: 'auto'
+          }}
+          onPointerDown={(e) => handlePointerDown(e, 'drawer')}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        >
+          {/* Header & Primary Drag Handle */}
+          <div
+            className="ai-chatbot-header"
+            onDoubleClick={handleResetPosition}
+            title="کھینچ کر کہیں بھی منتقل کریں (ڈبل کلک سے اصل جگہ ری سیٹ کریں)"
+          >
             <div className="header-info">
+              <div className="drag-handle-grip" aria-hidden="true" title="کھینچ کر منتقل کریں (Drag to move)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="9" cy="6" r="2" />
+                  <circle cx="15" cy="6" r="2" />
+                  <circle cx="9" cy="12" r="2" />
+                  <circle cx="15" cy="12" r="2" />
+                  <circle cx="9" cy="18" r="2" />
+                  <circle cx="15" cy="18" r="2" />
+                </svg>
+              </div>
               <div className="bot-avatar">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
@@ -448,7 +789,7 @@ export default function AiChatbot() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Preset Suggested Prompt Chips (2-3 Rows, No Scrollbar) */}
+          {/* Preset Suggested Prompt Chips */}
           <div className="ai-chatbot-prompts">
             <div className="prompts-grid-container">
               {SUGGESTED_PROMPTS.map((prompt) => (

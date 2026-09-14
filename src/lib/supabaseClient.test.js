@@ -8,10 +8,11 @@ describe('Supabase Client Initializer', () => {
     expect(typeof supabase.from).toBe('function');
   });
 
-  it('provides helper auth methods', () => {
+  it('provides helper auth methods and uses sessionStorage', () => {
     expect(typeof supabase.auth.getSession).toBe('function');
     expect(typeof supabase.auth.signInWithPassword).toBe('function');
     expect(typeof supabase.auth.signOut).toBe('function');
+    expect(supabase.auth.storage).toBe(window.sessionStorage);
   });
 
   it('validates UUID strings correctly', () => {

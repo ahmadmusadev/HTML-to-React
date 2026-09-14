@@ -14,6 +14,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 import { generateSecurePassword } from './passwordGenerator.ts';
+import { buildProfileUpsertPayload } from './profilePayload.ts';
 
 serve(async (req) => {
   // Handle CORS preflight request
@@ -223,19 +224,44 @@ serve(async (req) => {
     const createdUser = createData.user;
 
     // 7. Reinforce public.profiles upsert (in case database trigger doesn't execute or metadata is delayed)
+    const profilePayload = buildProfileUpsertPayload({
+      id: createdUser.id,
+      fullName,
+      role: targetRole,
+      madrasaId: targetMadrasaId,
+      phone
+    });
+
     const { error: upsertErr } = await supabaseAdmin
       .from('profiles')
-      .upsert({
-        id: createdUser.id,
-        full_name: fullName,
-        role: targetRole,
-        madrasa_id: targetMadrasaId,
-        phone: phone || null,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id' });
+      .upsert(profilePayload, { onConflict: 'id' });
 
     if (upsertErr) {
-      console.warn('Profile upsert warning after account creation:', upsertErr.message);
+      console.error('Profile upsert failed after auth user creation. Rolling back:', upsertErr);
+
+      // Attempt rollback of created auth user to avoid leaving an orphaned/broken account
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(createdUser.id);
+      } catch (deleteErr) {
+        console.error('Failed to rollback created auth user:', deleteErr);
+      }
+
+      // Roll back created madrasa if this operation created one
+      if (createdMadrasaId) {
+        try {
+          await supabaseAdmin.from('madrasas').delete().eq('id', createdMadrasaId);
+        } catch (madrasaDeleteErr) {
+          console.error('Failed to rollback created madrasa:', madrasaDeleteErr);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          error: 'اکاؤنٹ بنانے کے بعد پروفائل کو محفوظ کرنے میں خرابی پیش آئی، براہ کرم دوبارہ کوشش کریں۔',
+          details: upsertErr.message
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     return new Response(

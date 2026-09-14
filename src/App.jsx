@@ -20,10 +20,12 @@ import Login from './pages/Login';
 import SuperAdmin from './pages/SuperAdmin';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import ProfileModal from './components/ProfileModal';
 
 function MainHeader({ theme, toggleTheme }) {
   const { activeMadrasa, activeLogo, uploadLogo, removeLogo } = useMadrasa();
   const { user, profile, role, signOut } = useAuth();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -98,12 +100,29 @@ function MainHeader({ theme, toggleTheme }) {
             {user ? (
               <div className="user-profile-badge">
                 <div className="user-avatar-circle">
-                  {(profile?.full_name || user.email || 'U')[0].toUpperCase()}
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile?.full_name || 'Avatar'}
+                      className="user-avatar-img"
+                    />
+                  ) : (
+                    (profile?.full_name || user.email || 'U')[0].toUpperCase()
+                  )}
                 </div>
                 <div className="user-info-text">
                   <span className="user-name">{profile?.full_name || user.email.split('@')[0]}</span>
                   <span className="user-role-badge">{getRoleLabel(role)}</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="change-password-header-btn"
+                  id="changePasswordHeaderBtn"
+                  title="پاسورڈ تبدیل کریں"
+                >
+                  پاسورڈ تبدیل کریں
+                </button>
                 <button
                   type="button"
                   onClick={signOut}
@@ -151,6 +170,13 @@ function MainHeader({ theme, toggleTheme }) {
 
           </div>
         </div>
+
+        {isProfileModalOpen && (
+          <ProfileModal
+            isOpen={isProfileModalOpen}
+            onClose={() => setIsProfileModalOpen(false)}
+          />
+        )}
 
       </div>
     </div>
@@ -239,6 +265,7 @@ function MainLayout({ theme, toggleTheme }) {
             <Route path="/ai-listen" element={<ProtectedRoute><AiListen /></ProtectedRoute>} />
             <Route path="/fees" element={<ProtectedRoute><Fees /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+            <Route path="/chatbot-preview" element={<div style={{ padding: '40px', textAlign: 'center' }}><h2>اے آئی رہنما (AI Rehnuma) — لائیو چیٹ بوٹ پری ویو</h2><p style={{ color: '#64748b', marginTop: '8px' }}>تیرتے ہوئے چیٹ بوٹ آئیکن اور پاپ اپ ڈائیلاگ کو اسکرین پر کہیں بھی ماؤس یا ٹچ سے کھینچ کر منتقل کریں۔</p></div>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

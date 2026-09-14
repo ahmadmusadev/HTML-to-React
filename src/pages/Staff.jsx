@@ -24,6 +24,7 @@ export default function Staff() {
   const [classes, setClasses] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
   // Teacher Invite State
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -125,19 +126,34 @@ export default function Staff() {
   // Load from Supabase on mount and madrasa change
   useEffect(() => {
     let isMounted = true;
+    setFetchError(null);
 
     const loadData = async () => {
+      let hasError = false;
+      let errorMessage = '';
+
       try {
         const [staffData, classesData] = await Promise.all([
-          fetchStaffFromSupabase(activeMadrasaId).catch(() => []),
-          fetchClassesFromSupabase(activeMadrasaId).catch(() => [])
+          fetchStaffFromSupabase(activeMadrasaId).catch(err => {
+            console.error('[Staff] Error fetching staff:', err);
+            hasError = true;
+            errorMessage = err?.message || 'سرور سے عملے کا ڈیٹا حاصل کرنے میں دشواری پیش آئی ہے۔ براہ کرم دوبارہ کوشش کریں۔';
+            return null;
+          }),
+          fetchClassesFromSupabase(activeMadrasaId).catch(err => {
+            console.error('[Staff] Error fetching classes:', err);
+            return [];
+          })
         ]);
 
         if (isMounted) {
           const loadedClasses = classesData || [];
           setClasses(loadedClasses);
 
-          if (staffData && staffData.length > 0) {
+          if (hasError) {
+            setFetchError(errorMessage);
+            setStaffProfiles([]);
+          } else if (staffData && staffData.length > 0) {
             const mapped = staffData.map(s => mapSupabaseToUi(s, loadedClasses));
             setStaffProfiles(mapped);
           } else {
@@ -145,7 +161,11 @@ export default function Staff() {
           }
         }
       } catch (err) {
-        console.warn('Error loading staff data:', err);
+        console.error('Error loading staff data:', err);
+        if (isMounted) {
+          setFetchError(err?.message || 'سرور سے عملے کا ڈیٹا حاصل کرنے میں دشواری پیش آئی ہے۔ براہ کرم دوبارہ کوشش کریں۔');
+          setStaffProfiles([]);
+        }
       }
     };
 
@@ -286,6 +306,23 @@ export default function Staff() {
 
   return (
     <div className="tab-content" id="tab-staff">
+      {fetchError && (
+        <div style={{
+          backgroundColor: '#fef2f2',
+          border: '1px solid #f87171',
+          color: '#991b1b',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: 500
+        }} role="alert">
+          <span>{fetchError}</span>
+        </div>
+      )}
+
       {/* Trigger Buttons Row */}
       <div className="staff-add-trigger" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button 

@@ -135,6 +135,86 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   color: #fca5a5 !important;
 }
 
+[data-theme="dark"] .change-password-header-btn {
+  background: #18181b !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .change-password-header-btn:hover {
+  background: #27272a !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .profile-modal-card {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .profile-modal-header {
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme="dark"] .profile-modal-title {
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .profile-modal-user-summary {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme="dark"] .profile-modal-user-name {
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .profile-modal-user-email {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .profile-modal-role-badge {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .profile-modal-alert-error {
+  background-color: #451a1a !important;
+  border-color: #7f1d1d !important;
+  color: #fca5a5 !important;
+}
+
+[data-theme="dark"] .profile-modal-alert-success {
+  background-color: #064e3b !important;
+  border-color: #047857 !important;
+  color: #6ee7b7 !important;
+}
+
+[data-theme="dark"] .profile-modal-label {
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .profile-modal-input {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .profile-modal-input:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+}
+
+[data-theme="dark"] .profile-modal-btn-cancel {
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .profile-modal-btn-cancel:hover {
+  background: #27272a !important;
+}
+
 [data-theme="dark"] .branch-rename-modal-content {
   background: #18181b !important;
   color: #f4f4f5 !important;

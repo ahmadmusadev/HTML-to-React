@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { isValidUUID } from '../lib/supabaseClient';
 import { DEFAULT_CLASSES } from '../constants/defaults';
 import {
   calculateStudentCounts,
@@ -52,15 +53,22 @@ export default function Dashboard() {
     updateClock();
     const intervalId = setInterval(updateClock, 1000);
 
-    // Initial local fallback load
+    // Initial local fallback load only for mock/offline tenant
     let isMounted = true;
-    const d = loadMadrasaData('hf_records_v1') || {};
-    const localAdmissions = (d.records || []).filter(r => r.isAdmissionProfile);
-    const localProgress = (d.records || []).filter(r => !r.isAdmissionProfile);
-    setStudents(localAdmissions);
-    setClassesList(d.classes && d.classes.length > 0 ? d.classes : DEFAULT_CLASSES);
-    setStaffList(d.staffProfiles || []);
-    setHifzRecords(localProgress);
+    if (!isValidUUID(activeMadrasaId)) {
+      const d = loadMadrasaData('hf_records_v1', activeMadrasaId) || {};
+      const localAdmissions = (d.records || []).filter(r => r.isAdmissionProfile);
+      const localProgress = (d.records || []).filter(r => !r.isAdmissionProfile);
+      setStudents(localAdmissions);
+      setClassesList(d.classes && d.classes.length > 0 ? d.classes : DEFAULT_CLASSES);
+      setStaffList(d.staffProfiles || []);
+      setHifzRecords(localProgress);
+    } else {
+      setStudents([]);
+      setClassesList([]);
+      setStaffList([]);
+      setHifzRecords([]);
+    }
 
     // Live fetch from Supabase
     const todayIso = getTodayDateIso();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { isValidUUID } from '../lib/supabaseClient';
 import { DEFAULT_CLASSES } from '../constants/defaults';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import {
@@ -143,28 +144,37 @@ export default function Attendance() {
     let isMounted = true;
 
     const loadInitialData = async () => {
-      const d = loadMadrasaData('hf_records_v1') || {};
-      const localAttList = loadMadrasaData('hf_student_attendance_v1') || [];
-      const localStaffAtt = loadMadrasaData('hf_staff_attendance_v1') || [];
-      
       if (isMounted) {
-        setRecords(d.records || []);
-        if (d.classes && d.classes.length > 0) {
-          setClassesList(d.classes);
+        if (!isValidUUID(activeMadrasaId)) {
+          const d = loadMadrasaData('hf_records_v1') || {};
+          const localAttList = loadMadrasaData('hf_student_attendance_v1') || [];
+          const localStaffAtt = loadMadrasaData('hf_staff_attendance_v1') || [];
+          
+          setRecords(d.records || []);
+          if (d.classes && d.classes.length > 0) {
+            setClassesList(d.classes);
+          } else {
+            setClassesList(DEFAULT_CLASSES);
+          }
+          setDailyAttendance(d.dailyAttendance || {});
+          setAttendance(d.attendance || {});
+          setStudentAttendanceList(localAttList);
+          setStaffProfiles(d.staffProfiles || []);
+          if (localStaffAtt.length > 0) {
+            setStaffAttendance(mapStaffAttendanceRowsToDict(localStaffAtt, d.staffProfiles || []));
+          } else {
+            setStaffAttendance(d.staffAttendance || {});
+          }
+          if (d.staffAttendanceFlow?.checkInSaved && !d.staffAttendanceFlow?.checkOutSaved && d.staffAttendanceFlow?.pendingDate) {
+            setStaffPendingDate(d.staffAttendanceFlow.pendingDate);
+          }
         } else {
-          setClassesList(DEFAULT_CLASSES);
-        }
-        setDailyAttendance(d.dailyAttendance || {});
-        setAttendance(d.attendance || {});
-        setStudentAttendanceList(localAttList);
-        setStaffProfiles(d.staffProfiles || []);
-        if (localStaffAtt.length > 0) {
-          setStaffAttendance(mapStaffAttendanceRowsToDict(localStaffAtt, d.staffProfiles || []));
-        } else {
-          setStaffAttendance(d.staffAttendance || {});
-        }
-        if (d.staffAttendanceFlow?.checkInSaved && !d.staffAttendanceFlow?.checkOutSaved && d.staffAttendanceFlow?.pendingDate) {
-          setStaffPendingDate(d.staffAttendanceFlow.pendingDate);
+          setRecords([]);
+          setClassesList([]);
+          setStaffProfiles([]);
+          setStudentAttendanceList([]);
+          setStaffAttendance({});
+          setStaffPendingDate(null);
         }
       }
 
@@ -902,19 +912,22 @@ export default function Attendance() {
           shiftEnd: formatTimeForUi(s.shiftEnd || s.shift_end, '14:45')
         }));
     }
-    const teachers = new Set();
-    classesList.forEach(c => {
-      if (c.teacher) teachers.add(c.teacher.trim());
-    });
-    return Array.from(teachers).map((name, idx) => ({
-      id: `teacher_${idx + 1}`,
-      staffId: `teacher_${idx + 1}`,
-      staffCode: 1001 + idx,
-      teacherId: String(1001 + idx),
-      name,
-      shiftStart: '06:50',
-      shiftEnd: '14:45'
-    }));
+    if (!isValidUUID(activeMadrasaId)) {
+      const teachers = new Set();
+      classesList.forEach(c => {
+        if (c.teacher) teachers.add(c.teacher.trim());
+      });
+      return Array.from(teachers).map((name, idx) => ({
+        id: `teacher_${idx + 1}`,
+        staffId: `teacher_${idx + 1}`,
+        staffCode: 1001 + idx,
+        teacherId: String(1001 + idx),
+        name,
+        shiftStart: '06:50',
+        shiftEnd: '14:45'
+      }));
+    }
+    return [];
   };
   const staffMembers = getStaffForAttendance();
 

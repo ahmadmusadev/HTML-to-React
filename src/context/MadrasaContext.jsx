@@ -253,10 +253,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase students fetch failed, falling back to local:', e.message || e);
-      const local = loadMadrasaData('hf_records_v1', madrasaId);
-      if (local?.records) return local.records;
-      throw new Error(FETCH_ERROR_URDU);
+      console.error('[MadrasaContext] Error fetching students from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -276,10 +274,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase Hifz records fetch failed, falling back to local:', e.message || e);
-      const local = loadMadrasaData('hf_records_v1', madrasaId);
-      if (local?.monthlyExams) return local.monthlyExams;
-      throw new Error(FETCH_ERROR_URDU);
+      console.error('[MadrasaContext] Error fetching Hifz records from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -315,12 +311,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase fees fetch failed, falling back to local:', e.message || e);
-      const local = loadMadrasaData('hf_fees_v1', mId);
-      if (local?.fees) return local.fees;
-      const legacy = loadMadrasaData('hf_records_v1', mId);
-      if (legacy?.records) return legacy.records.filter(r => r.isFeeRecord);
-      throw new Error(FETCH_ERROR_URDU);
+      console.error('[MadrasaContext] Error fetching fees from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -467,10 +459,10 @@ export function MadrasaProvider({ children }) {
           class_name: c.class_name || c.name || ''
         }));
       }
-      return DEFAULT_CLASSES;
+      return [];
     } catch (e) {
-      console.warn('Supabase classes fetch failed, falling back to defaults:', e.message || e);
-      return DEFAULT_CLASSES;
+      console.error('[MadrasaContext] Error fetching classes from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -602,12 +594,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase hifz half-year records fetch failed, falling back to local:', e.message || e);
-      const local = loadMadrasaData('hf_records_v1', madrasaId);
-      if (local?.records) {
-        return local.records.filter(r => r && r.name && !r.isAdmissionProfile && !r.isFeeRecord);
-      }
-      throw new Error(FETCH_ERROR_URDU);
+      console.error('[MadrasaContext] Error fetching Hifz half-year records from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -831,9 +819,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase student attendance fetch failed, falling back to local:', e.message || e);
-      const localCustom = loadMadrasaData('hf_student_attendance_v1', madrasaId) || [];
-      return localCustom;
+      console.error('[MadrasaContext] Error fetching student attendance from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -917,10 +904,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase staff fetch failed, falling back to local:', e.message || e);
-      const local = loadMadrasaData('hf_records_v1', madrasaId);
-      if (local?.staffProfiles) return local.staffProfiles;
-      throw new Error(FETCH_ERROR_URDU);
+      console.error('[MadrasaContext] Error fetching staff from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -1230,9 +1215,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase staff attendance fetch failed, falling back to local:', e.message || e);
-      const local = loadMadrasaData('hf_staff_attendance_v1', mId) || [];
-      return local;
+      console.error('[MadrasaContext] Error fetching staff attendance from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -1413,18 +1397,8 @@ export function MadrasaProvider({ children }) {
       }
       return null;
     } catch (e) {
-      console.warn('Supabase fetchStaffAttendancePendingDate failed, checking local fallback:', e.message || e);
-      const local = loadMadrasaData('hf_staff_attendance_v1', mId) || [];
-      const pendingRows = local.filter(r => r.status === 'present' && (r.check_in || r.checkIn) && !(r.check_out || r.checkOut));
-      if (pendingRows.length > 0) {
-        pendingRows.sort((a, b) => String(b.date).localeCompare(String(a.date)));
-        return pendingRows[0].date;
-      }
-      const legacy = loadMadrasaData('hf_records_v1', mId) || {};
-      if (legacy.staffAttendanceFlow?.checkInSaved && !legacy.staffAttendanceFlow?.checkOutSaved && legacy.staffAttendanceFlow?.pendingDate) {
-        return legacy.staffAttendanceFlow.pendingDate;
-      }
-      return null;
+      console.error('[MadrasaContext] Error fetching pending staff attendance date from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -1475,24 +1449,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase fetchExamMiqdar failed, falling back to local:', e.message || e);
-      const local = loadMadrasaData('hf_records_v1', mId) || {};
-      let miqdar = local.examMiqdar || [];
-      if (filters.class_id || filters.classId) {
-        const cid = filters.class_id || filters.classId;
-        miqdar = miqdar.filter(m => m.classId === cid || m.class_id === cid);
-      }
-      if (filters.term) {
-        miqdar = miqdar.filter(m => m.term === filters.term);
-      }
-      if (filters.year) {
-        miqdar = miqdar.filter(m => String(m.year) === String(filters.year));
-      }
-      if (filters.student_id || filters.studentId) {
-        const sid = filters.student_id || filters.studentId;
-        miqdar = miqdar.filter(m => m.student_id === sid || m.studentId === sid || m.regNo === sid);
-      }
-      return miqdar;
+      console.error('[MadrasaContext] Error fetching exam miqdar from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
@@ -1665,24 +1623,8 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       return data || [];
     } catch (e) {
-      console.warn('Supabase fetchExamResults failed, falling back to local:', e.message || e);
-      const local = loadMadrasaData('hf_records_v1', mId) || {};
-      let results = local.examResults || [];
-      if (filters.class_id || filters.classId) {
-        const cid = filters.class_id || filters.classId;
-        results = results.filter(r => r.classId === cid || r.class_id === cid);
-      }
-      if (filters.term) {
-        results = results.filter(r => r.term === filters.term);
-      }
-      if (filters.year) {
-        results = results.filter(r => String(r.year) === String(filters.year));
-      }
-      if (filters.student_id || filters.studentId) {
-        const sid = filters.student_id || filters.studentId;
-        results = results.filter(r => r.student_id === sid || r.studentId === sid || r.regNo === sid);
-      }
-      return results;
+      console.error('[MadrasaContext] Error fetching exam results from Supabase:', e);
+      throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
     }
   };
 
