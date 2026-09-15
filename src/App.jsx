@@ -1,11 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MadrasaProvider, useMadrasa } from './context/MadrasaContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import AiChatbot from './components/AiChatbot';
 import './index.css'; // Global CSS
+import './App.css';
 
 import Dashboard from './pages/Dashboard';
 import Admissions from './pages/Admissions';
@@ -22,10 +23,42 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ProfileModal from './components/ProfileModal';
 
-function MainHeader({ theme, toggleTheme }) {
+export function MainHeader({ theme, toggleTheme }) {
   const { activeMadrasa, activeLogo, uploadLogo, removeLogo } = useMadrasa();
   const { user, profile, role, signOut } = useAuth();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileModalSection, setProfileModalSection] = useState('password');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsDropdownRef = useRef(null);
+  const logoUploadInputRef = useRef(null);
+  const logoUpdateInputRef = useRef(null);
+
+  // Close dropdown on outside click or ESC key
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+
+    const handleClickOutside = (e) => {
+      if (settingsDropdownRef.current && !settingsDropdownRef.current.contains(e.target)) {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSettingsOpen]);
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -36,6 +69,8 @@ function MainHeader({ theme, toggleTheme }) {
         alert(err.message || 'لوگو آپ لوڈ کرنے میں مسئلہ پیش آیا');
       }
     }
+    // Clear input value so same file can be chosen again if needed
+    e.target.value = '';
   };
 
   const getRoleLabel = (r) => {
@@ -74,7 +109,7 @@ function MainHeader({ theme, toggleTheme }) {
           </div>
         </div>
 
-        {/* Controls Section: Theme Toggle, User Profile/Logout & Logo Controls */}
+        {/* Controls Section: Theme Toggle, User Profile & Settings Dropdown */}
         <div className="header-controls-container">
           <div className="header-actions-row">
             
@@ -96,10 +131,11 @@ function MainHeader({ theme, toggleTheme }) {
               </svg>
             </button>
 
-            {/* Authenticated User Badge & Logout Button */}
+            {/* Authenticated User Profile & Settings Dropdown */}
             {user ? (
-              <div className="user-profile-badge">
-                <div className="user-avatar-circle">
+              <div className="user-profile-badge" ref={settingsDropdownRef}>
+                {/* Profile Picture */}
+                <div className="user-avatar-circle" title={profile?.full_name || user.email}>
                   {profile?.avatar_url ? (
                     <img
                       src={profile.avatar_url}
@@ -110,62 +146,210 @@ function MainHeader({ theme, toggleTheme }) {
                     (profile?.full_name || user.email || 'U')[0].toUpperCase()
                   )}
                 </div>
+
+                {/* User Identity: Super Admin / Name */}
                 <div className="user-info-text">
                   <span className="user-name">{profile?.full_name || user.email.split('@')[0]}</span>
                   <span className="user-role-badge">{getRoleLabel(role)}</span>
                 </div>
+
+                {/* Settings Trigger Icon */}
                 <button
                   type="button"
-                  onClick={() => setIsProfileModalOpen(true)}
-                  className="change-password-header-btn"
-                  id="changePasswordHeaderBtn"
-                  title="پاسورڈ تبدیل کریں"
+                  id="userSettingsMenuBtn"
+                  className={`settings-icon-btn ${isSettingsOpen ? 'active' : ''}`}
+                  onClick={() => setIsSettingsOpen(prev => !prev)}
+                  aria-label="ترتیبات اور اختیارات"
+                  aria-haspopup="true"
+                  aria-expanded={isSettingsOpen}
+                  title="ترتیبات"
                 >
-                  پاسورڈ تبدیل کریں
-                </button>
-                <button
-                  type="button"
-                  onClick={signOut}
-                  className="logout-header-btn"
-                  title="سسٹم سے لاگ آؤٹ کریں"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  <svg className="settings-cog-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                   </svg>
-                  <span>لاگ آؤٹ</span>
                 </button>
+
+                {/* Settings Dropdown Menu */}
+                {isSettingsOpen && (
+                  <div className="settings-dropdown-menu" role="menu" aria-orientation="vertical">
+                    <div className="settings-dropdown-header">
+                      <div className="settings-user-preview">
+                        <div className="settings-mini-avatar">
+                          {profile?.avatar_url ? (
+                            <img src={profile.avatar_url} alt="Profile" />
+                          ) : (
+                            (profile?.full_name || user.email || 'U')[0].toUpperCase()
+                          )}
+                        </div>
+                        <div className="settings-user-meta">
+                          <span className="settings-user-title">{profile?.full_name || user.email.split('@')[0]}</span>
+                          <span className="settings-user-sub">{getRoleLabel(role)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="settings-dropdown-body">
+                      {/* Change Password */}
+                      <button
+                        type="button"
+                        className="settings-dropdown-item"
+                        id="menuItemChangePassword"
+                        role="menuitem"
+                        onClick={() => {
+                          setIsSettingsOpen(false);
+                          setProfileModalSection('password');
+                          setIsProfileModalOpen(true);
+                        }}
+                      >
+                        <span className="settings-item-icon">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                          </svg>
+                        </span>
+                        <span className="settings-item-label">پاسورڈ تبدیل کریں</span>
+                      </button>
+
+                      {/* Upload/Update Profile Picture */}
+                      <button
+                        type="button"
+                        className="settings-dropdown-item"
+                        id="menuItemUploadAvatar"
+                        role="menuitem"
+                        onClick={() => {
+                          setIsSettingsOpen(false);
+                          setProfileModalSection('avatar');
+                          setIsProfileModalOpen(true);
+                        }}
+                      >
+                        <span className="settings-item-icon">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                          </svg>
+                        </span>
+                        <span className="settings-item-label">پروفائل تصویر اپ لوڈ / اپ ڈیٹ کریں</span>
+                      </button>
+
+                      {/* Logo Actions (admin / super_admin) */}
+                      {(role === 'admin' || role === 'super_admin') && (
+                        <>
+                          {/* Upload Logo */}
+                          <button
+                            type="button"
+                            className="settings-dropdown-item"
+                            id="menuItemUploadLogo"
+                            role="menuitem"
+                            onClick={() => {
+                              setIsSettingsOpen(false);
+                              logoUploadInputRef.current?.click();
+                            }}
+                          >
+                            <span className="settings-item-icon">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                              </svg>
+                            </span>
+                            <span className="settings-item-label">لوگو اپ لوڈ کریں</span>
+                          </button>
+
+                          {/* Update Logo */}
+                          <button
+                            type="button"
+                            className="settings-dropdown-item"
+                            id="menuItemUpdateLogo"
+                            role="menuitem"
+                            onClick={() => {
+                              setIsSettingsOpen(false);
+                              logoUpdateInputRef.current?.click();
+                            }}
+                          >
+                            <span className="settings-item-icon">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                              </svg>
+                            </span>
+                            <span className="settings-item-label">لوگو تبدیل / اپ ڈیٹ کریں</span>
+                          </button>
+
+                          {/* Delete Logo Option (if activeLogo is present) */}
+                          {activeLogo && (
+                            <button
+                              type="button"
+                              className="settings-dropdown-item warning"
+                              id="menuItemRemoveLogo"
+                              role="menuitem"
+                              onClick={() => {
+                                setIsSettingsOpen(false);
+                                removeLogo();
+                              }}
+                            >
+                              <span className="settings-item-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"></polyline>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                              </span>
+                              <span className="settings-item-label">لوگو حذف کریں</span>
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {/* Divider */}
+                      <div className="settings-dropdown-divider" />
+
+                      {/* Logout */}
+                      <button
+                        type="button"
+                        className="settings-dropdown-item danger"
+                        id="menuItemLogout"
+                        role="menuitem"
+                        onClick={() => {
+                          setIsSettingsOpen(false);
+                          signOut();
+                        }}
+                      >
+                        <span className="settings-item-icon">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                          </svg>
+                        </span>
+                        <span className="settings-item-label">لاگ آؤٹ</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : null}
 
-            {/* Logo Actions (admin / super_admin) */}
+            {/* Hidden Inputs for Logo Upload & Update */}
             {(role === 'admin' || role === 'super_admin') && (
-              <div className="header-btn-group">
-                <label className="logo-upload-btn" htmlFor="madrasaHeaderLogoInput">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  <span>لوگو اپ لوڈ</span>
-                  <input type="file" id="madrasaHeaderLogoInput" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} />
-                </label>
-
-                {activeLogo && (
-                  <button 
-                    type="button" 
-                    onClick={() => removeLogo()} 
-                    className="delete-logo-btn"
-                    title="لوگو حذف کریں"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6"></polyline>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
-                  </button>
-                )}
-              </div>
+              <>
+                <input
+                  type="file"
+                  ref={logoUploadInputRef}
+                  id="madrasaHeaderLogoUploadInput"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  style={{ display: 'none' }}
+                />
+                <input
+                  type="file"
+                  ref={logoUpdateInputRef}
+                  id="madrasaHeaderLogoUpdateInput"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  style={{ display: 'none' }}
+                />
+              </>
             )}
 
           </div>
@@ -175,6 +359,7 @@ function MainHeader({ theme, toggleTheme }) {
           <ProfileModal
             isOpen={isProfileModalOpen}
             onClose={() => setIsProfileModalOpen(false)}
+            initialSection={profileModalSection}
           />
         )}
 

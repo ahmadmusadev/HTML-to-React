@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { validatePasswordChange, formatPasswordChangeError } from '../utils/passwordValidation';
 import { validateAvatarFile } from '../utils/avatarValidation';
 import './ProfileModal.css';
 
-export default function ProfileModal({ isOpen, onClose }) {
+export default function ProfileModal({ isOpen, onClose, initialSection = null }) {
   const { user, profile, role, fetchUserProfile } = useAuth();
+  const passwordInputRef = useRef(null);
+  const avatarSectionRef = useRef(null);
 
   // Password Change State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -64,6 +66,19 @@ export default function ProfileModal({ isOpen, onClose }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Focus/scroll to target section on open
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => {
+      if (initialSection === 'avatar') {
+        avatarSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (initialSection === 'password') {
+        passwordInputRef.current?.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isOpen, initialSection]);
 
   if (!isOpen) return null;
 
@@ -307,7 +322,7 @@ export default function ProfileModal({ isOpen, onClose }) {
         </div>
 
         {/* User Profile & Avatar Section */}
-        <div className="profile-modal-avatar-section">
+        <div ref={avatarSectionRef} className="profile-modal-avatar-section">
           <div className="profile-modal-user-summary">
             <div className="profile-modal-avatar">
               {avatarPreviewUrl ? (
@@ -422,6 +437,7 @@ export default function ProfileModal({ isOpen, onClose }) {
               موجودہ پاسورڈ
             </label>
             <input
+              ref={passwordInputRef}
               id="currentPasswordInput"
               type="password"
               className={`profile-modal-input ${errors.currentPassword ? 'input-error' : ''}`}
