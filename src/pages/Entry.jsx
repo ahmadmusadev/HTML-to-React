@@ -620,7 +620,7 @@ export default function Entry() {
                   </table>
                 </div>
                 <div className="me-save-bar" style={{ marginTop: "18px" }}>
-                  <button className="me-save-btn" onClick={meSaveExam}>💾 {meStudents.clsName} — {meMonth} {formatAcademicYear(meYear)} محفوظ کریں</button>
+                  <button className="me-save-btn" onClick={meSaveExam}>{meStudents.clsName} — {meMonth} {formatAcademicYear(meYear)} محفوظ کریں</button>
                   <div className="me-summary-chips">
                     <span className="me-chip me-chip-green">طلباء: {meStudents.data.length}</span>
                     <span className="me-chip me-chip-blue">کل نمبر: {ME_MAX_TOTAL}</span>
@@ -959,7 +959,7 @@ export default function Entry() {
                 disabled={hifzSaving}
                 style={{ background: "var(--accent)", color: "#fff", padding: "12px 30px", fontSize: "1.05rem", fontWeight: "700" }}
               >
-                {hifzSaving ? '⏳ محفوظ ہو رہا ہے...' : '💾 مکمل ریکارڈ (تعلیمی + حاضری) محفوظ کریں'}
+                {hifzSaving ? 'محفوظ ہو رہا ہے...' : 'مکمل ریکارڈ (تعلیمی + حاضری) محفوظ کریں'}
               </button>
             </div>
         </div>

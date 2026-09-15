@@ -1963,7 +1963,7 @@
       position: relative; overflow: hidden;
     }
     .dashboard-hero::before {
-      content: '☪';
+      content: '';
       position: absolute; left: -10px; top: -10px;
       font-size: 8rem; color: rgba(255,255,255,0.04);
       line-height: 1; pointer-events: none;

@@ -331,11 +331,42 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   color: #000000 !important;
 }
 
-/* --- Gender Radio Toggle Labels --- */
-[data-theme="dark"] .gender-toggle-wrap label {
+/* --- Gender Radio Toggle Labels & Buttons --- */
+[data-theme="dark"] .gender-toggle-wrap label,
+[data-theme="dark"] .gender-toggle-wrap button,
+[data-theme="dark"] .gender-toggle-label,
+[data-theme="dark"] .gender-toggle-btn {
   background: #18181b !important;
   color: #a1a1aa !important;
-  border-color: var(--border) !important;
+  border: 1px solid #3f3f46 !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-theme="dark"] .gender-toggle-wrap label:hover:not(.selected):not([data-selected="true"]),
+[data-theme="dark"] .gender-toggle-wrap button:hover:not(.selected):not([data-selected="true"]),
+[data-theme="dark"] .gender-toggle-label:hover:not(.selected):not([data-selected="true"]),
+[data-theme="dark"] .gender-toggle-btn:hover:not(.selected):not([data-selected="true"]) {
+  background: #27272a !important;
+  color: #ffffff !important;
+  border-color: #52525b !important;
+}
+
+[data-theme="dark"] .gender-toggle-wrap input[type="radio"]:checked + label,
+[data-theme="dark"] .gender-toggle-wrap label.selected,
+[data-theme="dark"] .gender-toggle-wrap label[data-selected="true"],
+[data-theme="dark"] .gender-toggle-label.selected,
+[data-theme="dark"] .gender-toggle-label[data-selected="true"],
+[data-theme="dark"] .gender-toggle-wrap button.selected,
+[data-theme="dark"] .gender-toggle-wrap button[data-selected="true"],
+[data-theme="dark"] .gender-toggle-btn.selected,
+[data-theme="dark"] .gender-toggle-btn[data-selected="true"] {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 0 1px #ffffff, 0 4px 16px rgba(255, 255, 255, 0.35) !important;
 }
 
 /* --- Section Title Headers (h2) --- */
@@ -358,7 +389,7 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 }
 
 /* --- Primary Action Buttons (Pure White with Jet Black Text) --- */
-[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn),
+[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn),
 [data-theme="dark"] .wizard-btn-next,
 [data-theme="dark"] .search-container button,
 [data-theme="dark"] .me-load-btn,
@@ -372,7 +403,7 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   box-shadow: 0 3px 12px rgba(255, 255, 255, 0.2) !important;
 }
 
-[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):hover,
+[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn):hover,
 [data-theme="dark"] .wizard-btn-next:hover,
 [data-theme="dark"] .search-container button:hover,
 [data-theme="dark"] .me-load-btn:hover,

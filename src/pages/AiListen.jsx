@@ -61,11 +61,11 @@ export default function AiListen() {
         setAyahLoadStatus('آیت تیار ہے');
         updateReferenceAudio(surah, ayah);
       } else {
-        setAyahLoadStatus('❌ آیت نہیں ملی — نمبر چیک کریں');
+        setAyahLoadStatus('آیت نہیں ملی — نمبر چیک کریں');
         setTargetAyahText('');
       }
     } catch (e) {
-      setAyahLoadStatus('❌ انٹرنیٹ کنکشن چیک کریں');
+      setAyahLoadStatus('انٹرنیٹ کنکشن چیک کریں');
       setTargetAyahText('');
     }
   };
@@ -278,12 +278,12 @@ ${missingWords.length > 0 ? `بھولے ہوئے الفاظ: ${missingWords.join
       } else {
         setAiFeedback(calcScore >= 80 
           ? 'ماشاءاللہ! آپ کی تلاوت بہت اچھی ہے۔ اللہ تعالیٰ آپ کو مزید برکت دے۔' 
-          : '⚠️ کچھ الفاظ درست نہیں ہوئے۔ پہلے آیت ذہن میں پکی کریں، پھر دوبارہ سنائیں۔');
+          : 'کچھ الفاظ درست نہیں ہوئے۔ پہلے آیت ذہن میں پکی کریں، پھر دوبارہ سنائیں۔');
       }
     } catch (e) {
       setAiFeedback(calcScore >= 80 
         ? 'ماشاءاللہ! آپ کی تلاوت بہت اچھی ہے۔ اللہ تعالیٰ آپ کو مزید برکت دے۔' 
-        : '⚠️ کچھ الفاظ درست نہیں ہوئے۔ پہلے آیت ذہن میں پکی کریں، پھر دوبارہ سنائیں۔');
+        : 'کچھ الفاظ درست نہیں ہوئے۔ پہلے آیت ذہن میں پکی کریں، پھر دوبارہ سنائیں۔');
     }
 
     updateReferenceAudio(currentSurah, currentAyah);
@@ -360,7 +360,7 @@ ${missingWords.length > 0 ? `بھولے ہوئے الفاظ: ${missingWords.join
       {/* ===== مائیک سیکشن ===== */}
       <div style={{ background: "white", borderRadius: "12px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", marginBottom: "16px", textAlign: "center" }}>
         <p style={{ color: "#555", margin: "0 0 12px 0", fontSize: "1rem" }}>آیت یاد کر لیں، پھر نیچے مائیک دبائیں اور تلاوت شروع کریں</p>
-        <button id="micBtn" className={`mic-btn ${aiListening ? 'listening' : ''}`} onClick={toggleAiListening} title="پڑھنا شروع کرنے کے لیے دبائیں">🎙️</button>
+        <button id="micBtn" className={`mic-btn ${aiListening ? 'listening' : ''}`} onClick={toggleAiListening} title="پڑھنا شروع کرنے کے لیے دبائیں">مائیک</button>
         <div id="micStatusText" style={{ color: micStatusColor, marginTop: "8px", fontSize: "1rem" }}>{micStatusText}</div>
         
         {/* لائیو ٹرانسکرپٹ */}
@@ -429,7 +429,7 @@ ${missingWords.length > 0 ? `بھولے ہوئے الفاظ: ${missingWords.join
 
               {/* اے آئی فیڈ بیک */}
               <div style={{ marginBottom: "20px" }}>
-                <h4 style={{ color: "#1565c0", margin: "0 0 10px 0", borderBottom: "1px solid #eee", paddingBottom: "8px" }}>🧑‍استاد کا تبصرہ</h4>
+                <h4 style={{ color: "#1565c0", margin: "0 0 10px 0", borderBottom: "1px solid #eee", paddingBottom: "8px" }}>استاد کا تبصرہ</h4>
                 <div id="aiFeedbackArea" style={{ background: "#e8f4fd", borderRadius: "8px", padding: "16px", fontSize: "1rem", lineHeight: "1.9", color: "#1a237e", borderRight: "4px solid #1565c0", direction: "rtl", textAlign: "right", whiteSpace: "pre-line" }}>
                   {aiFeedback || 'استاد کا تبصرہ آ رہا ہے...'}
                 </div>

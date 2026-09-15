@@ -258,7 +258,7 @@ export default function Fees() {
       }, 100);
     } catch (err) {
       console.error('Save fee error:', err);
-      alert(`⚠️ فیس ریکارڈ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
+      alert(`فیس ریکارڈ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
     }
   };
 
@@ -359,9 +359,7 @@ export default function Fees() {
             <div className="receipt-logo" style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
               {activeLogo ? (
                 <img src={activeLogo} alt={activeMadrasa.name} style={{ maxHeight: '65px', maxWidth: '160px', objectFit: 'contain' }} />
-              ) : (
-                <span style={{ fontSize: '2.5rem', lineHeight: 1 }}>☪</span>
-              )}
+              ) : null}
             </div>
             <h1 className="receipt-org">{activeMadrasa.name}</h1>
             <p className="receipt-branch">تعلیمی و حاضری ریکارڈ سسٹم</p>
@@ -488,7 +486,7 @@ export default function Fees() {
 
       {fetchError && (
         <div className="no-print" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>⚠️ {fetchError}</span>
+          <span>{fetchError}</span>
           <button onClick={() => setFetchError(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#856404' }}>✕</button>
         </div>
       )}

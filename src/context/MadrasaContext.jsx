@@ -181,7 +181,7 @@ export function MadrasaProvider({ children }) {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
       console.error('Failed to save data to localStorage (possible quota exceeded):', e);
-      alert('⚠️ ڈیٹا محفوظ نہیں ہو سکا — براؤزر اسٹوریج بھر چکا ہے یا پرائیویٹ موڈ میں ہے۔');
+      alert('ڈیٹا محفوظ نہیں ہو سکا — براؤزر اسٹوریج بھر چکا ہے یا پرائیویٹ موڈ میں ہے۔');
     }
   };
 
@@ -438,31 +438,318 @@ export function MadrasaProvider({ children }) {
 
   const fetchClassesFromSupabase = async (madrasaId = activeMadrasaId) => {
     if (!isValidUUID(madrasaId)) {
-      return (DEFAULT_CLASSES || []).map(c => ({
+      const localClasses = loadMadrasaData('hf_classes_v1', madrasaId);
+      if (localClasses && Array.isArray(localClasses.classes) && localClasses.classes.length > 0) {
+        return localClasses.classes;
+      }
+      const initial = (DEFAULT_CLASSES || []).map(c => ({
         id: c.id,
         name: c.name || '',
-        class_name: c.name || ''
+        class_name: c.name || '',
+        teacher: c.teacher || '',
+        teacher_name: c.teacher || ''
       }));
+      saveMadrasaData('hf_classes_v1', { classes: initial }, madrasaId);
+      return initial;
     }
 
     try {
       const { data, error } = await supabase
         .from('classes')
         .select('*')
-        .eq('madrasa_id', madrasaId);
+        .eq('madrasa_id', madrasaId)
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
       if (data && data.length > 0) {
+        const localMeta = loadMadrasaData('hf_classes_meta_v1', madrasaId) || {};
         return data.map(c => ({
           id: c.id,
           name: c.class_name || c.name || '',
-          class_name: c.class_name || c.name || ''
+          class_name: c.class_name || c.name || '',
+          teacher: c.teacher_name || localMeta[c.id]?.teacher_name || c.teacher || '',
+          teacher_name: c.teacher_name || localMeta[c.id]?.teacher_name || c.teacher || ''
         }));
       }
       return [];
     } catch (e) {
       console.error('[MadrasaContext] Error fetching classes from Supabase:', e);
       throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
+    }
+  };
+
+  const seedDefaultClassesForMadrasa = async (madrasaId = activeMadrasaId) => {
+    const defaultList = [
+      { name: 'حفظِ قرآن — ناظرہ', teacher: 'مولانا عبدالرحمن' },
+      { name: 'حفظِ قرآن — سال اول', teacher: 'مولانا محمد اسحاق' },
+      { name: 'حفظِ قرآن — سال دوم', teacher: 'مولانا یوسف' },
+      { name: 'حفظِ قرآن — سال سوم', teacher: 'مولانا ابراہیم' },
+      { name: 'حفظِ قرآن — سال چہارم', teacher: 'مولانا عبداللہ' }
+    ];
+
+    if (!isValidUUID(madrasaId)) {
+      const offlineClasses = defaultList.map((c, i) => ({
+        id: `cls-${i + 1}`,
+        name: c.name,
+        class_name: c.name,
+        teacher: c.teacher,
+        teacher_name: c.teacher
+      }));
+      saveMadrasaData('hf_classes_v1', { classes: offlineClasses }, madrasaId);
+      return offlineClasses;
+    }
+
+    try {
+      let insertedRows = null;
+      try {
+        const payloadWithTeacher = defaultList.map(c => ({
+          madrasa_id: madrasaId,
+          class_name: c.name,
+          teacher_name: c.teacher
+        }));
+        const { data, error } = await supabase
+          .from('classes')
+          .insert(payloadWithTeacher)
+          .select('*');
+        if (!error && data && data.length > 0) {
+          insertedRows = data;
+        }
+      } catch (err) {}
+
+      if (!insertedRows) {
+        const payloadBasic = defaultList.map(c => ({
+          madrasa_id: madrasaId,
+          class_name: c.name
+        }));
+        const { data, error } = await supabase
+          .from('classes')
+          .insert(payloadBasic)
+          .select('*');
+        if (error) throw error;
+        insertedRows = data || [];
+      }
+
+      const localMeta = loadMadrasaData('hf_classes_meta_v1', madrasaId) || {};
+      insertedRows.forEach((row, idx) => {
+        const teacher = defaultList[idx]?.teacher || '';
+        localMeta[row.id] = { teacher_name: teacher };
+      });
+      saveMadrasaData('hf_classes_meta_v1', localMeta, madrasaId);
+
+      return insertedRows.map((c, idx) => ({
+        id: c.id,
+        name: c.class_name || c.name || '',
+        class_name: c.class_name || c.name || '',
+        teacher: c.teacher_name || defaultList[idx]?.teacher || '',
+        teacher_name: c.teacher_name || defaultList[idx]?.teacher || ''
+      }));
+    } catch (e) {
+      console.error('[MadrasaContext] Error seeding default classes:', e);
+      throw new Error(e?.message || 'کلاسز سیڈ کرنے میں مسئلہ پیش آیا۔');
+    }
+  };
+
+  const addClassToSupabase = async (classData, madrasaId = activeMadrasaId) => {
+    const className = (classData.class_name || classData.name || '').trim();
+    const teacherName = (classData.teacher_name || classData.teacher || '').trim();
+    if (!className) throw new Error('کلاس کا نام درج کرنا لازمی ہے۔');
+
+    if (!isValidUUID(madrasaId)) {
+      const localData = loadMadrasaData('hf_classes_v1', madrasaId) || { classes: [] };
+      const newClass = {
+        id: `cls_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        name: className,
+        class_name: className,
+        teacher: teacherName,
+        teacher_name: teacherName
+      };
+      localData.classes = [...(localData.classes || []), newClass];
+      saveMadrasaData('hf_classes_v1', localData, madrasaId);
+      return newClass;
+    }
+
+    try {
+      let createdRow = null;
+      try {
+        const { data, error } = await supabase
+          .from('classes')
+          .insert([{
+            madrasa_id: madrasaId,
+            class_name: className,
+            teacher_name: teacherName
+          }])
+          .select('*')
+          .single();
+        if (!error && data) createdRow = data;
+      } catch (err) {}
+
+      if (!createdRow) {
+        const { data, error } = await supabase
+          .from('classes')
+          .insert([{
+            madrasa_id: madrasaId,
+            class_name: className
+          }])
+          .select('*')
+          .single();
+        if (error) throw error;
+        createdRow = data;
+      }
+
+      if (teacherName) {
+        const localMeta = loadMadrasaData('hf_classes_meta_v1', madrasaId) || {};
+        localMeta[createdRow.id] = { teacher_name: teacherName };
+        saveMadrasaData('hf_classes_meta_v1', localMeta, madrasaId);
+      }
+
+      return {
+        id: createdRow.id,
+        name: createdRow.class_name || className,
+        class_name: createdRow.class_name || className,
+        teacher: createdRow.teacher_name || teacherName,
+        teacher_name: createdRow.teacher_name || teacherName
+      };
+    } catch (e) {
+      console.error('[MadrasaContext] Error adding class to Supabase:', e);
+      throw new Error(e?.message || 'کلاس شامل کرنے میں مسئلہ پیش آیا۔');
+    }
+  };
+
+  const updateClassInSupabase = async (classId, classData, madrasaId = activeMadrasaId) => {
+    const className = (classData.class_name || classData.name || '').trim();
+    const teacherName = (classData.teacher_name || classData.teacher || '').trim();
+
+    if (!isValidUUID(madrasaId) || !isValidUUID(classId)) {
+      const localData = loadMadrasaData('hf_classes_v1', madrasaId) || { classes: [] };
+      localData.classes = (localData.classes || []).map(c =>
+        c.id === classId
+          ? {
+              ...c,
+              ...(className ? { name: className, class_name: className } : {}),
+              teacher: teacherName,
+              teacher_name: teacherName
+            }
+          : c
+      );
+      saveMadrasaData('hf_classes_v1', localData, madrasaId);
+      return { id: classId, name: className, class_name: className, teacher: teacherName, teacher_name: teacherName };
+    }
+
+    try {
+      let updatedRow = null;
+      try {
+        const updatePayload = {};
+        if (className) updatePayload.class_name = className;
+        updatePayload.teacher_name = teacherName;
+
+        const { data, error } = await supabase
+          .from('classes')
+          .update(updatePayload)
+          .eq('id', classId)
+          .select('*')
+          .single();
+        if (!error && data) updatedRow = data;
+      } catch (err) {}
+
+      if (!updatedRow) {
+        const updatePayload = {};
+        if (className) updatePayload.class_name = className;
+
+        const { data, error } = await supabase
+          .from('classes')
+          .update(updatePayload)
+          .eq('id', classId)
+          .select('*')
+          .single();
+        if (error) throw error;
+        updatedRow = data;
+      }
+
+      const localMeta = loadMadrasaData('hf_classes_meta_v1', madrasaId) || {};
+      localMeta[classId] = { teacher_name: teacherName };
+      saveMadrasaData('hf_classes_meta_v1', localMeta, madrasaId);
+
+      return {
+        id: updatedRow.id,
+        name: updatedRow.class_name || className,
+        class_name: updatedRow.class_name || className,
+        teacher: updatedRow.teacher_name || teacherName,
+        teacher_name: updatedRow.teacher_name || teacherName
+      };
+    } catch (e) {
+      console.error('[MadrasaContext] Error updating class:', e);
+      throw new Error(e?.message || 'کلاس میں ترمیم کرنے میں مسئلہ پیش آیا۔');
+    }
+  };
+
+  const deleteClassFromSupabase = async (classId, madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId) || !isValidUUID(classId)) {
+      const localData = loadMadrasaData('hf_classes_v1', madrasaId) || { classes: [] };
+      localData.classes = (localData.classes || []).filter(c => c.id !== classId);
+      saveMadrasaData('hf_classes_v1', localData, madrasaId);
+
+      const stdData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+      stdData.records = (stdData.records || []).map(r =>
+        (r.admClass === classId || r.class_id === classId) ? { ...r, admClass: '', class_id: null } : r
+      );
+      saveMadrasaData('hf_records_v1', stdData, madrasaId);
+      return true;
+    }
+
+    try {
+      await supabase
+        .from('students')
+        .update({ class_id: null })
+        .eq('class_id', classId)
+        .eq('madrasa_id', madrasaId);
+
+      const { error } = await supabase
+        .from('classes')
+        .delete()
+        .eq('id', classId)
+        .eq('madrasa_id', madrasaId);
+
+      if (error) throw error;
+
+      try {
+        const localMeta = loadMadrasaData('hf_classes_meta_v1', madrasaId) || {};
+        delete localMeta[classId];
+        saveMadrasaData('hf_classes_meta_v1', localMeta, madrasaId);
+      } catch (err) {}
+
+      return true;
+    } catch (e) {
+      console.error('[MadrasaContext] Error deleting class:', e);
+      throw new Error(e?.message || 'کلاس حذف کرنے میں مسئلہ پیش آیا۔');
+    }
+  };
+
+  const deleteStudentFromSupabase = async (studentId, madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(studentId)) {
+      const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+      localData.records = (localData.records || []).filter(r => r.id !== studentId);
+      saveMadrasaData('hf_records_v1', localData, madrasaId);
+      return true;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      try {
+        const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+        localData.records = (localData.records || []).filter(r => r.id !== studentId);
+        saveMadrasaData('hf_records_v1', localData, madrasaId);
+      } catch (err) {}
+
+      return true;
+    } catch (e) {
+      console.error('[MadrasaContext] Error deleting student:', e);
+      throw new Error(e?.message || 'طالب علم کا ریکارڈ حذف کرنے میں مسئلہ پیش آیا۔');
     }
   };
 
@@ -1762,6 +2049,11 @@ export function MadrasaProvider({ children }) {
       pendingSyncCount,
       flushOfflineQueue: () => flushQueue(supabase),
       fetchClassesFromSupabase,
+      seedDefaultClassesForMadrasa,
+      addClassToSupabase,
+      updateClassInSupabase,
+      deleteClassFromSupabase,
+      deleteStudentFromSupabase,
       addStudentToSupabase,
       updateStudentInSupabase,
       withdrawStudentInSupabase,

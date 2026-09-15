@@ -154,6 +154,20 @@ serve(async (req) => {
 
       createdMadrasaId = newMadrasa.id;
       targetMadrasaId = newMadrasa.id;
+
+      // Automatically include the 5 default classes for this newly added madrasa
+      try {
+        const initialClasses = [
+          { madrasa_id: newMadrasa.id, class_name: 'حفظِ قرآن — ناظرہ' },
+          { madrasa_id: newMadrasa.id, class_name: 'حفظِ قرآن — سال اول' },
+          { madrasa_id: newMadrasa.id, class_name: 'حفظِ قرآن — سال دوم' },
+          { madrasa_id: newMadrasa.id, class_name: 'حفظِ قرآن — سال سوم' },
+          { madrasa_id: newMadrasa.id, class_name: 'حفظِ قرآن — سال چہارم' }
+        ];
+        await supabaseAdmin.from('classes').insert(initialClasses);
+      } catch (clsErr) {
+        console.warn('[create-account-invite] Initial classes seeding warning:', clsErr);
+      }
     } else if (targetRole === 'teacher') {
       // super_admin or admin can invite teachers
       if (callerRole === 'admin') {

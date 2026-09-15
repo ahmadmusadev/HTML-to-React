@@ -1025,7 +1025,7 @@ export default function Attendance() {
       setShowHistory(true);
     } catch (err) {
       console.error('Save staff check-in error:', err);
-      alert('⚠️ چیک اِن محفوظ کرنے میں خرابی پیش آگئی: ' + (err.message || 'نامعلوم خرابی'));
+      alert('چیک اِن محفوظ کرنے میں خرابی پیش آگئی: ' + (err.message || 'نامعلوم خرابی'));
     }
   };
 
@@ -1085,7 +1085,7 @@ export default function Attendance() {
       setShowHistory(true);
     } catch (err) {
       console.error('Save staff check-out error:', err);
-      alert('⚠️ چیک آؤٹ محفوظ کرنے میں خرابی پیش آگئی: ' + (err.message || 'نامعلوم خرابی'));
+      alert('چیک آؤٹ محفوظ کرنے میں خرابی پیش آگئی: ' + (err.message || 'نامعلوم خرابی'));
     }
   };
 

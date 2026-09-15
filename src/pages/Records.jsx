@@ -207,7 +207,7 @@ export default function Records() {
 
       {fetchError && (
         <div style={{ background: '#fff3cd', color: '#856404', padding: '10px 15px', borderRadius: '8px', marginBottom: '15px' }}>
-          ⚠️ {fetchError}
+          {fetchError}
         </div>
       )}
 
@@ -225,7 +225,7 @@ export default function Records() {
       <div id="recordsArea">
         {loading ? (
           <div style={{ textAlign: 'center', color: '#666', padding: '30px' }}>
-            ⏳ ریکارڈز لوڈ ہو رہے ہیں...
+            ریکارڈز لوڈ ہو رہے ہیں...
           </div>
         ) : filteredRecords.length === 0 ? (
           <div style={{ textAlign: 'center', color: '#666', padding: '20px' }}>

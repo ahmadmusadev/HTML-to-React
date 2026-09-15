@@ -145,7 +145,7 @@ export const mapUiToSupabase = (data) => {
     admission_date: data.admDate || null,
     name: (data.admName || data.name || '').trim(),
     father_name: father_name,
-    class_id: isValidUUID(data.admClass) ? data.admClass : null,
+    class_id: data.admClass || data.class_id || null,
     gender: data.admGender || 'لڑکا',
     date_of_birth: date_of_birth,
     b_form_number: data.admBForm || null,
@@ -184,6 +184,11 @@ export default function Admissions() {
   const {
     activeMadrasaId,
     fetchClassesFromSupabase,
+    seedDefaultClassesForMadrasa,
+    addClassToSupabase,
+    updateClassInSupabase,
+    deleteClassFromSupabase,
+    deleteStudentFromSupabase,
     fetchStudentsFromSupabase,
     addStudentToSupabase,
     updateStudentInSupabase,
@@ -195,6 +200,35 @@ export default function Admissions() {
   const [loading, setLoading] = useState(true);
   const [wizardStep, setWizardStep] = useState(1);
   const [editingStudentId, setEditingStudentId] = useState(null);
+
+  // Class Management State
+  const [classSearchQuery, setClassSearchQuery] = useState('');
+  const [expandedClassId, setExpandedClassId] = useState(null);
+  const [classActionLoading, setClassActionLoading] = useState(false);
+
+  // Class Add/Edit Modal State
+  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [classModalMode, setClassModalMode] = useState('add');
+  const [modalClassId, setModalClassId] = useState(null);
+  const [modalClassName, setModalClassName] = useState('');
+  const [modalTeacherName, setModalTeacherName] = useState('');
+
+  // Quick Add Student to Class State
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [addStudentClassId, setAddStudentClassId] = useState('');
+  const [addStudentName, setAddStudentName] = useState('');
+  const [addStudentFatherName, setAddStudentFatherName] = useState('');
+  const [addStudentRegNo, setAddStudentRegNo] = useState('');
+  const [addStudentPhone, setAddStudentPhone] = useState('');
+  const [addStudentGender, setAddStudentGender] = useState('لڑکا');
+
+  // Quick Edit Student State
+  const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
+  const [editStudentId, setEditStudentId] = useState(null);
+  const [editStudentName, setEditStudentName] = useState('');
+  const [editStudentFatherName, setEditStudentFatherName] = useState('');
+  const [editStudentRegNo, setEditStudentRegNo] = useState('');
+  const [editStudentClassId, setEditStudentClassId] = useState('');
 
   const initialFormData = {
     admRegNo: '', admDate: '', admName: '', admFatherName: '', admClass: '', admGender: 'لڑکا',
@@ -275,7 +309,18 @@ export default function Admissions() {
         if (clsData && clsData.length > 0) {
           setClassesList(clsData);
         } else {
-          setClassesList(prev => (prev && prev.length > 0 ? prev : DEFAULT_CLASSES));
+          // If no classes exist yet in database/storage for this madrasa, auto-seed the 5 default classes!
+          try {
+            const seeded = await seedDefaultClassesForMadrasa(activeMadrasaId);
+            if (isMounted && seeded && seeded.length > 0) {
+              setClassesList(seeded);
+            } else if (isMounted) {
+              setClassesList(DEFAULT_CLASSES);
+            }
+          } catch (seedErr) {
+            console.warn('Auto-seed classes warning:', seedErr);
+            if (isMounted) setClassesList(DEFAULT_CLASSES);
+          }
         }
 
         if (stdData) {
@@ -351,8 +396,210 @@ export default function Admissions() {
     } else if (tab === 'search' || tab === 'all') {
       setSearchId('');
       setSearchName('');
+    } else if (tab === 'classes') {
+      setClassSearchQuery('');
     }
   };
+
+  // Class Management Handlers
+  const openAddClassModal = () => {
+    setClassModalMode('add');
+    setModalClassId(null);
+    setModalClassName('');
+    setModalTeacherName('');
+    setIsClassModalOpen(true);
+  };
+
+  const openEditClassModal = (cls) => {
+    setClassModalMode('edit');
+    setModalClassId(cls.id);
+    setModalClassName(cls.name || cls.class_name || '');
+    setModalTeacherName(cls.teacher || cls.teacher_name || '');
+    setIsClassModalOpen(true);
+  };
+
+  const handleSaveClass = async (e) => {
+    if (e) e.preventDefault();
+    if (!modalClassName.trim()) {
+      alert('براہ کرم کلاس کا نام درج کریں۔');
+      return;
+    }
+    setClassActionLoading(true);
+    try {
+      if (classModalMode === 'add') {
+        const newCls = await addClassToSupabase({
+          class_name: modalClassName.trim(),
+          teacher_name: modalTeacherName.trim()
+        }, activeMadrasaId);
+        setClassesList(prev => [...prev, newCls]);
+        alert('کلاس کامیابی سے شامل ہو گئی ہے۔');
+      } else {
+        const updated = await updateClassInSupabase(modalClassId, {
+          class_name: modalClassName.trim(),
+          teacher_name: modalTeacherName.trim()
+        }, activeMadrasaId);
+        setClassesList(prev => prev.map(c => c.id === modalClassId ? { ...c, ...updated } : c));
+        alert('کلاس کی تفصیلات کامیابی سے اپ ڈیٹ ہو گئی ہیں۔');
+      }
+      setIsClassModalOpen(false);
+    } catch (err) {
+      console.error('Save class error:', err);
+      alert(err.message || 'کلاس محفوظ کرنے میں خرابی پیش آئی۔');
+    } finally {
+      setClassActionLoading(false);
+    }
+  };
+
+  const handleDeleteClass = async (classId, className) => {
+    const enrolledStudents = records.filter(r => r.isAdmissionProfile && !r.isWithdrawn && (r.admClass === classId || r.class_id === classId));
+    let confirmMsg = `کیا آپ واقعی "${className}" کو حذف کرنا چاہتے ہیں؟`;
+    if (enrolledStudents.length > 0) {
+      confirmMsg += `\nاس کلاس میں ${enrolledStudents.length} طلباء داخل ہیں۔ حذف کرنے پر ان طلباء کی تفویض کردہ کلاس خالی کر دی جائے گی۔`;
+    }
+    if (!window.confirm(confirmMsg)) return;
+
+    setClassActionLoading(true);
+    try {
+      await deleteClassFromSupabase(classId, activeMadrasaId);
+      setClassesList(prev => prev.filter(c => c.id !== classId));
+      setRecords(prev => prev.map(r => (r.admClass === classId || r.class_id === classId) ? { ...r, admClass: '', class_id: null } : r));
+      if (expandedClassId === classId) setExpandedClassId(null);
+      alert('کلاس کامیابی سے حذف کر دی گئی ہے۔');
+    } catch (err) {
+      console.error('Delete class error:', err);
+      alert(err.message || 'کلاس حذف کرنے میں خرابی پیش آئی۔');
+    } finally {
+      setClassActionLoading(false);
+    }
+  };
+
+  const openAddStudentToClass = (classId) => {
+    setAddStudentClassId(classId);
+    setAddStudentName('');
+    setAddStudentFatherName('');
+    setAddStudentPhone('');
+    setAddStudentGender('لڑکا');
+
+    let maxId = 0;
+    records.forEach(r => {
+      if (r.admRegNo && !isNaN(r.admRegNo)) maxId = Math.max(maxId, parseInt(r.admRegNo, 10));
+    });
+    setAddStudentRegNo((maxId + 1).toString().padStart(2, '0'));
+    setIsAddStudentModalOpen(true);
+  };
+
+  const handleSaveNewStudentToClass = async (e) => {
+    if (e) e.preventDefault();
+    if (!addStudentName.trim()) {
+      alert('طالب علم کا نام درج کرنا لازمی ہے۔');
+      return;
+    }
+    setClassActionLoading(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const payload = mapUiToSupabase({
+        admRegNo: addStudentRegNo,
+        admDate: today,
+        admName: addStudentName.trim(),
+        admFatherName: addStudentFatherName.trim(),
+        admClass: addStudentClassId,
+        admGender: addStudentGender,
+        fatherMobile: addStudentPhone.trim()
+      });
+      const inserted = await addStudentToSupabase(payload, activeMadrasaId);
+      const newUi = mapSupabaseToUi(inserted);
+      setRecords(prev => [...prev, newUi]);
+      setIsAddStudentModalOpen(false);
+      setExpandedClassId(addStudentClassId);
+      alert('طالب علم کامیابی سے کلاس میں شامل کر دیا گیا ہے۔');
+    } catch (err) {
+      console.error('Add student to class error:', err);
+      alert(err.message || 'طالب علم شامل کرنے میں خرابی پیش آئی۔');
+    } finally {
+      setClassActionLoading(false);
+    }
+  };
+
+  const openEditStudentNameModal = (student) => {
+    setEditStudentId(student.id);
+    setEditStudentName(student.name || '');
+    setEditStudentFatherName(student.admFatherName || student.fatherName || '');
+    setEditStudentRegNo(student.admRegNo || '');
+    setEditStudentClassId(student.admClass || student.class_id || '');
+    setIsEditStudentModalOpen(true);
+  };
+
+  const handleSaveEditStudent = async (e) => {
+    if (e) e.preventDefault();
+    if (!editStudentName.trim()) {
+      alert('طالب علم کا نام درج کرنا لازمی ہے۔');
+      return;
+    }
+    setClassActionLoading(true);
+    try {
+      const existing = records.find(r => r.id === editStudentId) || {};
+      const payload = mapUiToSupabase({
+        ...existing,
+        name: editStudentName.trim(),
+        admName: editStudentName.trim(),
+        admFatherName: editStudentFatherName.trim(),
+        fatherName: editStudentFatherName.trim(),
+        admRegNo: editStudentRegNo.trim(),
+        admClass: editStudentClassId
+      });
+      const updated = await updateStudentInSupabase(editStudentId, payload);
+      const updatedUi = mapSupabaseToUi(updated);
+      setRecords(prev => prev.map(r => r.id === editStudentId ? { ...r, ...updatedUi } : r));
+      setIsEditStudentModalOpen(false);
+      alert('طالب علم کی تفصیلات کامیابی سے اپ ڈیٹ ہو گئی ہیں۔');
+    } catch (err) {
+      console.error('Update student name error:', err);
+      alert(err.message || 'تفصیلات محفوظ کرنے میں خرابی پیش آئی۔');
+    } finally {
+      setClassActionLoading(false);
+    }
+  };
+
+  const handleDeleteStudentFromClass = async (studentId, studentName) => {
+    if (!window.confirm(`کیا آپ واقعی طالب علم "${studentName}" کا ریکارڈ مکمل طور پر حذف کرنا چاہتے ہیں؟\nیہ عمل ناقابل واپسی ہے۔`)) {
+      return;
+    }
+    setClassActionLoading(true);
+    try {
+      await deleteStudentFromSupabase(studentId, activeMadrasaId);
+      setRecords(prev => prev.filter(r => r.id !== studentId));
+      alert('طالب علم کا ریکارڈ کامیابی سے حذف کر دیا گیا ہے۔');
+    } catch (err) {
+      console.error('Delete student error:', err);
+      alert(err.message || 'طالب علم حذف کرنے میں خرابی پیش آئی۔');
+    } finally {
+      setClassActionLoading(false);
+    }
+  };
+
+  const handleManualSeedDefaultClasses = async () => {
+    if (!window.confirm('کیا آپ 5 ڈیفالٹ کلاسز اس مدرسے میں خودکار طور پر شامل کرنا چاہتے ہیں؟')) return;
+    setClassActionLoading(true);
+    try {
+      const seeded = await seedDefaultClassesForMadrasa(activeMadrasaId);
+      if (seeded && seeded.length > 0) {
+        setClassesList(seeded);
+        alert('5 ڈیفالٹ کلاسز کامیابی سے شامل ہو گئی ہیں۔');
+      }
+    } catch (err) {
+      alert(err.message || 'کلاسز شامل کرنے میں خرابی پیش آئی۔');
+    } finally {
+      setClassActionLoading(false);
+    }
+  };
+
+  const filteredClassesList = classesList.filter(c => {
+    if (!classSearchQuery.trim()) return true;
+    const q = classSearchQuery.toLowerCase().trim();
+    const cName = (c.name || c.class_name || '').toLowerCase();
+    const tName = (c.teacher || c.teacher_name || '').toLowerCase();
+    return cName.includes(q) || tName.includes(q);
+  });
 
   const wizardNext = () => {
     if (wizardStep === 1 && !formData.admName.trim()) { alert('براہ کرم طالب علم کا نام درج کریں۔'); return; }
@@ -378,7 +625,7 @@ export default function Admissions() {
       handleTabChange('all');
     } catch (err) {
       console.error('Save admission error:', err);
-      alert(`⚠️ داخلہ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
+      alert(`داخلہ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
     }
   };
 
@@ -430,7 +677,7 @@ export default function Admissions() {
       setProfileModal(null);
     } catch (err) {
       console.error('Save profile error:', err);
-      alert(`⚠️ پروفائل محفوظ نہیں ہو سکی!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
+      alert(`پروفائل محفوظ نہیں ہو سکی!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
     }
   };
 
@@ -481,7 +728,7 @@ export default function Admissions() {
       setWithdrawStudent(null);
     } catch (err) {
       console.error('Withdrawal error:', err);
-      alert(`⚠️ اخراج محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
+      alert(`اخراج محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
     }
   };
 
@@ -517,7 +764,7 @@ export default function Admissions() {
 
       {fetchError && (
         <div className="no-print" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>⚠️ {fetchError}</span>
+          <span>{fetchError}</span>
           <button onClick={() => setFetchError(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#856404' }}>✕</button>
         </div>
       )}
@@ -561,10 +808,64 @@ export default function Admissions() {
                   <div>
                     <label>صنف</label>
                     <div className="gender-toggle-wrap" style={{ display: 'flex', gap: '10px' }}>
-                      <input type="radio" name="admGender" id="genderBoy" value="لڑکا" checked={formData.admGender === 'لڑکا'} onChange={(e) => setFormData(prev => ({...prev, admGender: e.target.value}))} style={{ display: 'none' }} />
-                      <label htmlFor="genderBoy" style={{ flex: 1, textAlign: 'center', padding: '10px', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', ...(formData.admGender === 'لڑکا' ? { borderColor: 'var(--accent)', background: 'var(--accent)', color: 'white' } : { background: 'var(--surface)' }) }}>لڑکا</label>
-                      <input type="radio" name="admGender" id="genderGirl" value="لڑکی" checked={formData.admGender === 'لڑکی'} onChange={(e) => setFormData(prev => ({...prev, admGender: e.target.value}))} style={{ display: 'none' }} />
-                      <label htmlFor="genderGirl" style={{ flex: 1, textAlign: 'center', padding: '10px', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', ...(formData.admGender === 'لڑکی' ? { borderColor: 'var(--accent)', background: 'var(--accent)', color: 'white' } : { background: 'var(--surface)' }) }}>لڑکی</label>
+                      <input
+                        type="radio"
+                        name="admGender"
+                        id="genderBoy"
+                        value="لڑکا"
+                        checked={formData.admGender === 'لڑکا'}
+                        onChange={(e) => setFormData(prev => ({...prev, admGender: e.target.value}))}
+                        style={{ display: 'none' }}
+                      />
+                      <label
+                        htmlFor="genderBoy"
+                        className={`gender-toggle-label boy-toggle-label ${formData.admGender === 'لڑکا' ? 'selected' : ''}`}
+                        data-selected={formData.admGender === 'لڑکا'}
+                        style={{
+                          flex: 1,
+                          textAlign: 'center',
+                          padding: '10px',
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                          borderColor: formData.admGender === 'لڑکا' ? 'var(--accent)' : 'var(--border)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          ...(formData.admGender === 'لڑکا'
+                            ? { background: 'var(--accent)', color: 'white', fontWeight: '700' }
+                            : { background: 'var(--surface)', color: 'var(--text)' })
+                        }}
+                      >
+                        لڑکا
+                      </label>
+                      <input
+                        type="radio"
+                        name="admGender"
+                        id="genderGirl"
+                        value="لڑکی"
+                        checked={formData.admGender === 'لڑکی'}
+                        onChange={(e) => setFormData(prev => ({...prev, admGender: e.target.value}))}
+                        style={{ display: 'none' }}
+                      />
+                      <label
+                        htmlFor="genderGirl"
+                        className={`gender-toggle-label girl-toggle-label ${formData.admGender === 'لڑکی' ? 'selected' : ''}`}
+                        data-selected={formData.admGender === 'لڑکی'}
+                        style={{
+                          flex: 1,
+                          textAlign: 'center',
+                          padding: '10px',
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                          borderColor: formData.admGender === 'لڑکی' ? 'var(--accent)' : 'var(--border)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          ...(formData.admGender === 'لڑکی'
+                            ? { background: 'var(--accent)', color: 'white', fontWeight: '700' }
+                            : { background: 'var(--surface)', color: 'var(--text)' })
+                        }}
+                      >
+                        لڑکی
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -726,6 +1027,241 @@ export default function Admissions() {
         </div>
       )}
 
+      {activeTab === 'classes' && (
+        <div id="allClassesContainer" className="no-print classes-management-wrapper">
+          {/* Top Header & Summary Card */}
+          <div className="classes-management-hero">
+            <div className="classes-hero-info">
+              <h2>تمام کلاسز کا انتظام (All Classes Management)</h2>
+              <p>ہر کلاس کے اساتذہ، طلباء، اور تمام تر تفصیلات کا آزادانہ اور خود مختار انتظام۔</p>
+            </div>
+            <div className="classes-hero-actions">
+              <button
+                type="button"
+                className="add-class-primary-btn"
+                onClick={openAddClassModal}
+                disabled={classActionLoading}
+              >
+                <span style={{ fontSize: '1.2rem', marginLeft: '6px' }}>+</span>
+                نیا کلاس شامل کریں
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Metrics Row */}
+          <div className="classes-metrics-grid">
+            <div className="classes-metric-card">
+              <div className="classes-metric-label">کل کلاسز</div>
+              <div className="classes-metric-val">{classesList.length}</div>
+            </div>
+            <div className="classes-metric-card">
+              <div className="classes-metric-label">کل فعال طلباء</div>
+              <div className="classes-metric-val">{records.filter(r => r.isAdmissionProfile && !r.isWithdrawn).length}</div>
+            </div>
+            <div className="classes-metric-card">
+              <div className="classes-metric-label">اوسط طلباء فی کلاس</div>
+              <div className="classes-metric-val">
+                {classesList.length > 0
+                  ? (records.filter(r => r.isAdmissionProfile && !r.isWithdrawn).length / classesList.length).toFixed(1)
+                  : '0.0'}
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Actions Bar */}
+          <div className="classes-toolbar">
+            <div className="classes-search-box">
+              <input
+                type="text"
+                placeholder="کلاس کا نام یا استاد کا نام تلاش کریں..."
+                value={classSearchQuery}
+                onChange={(e) => setClassSearchQuery(e.target.value)}
+              />
+              {classSearchQuery && (
+                <button
+                  type="button"
+                  className="classes-clear-search-btn"
+                  onClick={() => setClassSearchQuery('')}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {classesList.length === 0 && (
+              <button
+                type="button"
+                className="seed-classes-btn"
+                onClick={handleManualSeedDefaultClasses}
+                disabled={classActionLoading}
+              >
+                5 ڈیفالٹ کلاسز شامل کریں
+              </button>
+            )}
+          </div>
+
+          {/* Classes Cards List */}
+          {filteredClassesList.length === 0 ? (
+            <div className="classes-empty-state">
+              {classesList.length === 0 ? (
+                <div>
+                  <p>اس مدرسے کے لیے فی الحال کوئی کلاس موجود نہیں ہے۔</p>
+                  <button
+                    type="button"
+                    className="seed-classes-btn"
+                    onClick={handleManualSeedDefaultClasses}
+                    style={{ marginTop: '14px' }}
+                    disabled={classActionLoading}
+                  >
+                    5 ڈیفالٹ کلاسز لوڈ کریں
+                  </button>
+                </div>
+              ) : (
+                <p>تلاش کے معیار کے مطابق کوئی کلاس نہیں ملی۔</p>
+              )}
+            </div>
+          ) : (
+            <div className="classes-cards-grid">
+              {filteredClassesList.map((cls) => {
+                const enrolled = records.filter(
+                  r => r.isAdmissionProfile && !r.isWithdrawn && (r.admClass === cls.id || r.class_id === cls.id)
+                );
+                const isExpanded = expandedClassId === cls.id;
+
+                return (
+                  <div key={cls.id} className="class-card-item">
+                    <div className="class-card-header">
+                      <div className="class-card-title-group">
+                        <h3 className="class-card-title">{cls.name || cls.class_name}</h3>
+                        <div className="class-card-teacher-badge">
+                          <span>استاد: <strong>{cls.teacher || cls.teacher_name || 'استاد کا نام درج نہیں'}</strong></span>
+                        </div>
+                      </div>
+                      <div className="class-card-badge-group">
+                        <span className="class-enrolled-count-badge">
+                          {enrolled.length} طلباء
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="class-card-actions">
+                      <button
+                        type="button"
+                        className="class-action-btn edit-class-btn"
+                        onClick={() => openEditClassModal(cls)}
+                        title="کلاس اور استاد کے نام میں ترمیم کریں"
+                      >
+                        کلاس میں ترمیم
+                      </button>
+
+                      <button
+                        type="button"
+                        className="class-action-btn add-student-btn"
+                        onClick={() => openAddStudentToClass(cls.id)}
+                        title="اس کلاس میں نیا طالب علم شامل کریں"
+                      >
+                        طالب علم شامل کریں
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`class-action-btn view-students-btn ${isExpanded ? 'active' : ''}`}
+                        onClick={() => setExpandedClassId(isExpanded ? null : cls.id)}
+                        title="اس کلاس کے طلباء کی فہرست دیکھیں یا چھپائیں"
+                      >
+                        {isExpanded ? 'طلباء فہرست چھپائیں' : `طلباء فہرست دیکھیں (${enrolled.length})`}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="class-action-btn delete-class-btn"
+                        onClick={() => handleDeleteClass(cls.id, cls.name || cls.class_name)}
+                        title="کلاس کو حذف کریں"
+                      >
+                        حذف
+                      </button>
+                    </div>
+
+                    {/* Accordion view of enrolled students */}
+                    {isExpanded && (
+                      <div className="class-enrolled-drawer slide-down">
+                        <div className="class-drawer-header">
+                          <h4>اس کلاس میں داخل شدہ طلباء ({enrolled.length}):</h4>
+                          <button
+                            type="button"
+                            className="drawer-add-student-btn"
+                            onClick={() => openAddStudentToClass(cls.id)}
+                          >
+                            + نیا طالب علم
+                          </button>
+                        </div>
+
+                        {enrolled.length === 0 ? (
+                          <div className="drawer-empty-msg">
+                            اس کلاس میں ابھی کوئی طالب علم داخل نہیں ہے۔ اوپر دیے گئے بٹن سے طالب علم شامل کریں۔
+                          </div>
+                        ) : (
+                          <div className="drawer-table-wrapper">
+                            <table className="drawer-students-table">
+                              <thead>
+                                <tr>
+                                  <th>رجسٹریشن نمبر</th>
+                                  <th>نام طالب علم</th>
+                                  <th>والد کا نام</th>
+                                  <th>رابطہ نمبر</th>
+                                  <th>تاریخ داخلہ</th>
+                                  <th>اقدامات</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {enrolled.map((std) => (
+                                  <tr key={std.id}>
+                                    <td className="std-reg-cell">{std.admRegNo || '—'}</td>
+                                    <td className="std-name-cell"><strong>{std.name}</strong></td>
+                                    <td>{std.admFatherName || std.fatherName || '—'}</td>
+                                    <td>{std.fatherMobile || std.admPhone || '—'}</td>
+                                    <td>{std.admDate || '—'}</td>
+                                    <td className="std-actions-cell">
+                                      <button
+                                        type="button"
+                                        className="std-quick-edit-btn"
+                                        onClick={() => openEditStudentNameModal(std)}
+                                        title="طالب علم کا نام اور کوائف تبدیل کریں"
+                                      >
+                                        نام / کوائف
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="std-quick-profile-btn"
+                                        onClick={() => setProfileModal(std)}
+                                        title="مکمل پروفائل دیکھیں / ترمیم کریں"
+                                      >
+                                        پروفائل
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="std-quick-delete-btn"
+                                        onClick={() => handleDeleteStudentFromClass(std.id, std.name)}
+                                        title="طالب علم کا ریکارڈ حذف کریں"
+                                      >
+                                        حذف
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'withdrawn_list' && (
         <div className="no-print">
           <h2>خارج شدہ طلباء (Withdrawn Students)</h2>
@@ -836,7 +1372,7 @@ export default function Admissions() {
                     width: '100%'
                   }}
                 >
-                  🖨️ فارم پرنٹ کریں
+                  فارم پرنٹ کریں
                 </button>
               </div>
             </div>
@@ -850,7 +1386,6 @@ export default function Admissions() {
                 {/* Header */}
                 <div className="a4-header-grid">
                   <div className="a4-header-center">
-                    <div className="a4-crescent-star">☪</div>
                     <div className="a4-title-box">
                       <h1 className="a4-title-text">داخلہ فارم</h1>
                     </div>
@@ -1051,6 +1586,310 @@ export default function Admissions() {
                   <button onClick={saveStudentProfile} style={{ background: 'var(--accent)', color: '#fff', border: 'none', padding: '10px 30px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>محفوظ کریں</button>
                </div>
             </div>
+        </div>
+      )}
+
+      {/* Class Add / Edit Modal */}
+      {isClassModalOpen && (
+        <div className="classes-modal-overlay" role="dialog" aria-modal="true">
+          <div className="classes-modal-card slide-down">
+            <div className="classes-modal-header">
+              <h3>{classModalMode === 'add' ? 'نیا کلاس شامل کریں (Add New Class)' : 'کلاس اور استاد میں ترمیم (Edit Class)'}</h3>
+              <button
+                type="button"
+                className="classes-modal-close"
+                onClick={() => setIsClassModalOpen(false)}
+                aria-label="بند کریں"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveClass}>
+              <div className="classes-modal-body">
+                <div className="classes-form-group">
+                  <label htmlFor="modalInputClassName">کلاس کا نام (Class Name) *</label>
+                  <input
+                    id="modalInputClassName"
+                    type="text"
+                    className="classes-form-input"
+                    placeholder="مثال: حفظِ قرآن — سال اول"
+                    value={modalClassName}
+                    onChange={(e) => setModalClassName(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                <div className="classes-form-group" style={{ marginTop: '14px' }}>
+                  <label htmlFor="modalInputTeacherName">استاد کا نام (Teacher's Name)</label>
+                  <input
+                    id="modalInputTeacherName"
+                    type="text"
+                    className="classes-form-input"
+                    placeholder="مثال: مولانا محمد اسحاق"
+                    value={modalTeacherName}
+                    onChange={(e) => setModalTeacherName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="classes-modal-footer">
+                <button
+                  type="button"
+                  className="classes-modal-cancel-btn"
+                  onClick={() => setIsClassModalOpen(false)}
+                  disabled={classActionLoading}
+                >
+                  منسوخ کریں
+                </button>
+                <button
+                  type="submit"
+                  className="classes-modal-save-btn"
+                  disabled={classActionLoading}
+                >
+                  {classActionLoading ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add Student Directly to Class Modal */}
+      {isAddStudentModalOpen && (
+        <div className="classes-modal-overlay" role="dialog" aria-modal="true">
+          <div className="classes-modal-card slide-down">
+            <div className="classes-modal-header">
+              <h3>کلاس میں نیا طالب علم داخل کریں</h3>
+              <button
+                type="button"
+                className="classes-modal-close"
+                onClick={() => setIsAddStudentModalOpen(false)}
+                aria-label="بند کریں"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewStudentToClass}>
+              <div className="classes-modal-body">
+                <div className="classes-selected-class-banner">
+                  <span>منتخب کردہ کلاس: </span>
+                  <strong>{getClassName(addStudentClassId)}</strong>
+                </div>
+
+                <div className="grid-row" style={{ marginTop: '14px' }}>
+                  <div>
+                    <label htmlFor="addStdRegNo">رجسٹریشن نمبر</label>
+                    <input
+                      id="addStdRegNo"
+                      type="text"
+                      className="classes-form-input"
+                      value={addStudentRegNo}
+                      onChange={(e) => setAddStudentRegNo(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="addStdName">طالب علم کا نام *</label>
+                    <input
+                      id="addStdName"
+                      type="text"
+                      className="classes-form-input"
+                      placeholder="طالب علم کا نام"
+                      value={addStudentName}
+                      onChange={(e) => setAddStudentName(e.target.value)}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="grid-row" style={{ marginTop: '12px' }}>
+                  <div>
+                    <label htmlFor="addStdFatherName">والد کا نام</label>
+                    <input
+                      id="addStdFatherName"
+                      type="text"
+                      className="classes-form-input"
+                      placeholder="والد کا نام"
+                      value={addStudentFatherName}
+                      onChange={(e) => setAddStudentFatherName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="addStdPhone">رابطہ / موبائل نمبر</label>
+                    <input
+                      id="addStdPhone"
+                      type="text"
+                      className="classes-form-input"
+                      placeholder="0300-1234567"
+                      value={addStudentPhone}
+                      onChange={(e) => setAddStudentPhone(formatPhoneNumber(e.target.value))}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '12px' }}>
+                  <label>صنف</label>
+                  <div className="gender-toggle-wrap" style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                    <button
+                      type="button"
+                      className={`gender-toggle-btn boy-toggle-btn ${addStudentGender === 'لڑکا' ? 'selected' : ''}`}
+                      data-selected={addStudentGender === 'لڑکا'}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        borderRadius: '8px',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: addStudentGender === 'لڑکا' ? 'var(--accent)' : 'var(--border)',
+                        background: addStudentGender === 'لڑکا' ? 'var(--accent)' : 'var(--surface)',
+                        color: addStudentGender === 'لڑکا' ? '#fff' : 'var(--text)',
+                        cursor: 'pointer',
+                        fontWeight: '600'
+                      }}
+                      onClick={() => setAddStudentGender('لڑکا')}
+                    >
+                      لڑکا
+                    </button>
+                    <button
+                      type="button"
+                      className={`gender-toggle-btn girl-toggle-btn ${addStudentGender === 'لڑکی' ? 'selected' : ''}`}
+                      data-selected={addStudentGender === 'لڑکی'}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        borderRadius: '8px',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: addStudentGender === 'لڑکی' ? 'var(--accent)' : 'var(--border)',
+                        background: addStudentGender === 'لڑکی' ? 'var(--accent)' : 'var(--surface)',
+                        color: addStudentGender === 'لڑکی' ? '#fff' : 'var(--text)',
+                        cursor: 'pointer',
+                        fontWeight: '600'
+                      }}
+                      onClick={() => setAddStudentGender('لڑکی')}
+                    >
+                      لڑکی
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="classes-modal-footer">
+                <button
+                  type="button"
+                  className="classes-modal-cancel-btn"
+                  onClick={() => setIsAddStudentModalOpen(false)}
+                  disabled={classActionLoading}
+                >
+                  منسوخ کریں
+                </button>
+                <button
+                  type="submit"
+                  className="classes-modal-save-btn"
+                  disabled={classActionLoading}
+                >
+                  {classActionLoading ? 'محفوظ ہو رہا ہے...' : 'طالب علم داخل کریں'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Edit Student Name & Details Modal */}
+      {isEditStudentModalOpen && (
+        <div className="classes-modal-overlay" role="dialog" aria-modal="true">
+          <div className="classes-modal-card slide-down">
+            <div className="classes-modal-header">
+              <h3>طالب علم کے نام اور کوائف میں ترمیم</h3>
+              <button
+                type="button"
+                className="classes-modal-close"
+                onClick={() => setIsEditStudentModalOpen(false)}
+                aria-label="بند کریں"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditStudent}>
+              <div className="classes-modal-body">
+                <div className="grid-row">
+                  <div>
+                    <label htmlFor="editStdName">طالب علم کا نام *</label>
+                    <input
+                      id="editStdName"
+                      type="text"
+                      className="classes-form-input"
+                      value={editStudentName}
+                      onChange={(e) => setEditStudentName(e.target.value)}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editStdFatherName">والد کا نام</label>
+                    <input
+                      id="editStdFatherName"
+                      type="text"
+                      className="classes-form-input"
+                      value={editStudentFatherName}
+                      onChange={(e) => setEditStudentFatherName(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid-row" style={{ marginTop: '12px' }}>
+                  <div>
+                    <label htmlFor="editStdRegNo">رجسٹریشن نمبر</label>
+                    <input
+                      id="editStdRegNo"
+                      type="text"
+                      className="classes-form-input"
+                      value={editStudentRegNo}
+                      onChange={(e) => setEditStudentRegNo(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editStdClassId">تفویض کردہ کلاس</label>
+                    <select
+                      id="editStdClassId"
+                      className="classes-form-input"
+                      value={editStudentClassId}
+                      onChange={(e) => setEditStudentClassId(e.target.value)}
+                    >
+                      <option value="">کلاس چنیں...</option>
+                      {classesList.map(c => (
+                        <option key={c.id} value={c.id}>{c.name || c.className || c.class_name || c.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="classes-modal-footer">
+                <button
+                  type="button"
+                  className="classes-modal-cancel-btn"
+                  onClick={() => setIsEditStudentModalOpen(false)}
+                  disabled={classActionLoading}
+                >
+                  منسوخ کریں
+                </button>
+                <button
+                  type="submit"
+                  className="classes-modal-save-btn"
+                  disabled={classActionLoading}
+                >
+                  {classActionLoading ? 'محفوظ ہو رہا ہے...' : 'تبدیلیاں محفوظ کریں'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
