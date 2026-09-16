@@ -33,36 +33,21 @@ export default function Login() {
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
-      let rawMsg = '';
-      if (typeof err === 'string') {
-        rawMsg = err;
-      } else if (err && typeof err.message === 'string' && err.message !== '{}') {
-        rawMsg = err.message;
-      } else if (err && typeof err.error_description === 'string') {
-        rawMsg = err.error_description;
+
+      const isServerError =
+        err?.status >= 500 ||
+        err?.name === 'AuthRetryableFetchError' ||
+        err?.message === 'SERVER_CONNECTION_ERROR' ||
+        err?.message?.includes('Database error') ||
+        err?.message?.includes('schema') ||
+        err?.message?.includes('Failed to fetch') ||
+        (typeof navigator !== 'undefined' && !navigator.onLine);
+
+      if (isServerError) {
+        setErrorMsg('سرور یا ڈیٹا بیس سے رابطہ نہیں ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔');
+      } else {
+        setErrorMsg('غلط ای میل یا پاس ورڈ! براہ کرم درست معلومات درج کریں۔');
       }
-
-      let userFriendlyMsg = 'غلط ای میل یا پاس ورڈ! براہ کرم درست معلومات درج کریں۔';
-
-      if (
-        rawMsg === 'SERVER_CONNECTION_ERROR' ||
-        rawMsg.includes('Failed to fetch') ||
-        rawMsg.includes('AuthRetryableFetchError') ||
-        (typeof navigator !== 'undefined' && !navigator.onLine)
-      ) {
-        userFriendlyMsg = 'سرور یا ڈیٹا بیس سے رابطہ نہیں ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔';
-      } else if (
-        rawMsg === 'INVALID_CREDENTIALS' ||
-        rawMsg.includes('Invalid login credentials') ||
-        rawMsg.includes('invalid_credentials') ||
-        rawMsg.includes('invalid_grant')
-      ) {
-        userFriendlyMsg = 'غلط ای میل یا پاس ورڈ! براہ کرم درست معلومات درج کریں۔';
-      } else if (rawMsg && rawMsg !== '{}' && rawMsg !== '[object Object]') {
-        userFriendlyMsg = rawMsg;
-      }
-
-      setErrorMsg(userFriendlyMsg);
     } finally {
       setIsSubmitting(false);
     }

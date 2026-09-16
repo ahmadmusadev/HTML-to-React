@@ -374,29 +374,40 @@ function MainLayout({ theme, toggleTheme }) {
   const { pendingSyncCount, madrasaError } = useMadrasa();
   const { role } = useAuth();
 
+  if (isAuthPage) {
+    return (
+      <div className="auth-fullscreen-layout" dir="rtl">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </div>
+    );
+  }
+
   return (
     <div className="wrap" dir="rtl">
       <div className="card">
-        {!isAuthPage && <MainHeader theme={theme} toggleTheme={toggleTheme} />}
+        <MainHeader theme={theme} toggleTheme={toggleTheme} />
 
-        {!isAuthPage && (
-          <nav className="tabs">
-            {role === 'super_admin' && (
-              <NavLink to="/super-admin" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>سپر ایڈمن</NavLink>
-            )}
-            <NavLink to="/" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>ڈیش بورڈ</NavLink>
-            <NavLink to="/admissions" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>داخلہ جات</NavLink>
-            <NavLink to="/fees" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>فیس ریکارڈ</NavLink>
-            <NavLink to="/entry" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>جائزہ جات</NavLink>
-            <NavLink to="/attendance" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>حاضری</NavLink>
-            <NavLink to="/exams" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>امتحانات</NavLink>
-            <NavLink to="/records" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تعلیمی ریکارڈز</NavLink>
-            <NavLink to="/staff" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اسٹاف</NavLink>
-            <NavLink to="/ai-listen" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
-          </nav>
-        )}
+        <nav className="tabs">
+          {role === 'super_admin' && (
+            <NavLink to="/super-admin" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>سپر ایڈمن</NavLink>
+          )}
+          <NavLink to="/" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>ڈیش بورڈ</NavLink>
+          <NavLink to="/admissions" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>داخلہ جات</NavLink>
+          <NavLink to="/fees" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>فیس ریکارڈ</NavLink>
+          <NavLink to="/entry" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>جائزہ جات</NavLink>
+          <NavLink to="/attendance" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>حاضری</NavLink>
+          <NavLink to="/exams" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>امتحانات</NavLink>
+          <NavLink to="/records" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تعلیمی ریکارڈز</NavLink>
+          <NavLink to="/staff" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اسٹاف</NavLink>
+          <NavLink to="/ai-listen" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
+        </nav>
 
-        {!isAuthPage && madrasaError && (
+        {madrasaError && (
           <div
             className="madrasa-error-indicator"
             style={{
@@ -415,7 +426,7 @@ function MainLayout({ theme, toggleTheme }) {
           </div>
         )}
 
-        {!isAuthPage && pendingSyncCount > 0 && (
+        {pendingSyncCount > 0 && (
           <div
             className="pending-sync-indicator"
             style={{
@@ -436,10 +447,6 @@ function MainLayout({ theme, toggleTheme }) {
         
         <div className="tab-content">
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            
             <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdmin /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/admissions" element={<ProtectedRoute><Admissions /></ProtectedRoute>} />
@@ -455,7 +462,7 @@ function MainLayout({ theme, toggleTheme }) {
           </Routes>
         </div>
       </div>
-      {!isAuthPage && <AiChatbot />}
+      <AiChatbot />
     </div>
   );
 }

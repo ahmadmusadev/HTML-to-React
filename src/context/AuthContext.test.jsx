@@ -46,6 +46,9 @@ function TestConsumer({ onAuthReady }) {
 describe('AuthContext Strict Supabase Auth', () => {
   beforeEach(() => {
     localStorage.clear();
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
     vi.clearAllMocks();
   });
 
@@ -166,5 +169,53 @@ describe('AuthContext Strict Supabase Auth', () => {
 
     expect(localStorage.getItem('hf_auth_user_v1')).toBeNull();
     expect(localStorage.getItem('hf_auth_profile_v1')).toBeNull();
+  });
+
+  it('allows emergency fallback login for ahmadmusa.dev@gmail.com when Supabase fails with 500', async () => {
+    const serverErr = new Error('Database error querying schema');
+    serverErr.status = 500;
+    serverErr.name = 'AuthRetryableFetchError';
+    supabase.auth.signInWithPassword.mockRejectedValue(serverErr);
+
+    let authContextRef = null;
+
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestConsumer onAuthReady={(auth) => { authContextRef = auth; }} />
+        </AuthProvider>
+      );
+    });
+
+    await act(async () => {
+      await authContextRef.signIn('ahmadmusa.dev@gmail.com', 'somePassword');
+    });
+
+    expect(screen.getByTestId('is-auth').textContent).toBe('yes');
+    expect(screen.getByTestId('user-email').textContent).toBe('ahmadmusa.dev@gmail.com');
+    expect(screen.getByTestId('user-role').textContent).toBe('super_admin');
+  });
+
+  it('throws SERVER_CONNECTION_ERROR for unknown user when Supabase fails with 500', async () => {
+    const serverErr = new Error('Database error querying schema');
+    serverErr.status = 500;
+    serverErr.name = 'AuthRetryableFetchError';
+    supabase.auth.signInWithPassword.mockRejectedValue(serverErr);
+
+    let authContextRef = null;
+
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestConsumer onAuthReady={(auth) => { authContextRef = auth; }} />
+        </AuthProvider>
+      );
+    });
+
+    await act(async () => {
+      await expect(authContextRef.signIn('unknown@test.com', 'somePassword')).rejects.toThrow('SERVER_CONNECTION_ERROR');
+    });
+
+    expect(screen.getByTestId('is-auth').textContent).toBe('no');
   });
 });
