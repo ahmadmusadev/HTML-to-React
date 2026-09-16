@@ -85,8 +85,8 @@ export function MainHeader({ theme, toggleTheme }) {
   const displayName = activeMadrasa?.name || (role === 'super_admin' ? 'جامعہ حفظ منیجر — پورٹل' : 'جامعہ حفظ منیجر');
 
   return (
-    <div className="card-header-top">
-      <div className="header-main-flex">
+    <div className="card-header-top" style={{ position: 'relative', zIndex: 100, overflow: 'visible' }}>
+      <div className="header-main-flex" style={{ position: 'relative', zIndex: 100, overflow: 'visible' }}>
         
         {/* Right Section (in RTL): Active Madrasa Branding & Title */}
         <div className="header-branding">
@@ -110,8 +110,8 @@ export function MainHeader({ theme, toggleTheme }) {
         </div>
 
         {/* Controls Section: Theme Toggle, User Profile & Settings Dropdown */}
-        <div className="header-controls-container">
-          <div className="header-actions-row">
+        <div className="header-controls-container" style={{ position: 'relative', zIndex: 100, overflow: 'visible' }}>
+          <div className="header-actions-row" style={{ position: 'relative', zIndex: 100, overflow: 'visible' }}>
             
             {/* Dark/Light Mode Toggle Button */}
             <button className="single-theme-toggle" id="singleThemeToggleBtn" onClick={toggleTheme} title={theme === 'dark' ? 'لائٹ موڈ' : 'ڈارک موڈ'} aria-label="Toggle Theme">
@@ -133,7 +133,7 @@ export function MainHeader({ theme, toggleTheme }) {
 
             {/* Authenticated User Profile & Settings Dropdown */}
             {user ? (
-              <div className="user-profile-badge" ref={settingsDropdownRef}>
+              <div className="user-profile-badge" ref={settingsDropdownRef} style={{ position: 'relative', zIndex: 1000, overflow: 'visible' }}>
                 {/* Profile Picture */}
                 <div className="user-avatar-circle" title={profile?.full_name || user.email}>
                   {profile?.avatar_url ? (
@@ -172,7 +172,7 @@ export function MainHeader({ theme, toggleTheme }) {
 
                 {/* Settings Dropdown Menu */}
                 {isSettingsOpen && (
-                  <div className="settings-dropdown-menu" role="menu" aria-orientation="vertical">
+                  <div className="settings-dropdown-menu" role="menu" aria-orientation="vertical" style={{ position: 'absolute', zIndex: 99999 }}>
                     <div className="settings-dropdown-header">
                       <div className="settings-user-preview">
                         <div className="settings-mini-avatar">
@@ -389,10 +389,10 @@ function MainLayout({ theme, toggleTheme }) {
 
   return (
     <div className="wrap" dir="rtl">
-      <div className="card">
+      <div className="card" style={{ overflow: 'visible' }}>
         <MainHeader theme={theme} toggleTheme={toggleTheme} />
 
-        <nav className="tabs">
+        <nav className="tabs" style={{ position: 'relative', zIndex: 1 }}>
           {role === 'super_admin' && (
             <NavLink to="/super-admin" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>سپر ایڈمن</NavLink>
           )}
