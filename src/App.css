@@ -48,8 +48,10 @@ body {
   background: var(--card, #ffffff);
   box-sizing: border-box;
   position: relative;
+  z-index: 1000;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: visible;
 }
 
 .user-profile-badge:hover {
@@ -149,9 +151,9 @@ body {
   background: var(--card, #ffffff);
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 14px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2), 0 6px 14px rgba(0, 0, 0, 0.1);
   padding: 8px;
-  z-index: 1000;
+  z-index: 99999 !important;
   box-sizing: border-box;
   animation: settingsMenuFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(10px);

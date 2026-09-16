@@ -446,7 +446,8 @@ nav.tabs {
   position: relative;
   box-sizing: border-box;
   width: 100%;
-  overflow: hidden;
+  overflow: visible !important;
+  z-index: 100;
 }
 
 .header-main-flex {
@@ -502,6 +503,9 @@ nav.tabs {
   width: 100%;
   max-width: 380px;
   box-sizing: border-box;
+  position: relative;
+  z-index: 100;
+  overflow: visible;
 }
 
 .madrasa-select-dropdown {
@@ -526,6 +530,9 @@ nav.tabs {
   width: 100%;
   flex-wrap: wrap;
   box-sizing: border-box;
+  position: relative;
+  z-index: 100;
+  overflow: visible;
 }
 
 .header-btn-group {
@@ -645,7 +652,7 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
     margin-bottom: 14px !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   .card-header-top {
@@ -653,6 +660,9 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
     margin-bottom: 12px !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 100 !important;
   }
 
   .header-main-flex {
@@ -996,8 +1006,10 @@ body, .card, .tab-button, input, select, textarea, th, td, .modal-content,
   background: var(--card, #ffffff);
   box-sizing: border-box;
   position: relative;
+  z-index: 1000;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: visible;
 }
 
 .user-profile-badge:hover {
@@ -1097,9 +1109,9 @@ body, .card, .tab-button, input, select, textarea, th, td, .modal-content,
   background: var(--card, #ffffff);
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 14px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2), 0 6px 14px rgba(0, 0, 0, 0.1);
   padding: 8px;
-  z-index: 1000;
+  z-index: 99999 !important;
   box-sizing: border-box;
   animation: settingsMenuFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   backdrop-filter: blur(10px);

@@ -46,6 +46,7 @@
 
 [data-theme="dark"] .card-header-top {
   border-bottom: 1px solid var(--border) !important;
+  overflow: visible !important;
 }
 
 [data-theme="dark"] .card-header-top h1,
@@ -123,6 +124,9 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   background: #18181b !important;
   border-color: #3f3f46 !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
+  position: relative !important;
+  z-index: 1000 !important;
+  overflow: visible !important;
 }
 
 [data-theme="dark"] .user-profile-badge:hover {
@@ -153,7 +157,8 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 [data-theme="dark"] .settings-dropdown-menu {
   background: #18181b !important;
   border-color: #27272a !important;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7), 0 6px 16px rgba(0, 0, 0, 0.5) !important;
+  z-index: 99999 !important;
 }
 
 [data-theme="dark"] .settings-dropdown-header {
