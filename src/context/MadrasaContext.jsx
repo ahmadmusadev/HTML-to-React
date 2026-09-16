@@ -619,7 +619,7 @@ export function MadrasaProvider({ children }) {
     const className = (classData.class_name || classData.name || '').trim();
     const teacherName = (classData.teacher_name || classData.teacher || '').trim();
 
-    if (!isValidUUID(madrasaId) || !isValidUUID(classId)) {
+    if (!isValidUUID(madrasaId)) {
       const localData = loadMadrasaData('hf_classes_v1', madrasaId) || { classes: [] };
       localData.classes = (localData.classes || []).map(c =>
         c.id === classId
@@ -633,6 +633,13 @@ export function MadrasaProvider({ children }) {
       );
       saveMadrasaData('hf_classes_v1', localData, madrasaId);
       return { id: classId, name: className, class_name: className, teacher: teacherName, teacher_name: teacherName };
+    }
+
+    // If madrasaId is a valid UUID, but classId is NOT a valid UUID (e.g. 'cls-1', 'cls-2', or offline temporary id):
+    if (!isValidUUID(classId)) {
+      // It is a default or offline placeholder class being saved to Supabase for the first time!
+      // Insert it into Supabase so it gets a real permanent UUID.
+      return await addClassToSupabase({ class_name: className, teacher_name: teacherName }, madrasaId);
     }
 
     try {

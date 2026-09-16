@@ -252,11 +252,19 @@ export default function Admissions() {
 
   const selectedPrintStudent = records.find(r => r.isAdmissionProfile && r.admRegNo === printStudentId) || null;
 
-  const getClassName = (clsId) => {
-    if (!clsId) return '';
-    const cls = classesList.find(c => c.id === clsId);
-    return cls ? (cls.name || cls.className || clsId) : clsId;
+  const getClassDetails = (clsId) => {
+    if (!clsId) return { name: 'غیر معین کلاس', teacher: 'استاد مقرر نہیں' };
+    const cls = classesList.find(c => c.id === clsId || String(c.id) === String(clsId));
+    if (cls) {
+      return {
+        name: cls.name || cls.class_name || cls.className || 'غیر معین کلاس',
+        teacher: cls.teacher || cls.teacher_name || cls.teacherName || 'استاد مقرر نہیں'
+      };
+    }
+    return { name: clsId, teacher: 'استاد مقرر نہیں' };
   };
+
+  const getClassName = (clsId) => getClassDetails(clsId).name;
 
   const getAgeParts = (student) => {
     if (!student || !student.admAge) return { day: '', month: '', year: '' };
@@ -439,6 +447,9 @@ export default function Admissions() {
           teacher_name: modalTeacherName.trim()
         }, activeMadrasaId);
         setClassesList(prev => prev.map(c => c.id === modalClassId ? { ...c, ...updated } : c));
+        if (updated?.id && updated.id !== modalClassId) {
+          setRecords(prev => prev.map(r => (r.admClass === modalClassId || r.class_id === modalClassId) ? { ...r, admClass: updated.id, class_id: updated.id } : r));
+        }
         alert('کلاس کی تفصیلات کامیابی سے اپ ڈیٹ ہو گئی ہیں۔');
       }
       setIsClassModalOpen(false);
@@ -790,16 +801,16 @@ export default function Admissions() {
                   <div><div className="form-section-title">مرحلہ 1 — طالب علم کی معلومات</div><div className="form-section-subtitle">رجسٹریشن، کلاس اور ذاتی تفصیلات</div></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>رجسٹریشن نمبر</label><input type="text" id="admRegNo" readOnly value={formData.admRegNo} /></div>
-                  <div><label>تاریخ داخلہ</label><input type="date" id="admDate" value={formData.admDate} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="admRegNo">رجسٹریشن نمبر</label><input type="text" id="admRegNo" readOnly value={formData.admRegNo} /></div>
+                  <div><label htmlFor="admDate">تاریخ داخلہ</label><input type="date" id="admDate" value={formData.admDate} onChange={handleInputChange} /></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>نام</label><input type="text" id="admName" value={formData.admName} onChange={handleInputChange} /></div>
-                  <div><label>والد کا نام</label><input type="text" id="admFatherName" value={formData.admFatherName} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="admName">نام</label><input type="text" id="admName" value={formData.admName} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="admFatherName">والد کا نام</label><input type="text" id="admFatherName" value={formData.admFatherName} onChange={handleInputChange} /></div>
                 </div>
                 <div className="grid-row">  
                   <div>
-                    <label>کلاس</label>
+                    <label htmlFor="admClass">کلاس</label>
                     <select id="admClass" value={formData.admClass} onChange={handleInputChange}>
                       <option value="">کلاس منتخب کریں...</option>
                       {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>)}
@@ -878,11 +889,11 @@ export default function Admissions() {
                       <input type="number" id="admDobYear" placeholder="YYYY" value={formData.admDobYear} onChange={handleInputChange} style={{ width: '40%' }} />
                     </div>
                   </div>
-                  <div><label>داخلے کے وقت عمر</label><input type="text" id="admAge" readOnly value={formData.admAge} /></div>
+                  <div><label htmlFor="admAge">داخلے کے وقت عمر</label><input type="text" id="admAge" readOnly value={formData.admAge} /></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>ب فارم نمبر</label><input type="text" id="admBForm" placeholder="00000-0000000-0" value={formData.admBForm} onChange={handleInputChange} /></div>
-                  <div><label>موجودہ رہائشی پتہ</label><input type="text" id="admAddress" value={formData.admAddress} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="admBForm">ب فارم نمبر</label><input type="text" id="admBForm" placeholder="00000-0000000-0" value={formData.admBForm} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="admAddress">موجودہ رہائشی پتہ</label><input type="text" id="admAddress" value={formData.admAddress} onChange={handleInputChange} /></div>
                 </div>
               </div>
               <div className="wizard-nav"><div></div><button className="wizard-btn-next" onClick={wizardNext}>اگلا: والد کی معلومات ←</button></div>
@@ -897,20 +908,20 @@ export default function Admissions() {
                   <div><div className="form-section-title">مرحلہ 2 — والد کی معلومات</div></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>نام</label><input type="text" id="fatherName" value={formData.fatherName} onChange={handleInputChange} /></div>
-                  <div><label>شناختی کارڈ نمبر</label><input type="text" id="fatherCnic" value={formData.fatherCnic} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="fatherName">نام</label><input type="text" id="fatherName" value={formData.fatherName} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="fatherCnic">شناختی کارڈ نمبر</label><input type="text" id="fatherCnic" value={formData.fatherCnic} onChange={handleInputChange} /></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>تعلیمی قابلیت</label><input type="text" id="fatherEdu" value={formData.fatherEdu} onChange={handleInputChange} /></div>
-                  <div><label>پیشہ</label><input type="text" id="fatherOcc" value={formData.fatherOcc} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="fatherEdu">تعلیمی قابلیت</label><input type="text" id="fatherEdu" value={formData.fatherEdu} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="fatherOcc">پیشہ</label><input type="text" id="fatherOcc" value={formData.fatherOcc} onChange={handleInputChange} /></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>موبائل نمبر</label><input type="text" id="fatherMobile" value={formData.fatherMobile} onChange={handleInputChange} /></div>
-                  <div><label>واٹس ایپ نمبر</label><input type="text" id="fatherWhatsapp" value={formData.fatherWhatsapp} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="fatherMobile">موبائل نمبر</label><input type="text" id="fatherMobile" value={formData.fatherMobile} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="fatherWhatsapp">واٹس ایپ نمبر</label><input type="text" id="fatherWhatsapp" value={formData.fatherWhatsapp} onChange={handleInputChange} /></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>ای میل</label><input type="text" id="fatherEmail" value={formData.fatherEmail} onChange={handleInputChange} /></div>
-                  <div><label>ماہانہ آمدنی</label><input type="text" id="fatherIncome" value={formData.fatherIncome} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="fatherEmail">ای میل</label><input type="text" id="fatherEmail" value={formData.fatherEmail} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="fatherIncome">ماہانہ آمدنی</label><input type="text" id="fatherIncome" value={formData.fatherIncome} onChange={handleInputChange} /></div>
                 </div>
                 <div style={{ marginTop: '16px' }}>
                   <label style={{ color: 'var(--accent)', fontWeight: '700', display: 'block', marginBottom: '8px' }}>کیا والد ہی سرپرست ہیں؟</label>
@@ -934,18 +945,18 @@ export default function Admissions() {
                   <div><div className="form-section-title">مرحلہ 3 — والدہ کی معلومات</div></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>نام</label><input type="text" id="motherName" value={formData.motherName} onChange={handleInputChange} /></div>
-                  <div><label>شناختی کارڈ نمبر</label><input type="text" id="motherCnic" value={formData.motherCnic} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="motherName">نام</label><input type="text" id="motherName" value={formData.motherName} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="motherCnic">شناختی کارڈ نمبر</label><input type="text" id="motherCnic" value={formData.motherCnic} onChange={handleInputChange} /></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>تعلیمی قابلیت</label><input type="text" id="motherEdu" value={formData.motherEdu} onChange={handleInputChange} /></div>
-                  <div><label>پیشہ</label><input type="text" id="motherOcc" value={formData.motherOcc} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="motherEdu">تعلیمی قابلیت</label><input type="text" id="motherEdu" value={formData.motherEdu} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="motherOcc">پیشہ</label><input type="text" id="motherOcc" value={formData.motherOcc} onChange={handleInputChange} /></div>
                 </div>
                 <div className="grid-row">
-                  <div><label>موبائل نمبر</label><input type="text" id="motherMobile" value={formData.motherMobile} onChange={handleInputChange} /></div>
-                  <div><label>واٹس ایپ نمبر</label><input type="text" id="motherWhatsapp" value={formData.motherWhatsapp} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="motherMobile">موبائل نمبر</label><input type="text" id="motherMobile" value={formData.motherMobile} onChange={handleInputChange} /></div>
+                  <div><label htmlFor="motherWhatsapp">واٹس ایپ نمبر</label><input type="text" id="motherWhatsapp" value={formData.motherWhatsapp} onChange={handleInputChange} /></div>
                 </div>
-                <div className="grid-row"><div><label>ماہانہ آمدنی</label><input type="text" id="motherIncome" value={formData.motherIncome} onChange={handleInputChange} /></div></div>
+                <div className="grid-row"><div><label htmlFor="motherIncome">ماہانہ آمدنی</label><input type="text" id="motherIncome" value={formData.motherIncome} onChange={handleInputChange} /></div></div>
               </div>
               {formData.isFatherGuardian === 'no' && (
                 <div className="form-section-card">
@@ -975,25 +986,344 @@ export default function Admissions() {
             </div>
           )}
 
-          {wizardStep === 4 && (
-            <div className="wizard-panel active">
-              <div className="form-section-card slide-down">
-                <div className="form-section-header">
-                  <div className="form-section-icon icon-green"></div>
-                  <div><div className="form-section-title">مرحلہ 4 — جائزہ و تکمیل</div></div>
+          {wizardStep === 4 && (() => {
+            const classInfo = getClassDetails(formData.admClass);
+            const dobDisplay = (formData.admDobDay && formData.admDobMonth && formData.admDobYear)
+              ? `${formData.admDobDay}/${formData.admDobMonth}/${formData.admDobYear}`
+              : (formData.admDobFull || '—');
+            const studentInitial = formData.admName?.trim() ? formData.admName.trim().charAt(0) : 'ط';
+            const isBoy = formData.admGender === 'لڑکا';
+
+            return (
+              <div className="wizard-panel active">
+                <div className="form-section-card slide-down adm-review-main-card">
+                  <div className="form-section-header" style={{ marginBottom: '18px' }}>
+                    <div className="form-section-icon icon-green"></div>
+                    <div>
+                      <div className="form-section-title">مرحلہ 4 — جائزہ و تکمیل (Admission Profile Preview)</div>
+                      <div className="form-section-subtitle">داخلہ محفوظ کرنے سے قبل تمام کوائف کا حتمی معائنہ فرمائیں۔</div>
+                    </div>
+                  </div>
+
+                  <div id="wizardReviewArea" className="adm-review-container">
+                    
+                    {/* Top Identity Hero Card */}
+                    <div className={`adm-review-hero ${isBoy ? 'gender-boy' : 'gender-girl'}`}>
+                      <div className="adm-review-avatar-wrap">
+                        <div className="adm-review-avatar">
+                          {studentInitial}
+                        </div>
+                        <span className="adm-review-gender-pill">
+                          {isBoy ? '👦 طالب علم (لڑکا)' : '👧 طالبہ (لڑکی)'}
+                        </span>
+                      </div>
+
+                      <div className="adm-review-hero-info">
+                        <div className="adm-review-hero-title-row">
+                          <h2 className="adm-review-name">{formData.admName || 'نام درج نہیں'}</h2>
+                          <span className="adm-review-reg-badge">
+                            رجسٹریشن نمبر: <strong>{formData.admRegNo || '—'}</strong>
+                          </span>
+                        </div>
+                        <div className="adm-review-hero-subtitle">
+                          <span>ولدیت: <strong>{formData.admFatherName || formData.fatherName || '—'}</strong></span>
+                          {formData.admDate && (
+                            <>
+                              <span className="adm-review-hero-sep">•</span>
+                              <span>تاریخ داخلہ: <strong>{formData.admDate}</strong></span>
+                            </>
+                          )}
+                          {formData.admAge && (
+                            <>
+                              <span className="adm-review-hero-sep">•</span>
+                              <span>عمر: <strong>{formData.admAge}</strong></span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Class & Teacher Spotlight Banner */}
+                    <div className="adm-class-spotlight">
+                      <div className="adm-spotlight-item class-item">
+                        <div className="adm-spotlight-icon class-icon">📚</div>
+                        <div className="adm-spotlight-text">
+                          <span className="adm-spotlight-label">تفویض کردہ کلاس (Class Name)</span>
+                          <span className="adm-spotlight-val" id="reviewClassNameDisplay">
+                            {classInfo.name}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="adm-spotlight-divider"></div>
+
+                      <div className="adm-spotlight-item teacher-item">
+                        <div className="adm-spotlight-icon teacher-icon">🎓</div>
+                        <div className="adm-spotlight-text">
+                          <span className="adm-spotlight-label">نگران استاد محترم (Assigned Teacher)</span>
+                          <span className="adm-spotlight-val" id="reviewTeacherNameDisplay">
+                            {classInfo.teacher}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="adm-review-edit-badge-btn"
+                        onClick={() => setWizardStep(1)}
+                        title="کلاس تبدیل کریں"
+                      >
+                        ✏️ کلاس تبدیل کریں
+                      </button>
+                    </div>
+
+                    {/* Profile Sections Grid */}
+                    <div className="adm-review-sections-grid">
+                      
+                      {/* Section 1: Student Details */}
+                      <div className="adm-review-card">
+                        <div className="adm-review-card-header">
+                          <div className="adm-review-card-title">
+                            <span className="adm-card-title-icon">📋</span>
+                            <span>طالب علم کی ذاتی تفصیلات</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="adm-card-edit-btn"
+                            onClick={() => setWizardStep(1)}
+                            title="طالب علم کی معلومات میں ترمیم کریں"
+                          >
+                            ✏️ ترمیم کریں
+                          </button>
+                        </div>
+                        <div className="adm-review-fields-table">
+                          <div className="review-field-row">
+                            <span className="review-field-label">مکمل نام</span>
+                            <span className="review-field-val highlight">{formData.admName || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">والد کا نام</span>
+                            <span className="review-field-val">{formData.admFatherName || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">رجسٹریشن نمبر</span>
+                            <span className="review-field-val">{formData.admRegNo || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">کلاس اور استاد</span>
+                            <span className="review-field-val highlight">
+                              {classInfo.name} — استاد: {classInfo.teacher}
+                            </span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">صنف</span>
+                            <span className="review-field-val">{formData.admGender || 'لڑکا'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">تاریخ پیدائش</span>
+                            <span className="review-field-val">{dobDisplay}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">داخلے کے وقت عمر</span>
+                            <span className="review-field-val">{formData.admAge || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">ب فارم نمبر</span>
+                            <span className="review-field-val">{formData.admBForm || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">رہائشی پتہ</span>
+                            <span className="review-field-val">{formData.admAddress || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">تاریخ داخلہ</span>
+                            <span className="review-field-val">{formData.admDate || '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 2: Father Details */}
+                      <div className="adm-review-card">
+                        <div className="adm-review-card-header">
+                          <div className="adm-review-card-title">
+                            <span className="adm-card-title-icon">👨‍💼</span>
+                            <span>والد محترم کے کوائف</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="adm-card-edit-btn"
+                            onClick={() => setWizardStep(2)}
+                            title="والد کی معلومات میں ترمیم کریں"
+                          >
+                            ✏️ ترمیم کریں
+                          </button>
+                        </div>
+                        <div className="adm-review-fields-table">
+                          <div className="review-field-row">
+                            <span className="review-field-label">والد کا نام</span>
+                            <span className="review-field-val highlight">{formData.fatherName || formData.admFatherName || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">شناختی کارڈ نمبر</span>
+                            <span className="review-field-val">{formData.fatherCnic || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">موبائل فون نمبر</span>
+                            <span className="review-field-val ltr-text">{formData.fatherMobile || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">واٹس ایپ نمبر</span>
+                            <span className="review-field-val ltr-text">{formData.fatherWhatsapp || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">تعلیمی قابلیت</span>
+                            <span className="review-field-val">{formData.fatherEdu || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">پیشہ / روزگار</span>
+                            <span className="review-field-val">{formData.fatherOcc || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">ماہانہ آمدنی</span>
+                            <span className="review-field-val">
+                              {formData.fatherIncome ? `${Number(formData.fatherIncome).toLocaleString()} روپے` : '—'}
+                            </span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">ای میل ایڈریس</span>
+                            <span className="review-field-val ltr-text">{formData.fatherEmail || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">سرپرستی کی حیثیت</span>
+                            <span className="review-field-val">
+                              {formData.isFatherGuardian === 'yes' ? 'والد ہی قانونی سرپرست ہیں' : 'علیحدہ سرپرست مقرر ہے'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 3: Mother Details */}
+                      <div className="adm-review-card">
+                        <div className="adm-review-card-header">
+                          <div className="adm-review-card-title">
+                            <span className="adm-card-title-icon">🧕</span>
+                            <span>والدہ ماجدہ کے کوائف</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="adm-card-edit-btn"
+                            onClick={() => setWizardStep(3)}
+                            title="والدہ کی معلومات میں ترمیم کریں"
+                          >
+                            ✏️ ترمیم کریں
+                          </button>
+                        </div>
+                        <div className="adm-review-fields-table">
+                          <div className="review-field-row">
+                            <span className="review-field-label">والدہ کا نام</span>
+                            <span className="review-field-val highlight">{formData.motherName || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">شناختی کارڈ نمبر</span>
+                            <span className="review-field-val">{formData.motherCnic || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">موبائل فون نمبر</span>
+                            <span className="review-field-val ltr-text">{formData.motherMobile || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">واٹس ایپ نمبر</span>
+                            <span className="review-field-val ltr-text">{formData.motherWhatsapp || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">تعلیمی قابلیت</span>
+                            <span className="review-field-val">{formData.motherEdu || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">پیشہ / مصروفیات</span>
+                            <span className="review-field-val">{formData.motherOcc || '—'}</span>
+                          </div>
+                          <div className="review-field-row">
+                            <span className="review-field-label">ماہانہ آمدنی</span>
+                            <span className="review-field-val">
+                              {formData.motherIncome ? `${Number(formData.motherIncome).toLocaleString()} روپے` : '—'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 4: Guardian Details (if applicable) */}
+                      {(formData.isFatherGuardian === 'no' || formData.guardianName) && (
+                        <div className="adm-review-card adm-guardian-card">
+                          <div className="adm-review-card-header">
+                            <div className="adm-review-card-title">
+                              <span className="adm-card-title-icon">🛡️</span>
+                              <span>سرپرست کے کوائف (والد کے علاوہ)</span>
+                            </div>
+                            <button
+                              type="button"
+                              className="adm-card-edit-btn"
+                              onClick={() => setWizardStep(3)}
+                              title="سرپرست کی معلومات میں ترمیم کریں"
+                            >
+                              ✏️ ترمیم کریں
+                            </button>
+                          </div>
+                          <div className="adm-review-fields-table">
+                            <div className="review-field-row">
+                              <span className="review-field-label">سرپرست کا نام</span>
+                              <span className="review-field-val highlight">{formData.guardianName || '—'}</span>
+                            </div>
+                            <div className="review-field-row">
+                              <span className="review-field-label">طالب علم سے رشتہ</span>
+                              <span className="review-field-val">{formData.guardianRel || '—'}</span>
+                            </div>
+                            <div className="review-field-row">
+                              <span className="review-field-label">شناختی کارڈ نمبر</span>
+                              <span className="review-field-val">{formData.guardianCnic || '—'}</span>
+                            </div>
+                            <div className="review-field-row">
+                              <span className="review-field-label">موبائل فون نمبر</span>
+                              <span className="review-field-val ltr-text">{formData.guardianMobile || '—'}</span>
+                            </div>
+                            <div className="review-field-row">
+                              <span className="review-field-label">واٹس ایپ نمبر</span>
+                              <span className="review-field-val ltr-text">{formData.guardianWhatsapp || '—'}</span>
+                            </div>
+                            <div className="review-field-row">
+                              <span className="review-field-label">تعلیمی قابلیت</span>
+                              <span className="review-field-val">{formData.guardianEdu || '—'}</span>
+                            </div>
+                            <div className="review-field-row">
+                              <span className="review-field-label">پیشہ</span>
+                              <span className="review-field-val">{formData.guardianOcc || '—'}</span>
+                            </div>
+                            <div className="review-field-row">
+                              <span className="review-field-label">ماہانہ آمدنی</span>
+                              <span className="review-field-val">
+                                {formData.guardianIncome ? `${Number(formData.guardianIncome).toLocaleString()} روپے` : '—'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
                 </div>
-                <div id="wizardReviewArea" style={{ color: 'var(--muted)', fontSize: '0.95rem', lineHeight: '2.2' }}>
-                  <div className="review-section-title">طالب علم کی معلومات</div>
-                  <div className="review-row"><span className="review-label">نام</span><span className="review-value">{formData.admName}</span></div>
-                  <div className="review-row"><span className="review-label">والد کا نام</span><span className="review-value">{formData.admFatherName}</span></div>
-                  <div className="review-row"><span className="review-label">کلاس</span><span className="review-value">{formData.admClass || '—'}</span></div>
-                  <div className="review-row"><span className="review-label">صنف</span><span className="review-value">{formData.admGender}</span></div>
-                  <div className="review-row"><span className="review-label">ب فارم</span><span className="review-value">{formData.admBForm || '—'}</span></div>
+
+                {/* Wizard Bottom Navigation Bar */}
+                <div className="wizard-nav adm-review-nav">
+                  <button type="button" className="wizard-btn-back" onClick={wizardBack}>
+                    → واپس: والدہ
+                  </button>
+                  <button type="button" className="save-admission-btn" onClick={saveAdmission}>
+                    داخلہ محفوظ کریں ✓
+                  </button>
                 </div>
               </div>
-              <div className="wizard-nav"><button className="wizard-btn-back" onClick={wizardBack}>→ واپس: والدہ</button><button className="save-admission-btn" onClick={saveAdmission}>داخلہ محفوظ کریں</button></div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

@@ -1012,6 +1012,144 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   border-color: #27272a !important;
 }
 
+/* ==========================================================================
+   DARK MODE - ADMISSION REVIEW STEP 4 AT-A-GLANCE PROFILE
+   ========================================================================== */
+[data-theme="dark"] .adm-review-main-card {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .adm-review-hero {
+  background: #141417 !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] .adm-review-hero::before {
+  background: #ffffff !important;
+}
+
+[data-theme="dark"] .adm-review-hero.gender-girl::before {
+  background: #f472b6 !important;
+}
+
+[data-theme="dark"] .adm-review-avatar {
+  background: #27272a !important;
+  color: #ffffff !important;
+  border: 1px solid #3f3f46 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] .adm-review-hero.gender-girl .adm-review-avatar {
+  background: #831843 !important;
+  border-color: #be185d !important;
+  color: #fbcfe8 !important;
+}
+
+[data-theme="dark"] .adm-review-name {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .adm-review-reg-badge {
+  background: #1c1c20 !important;
+  border-color: #3f3f46 !important;
+  color: #e4e4e7 !important;
+}
+
+[data-theme="dark"] .adm-review-reg-badge strong {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .adm-class-spotlight {
+  background: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme="dark"] .adm-spotlight-icon {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme="dark"] .adm-spotlight-val {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .adm-spotlight-divider {
+  background: #27272a !important;
+}
+
+[data-theme="dark"] .adm-review-edit-badge-btn {
+  background: #27272a !important;
+  color: #ffffff !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme="dark"] .adm-review-edit-badge-btn:hover {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+}
+
+[data-theme="dark"] .adm-review-card {
+  background: #141417 !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] .adm-review-card-header {
+  background: #1c1c20 !important;
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme="dark"] .adm-review-card-title {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .adm-card-edit-btn {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .adm-card-edit-btn:hover {
+  background: #3f3f46 !important;
+  color: #ffffff !important;
+  border-color: #52525b !important;
+}
+
+[data-theme="dark"] .review-field-row {
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme="dark"] .review-field-label {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .review-field-val {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .review-field-val.highlight {
+  color: #ffffff !important;
+  text-decoration: underline dotted #a1a1aa;
+}
+
+[data-theme="dark"] .review-row {
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme="dark"] .review-label {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .review-value {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .review-section-title {
+  color: #ffffff !important;
+  border-bottom-color: #27272a !important;
+}
+
 /* Smooth Transitions */
 body, .card, .tab-button, .sub-tab-btn, input, select, textarea, th, td, 
 .modal-content, .stats-grid .stat-card, .dashboard-card, .btn-secondary, 
