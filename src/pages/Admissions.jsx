@@ -1014,7 +1014,7 @@ export default function Admissions() {
                           {studentInitial}
                         </div>
                         <span className="adm-review-gender-pill">
-                          {isBoy ? '👦 طالب علم (لڑکا)' : '👧 طالبہ (لڑکی)'}
+                          {isBoy ? 'طالب علم (لڑکا)' : 'طالبہ (لڑکی)'}
                         </span>
                       </div>
 
@@ -1046,7 +1046,6 @@ export default function Admissions() {
                     {/* Class & Teacher Spotlight Banner */}
                     <div className="adm-class-spotlight">
                       <div className="adm-spotlight-item class-item">
-                        <div className="adm-spotlight-icon class-icon">📚</div>
                         <div className="adm-spotlight-text">
                           <span className="adm-spotlight-label">تفویض کردہ کلاس (Class Name)</span>
                           <span className="adm-spotlight-val" id="reviewClassNameDisplay">
@@ -1058,7 +1057,6 @@ export default function Admissions() {
                       <div className="adm-spotlight-divider"></div>
 
                       <div className="adm-spotlight-item teacher-item">
-                        <div className="adm-spotlight-icon teacher-icon">🎓</div>
                         <div className="adm-spotlight-text">
                           <span className="adm-spotlight-label">نگران استاد محترم (Assigned Teacher)</span>
                           <span className="adm-spotlight-val" id="reviewTeacherNameDisplay">
@@ -1073,7 +1071,7 @@ export default function Admissions() {
                         onClick={() => setWizardStep(1)}
                         title="کلاس تبدیل کریں"
                       >
-                        ✏️ کلاس تبدیل کریں
+                        کلاس تبدیل کریں
                       </button>
                     </div>
 
@@ -1084,7 +1082,6 @@ export default function Admissions() {
                       <div className="adm-review-card">
                         <div className="adm-review-card-header">
                           <div className="adm-review-card-title">
-                            <span className="adm-card-title-icon">📋</span>
                             <span>طالب علم کی ذاتی تفصیلات</span>
                           </div>
                           <button
@@ -1093,7 +1090,7 @@ export default function Admissions() {
                             onClick={() => setWizardStep(1)}
                             title="طالب علم کی معلومات میں ترمیم کریں"
                           >
-                            ✏️ ترمیم کریں
+                            ترمیم کریں
                           </button>
                         </div>
                         <div className="adm-review-fields-table">
@@ -1146,7 +1143,6 @@ export default function Admissions() {
                       <div className="adm-review-card">
                         <div className="adm-review-card-header">
                           <div className="adm-review-card-title">
-                            <span className="adm-card-title-icon">👨‍💼</span>
                             <span>والد محترم کے کوائف</span>
                           </div>
                           <button
@@ -1155,7 +1151,7 @@ export default function Admissions() {
                             onClick={() => setWizardStep(2)}
                             title="والد کی معلومات میں ترمیم کریں"
                           >
-                            ✏️ ترمیم کریں
+                            ترمیم کریں
                           </button>
                         </div>
                         <div className="adm-review-fields-table">
@@ -1206,7 +1202,6 @@ export default function Admissions() {
                       <div className="adm-review-card">
                         <div className="adm-review-card-header">
                           <div className="adm-review-card-title">
-                            <span className="adm-card-title-icon">🧕</span>
                             <span>والدہ ماجدہ کے کوائف</span>
                           </div>
                           <button
@@ -1215,7 +1210,7 @@ export default function Admissions() {
                             onClick={() => setWizardStep(3)}
                             title="والدہ کی معلومات میں ترمیم کریں"
                           >
-                            ✏️ ترمیم کریں
+                            ترمیم کریں
                           </button>
                         </div>
                         <div className="adm-review-fields-table">
@@ -1257,7 +1252,6 @@ export default function Admissions() {
                         <div className="adm-review-card adm-guardian-card">
                           <div className="adm-review-card-header">
                             <div className="adm-review-card-title">
-                              <span className="adm-card-title-icon">🛡️</span>
                               <span>سرپرست کے کوائف (والد کے علاوہ)</span>
                             </div>
                             <button
@@ -1266,7 +1260,7 @@ export default function Admissions() {
                               onClick={() => setWizardStep(3)}
                               title="سرپرست کی معلومات میں ترمیم کریں"
                             >
-                              ✏️ ترمیم کریں
+                              ترمیم کریں
                             </button>
                           </div>
                           <div className="adm-review-fields-table">
@@ -1318,7 +1312,7 @@ export default function Admissions() {
                     → واپس: والدہ
                   </button>
                   <button type="button" className="save-admission-btn" onClick={saveAdmission}>
-                    داخلہ محفوظ کریں ✓
+                    داخلہ محفوظ کریں
                   </button>
                 </div>
               </div>
