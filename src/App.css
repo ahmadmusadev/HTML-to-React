@@ -297,3 +297,34 @@ body {
     right: auto;
   }
 }
+
+/* =========================================================
+   Header Controls Alignment & Compact Theme Toggle Spacing
+   ========================================================= */
+
+.header-controls-container {
+  width: auto !important;
+  max-width: 100% !important;
+}
+
+.header-actions-row {
+  width: auto !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+}
+
+/* Make Dark/Light mode toggle button completely round / circular */
+.single-theme-toggle {
+  border-radius: 50% !important;
+}
+
+@media (max-width: 768px) {
+  .header-controls-container {
+    width: auto !important;
+  }
+  .header-actions-row {
+    width: auto !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+  }
+}

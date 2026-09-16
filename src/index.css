@@ -500,8 +500,8 @@ nav.tabs {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 100%;
-  max-width: 380px;
+  width: auto;
+  max-width: 100%;
   box-sizing: border-box;
   position: relative;
   z-index: 100;
@@ -525,9 +525,9 @@ nav.tabs {
 .header-actions-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
+  justify-content: flex-end;
+  gap: 12px;
+  width: auto;
   flex-wrap: wrap;
   box-sizing: border-box;
   position: relative;
@@ -585,7 +585,7 @@ nav.tabs {
   min-width: 38px !important;
   min-height: 38px !important;
   padding: 0 !important;
-  border-radius: 10px !important;
+  border-radius: 50% !important;
   aspect-ratio: 1 !important;
   background: #09090b !important;
   border: 1.5px solid #18181b !important;
