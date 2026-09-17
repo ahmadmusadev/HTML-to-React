@@ -10,6 +10,9 @@ vi.mock('../lib/supabaseClient', () => ({
     rpc: vi.fn(),
     functions: {
       invoke: vi.fn()
+    },
+    auth: {
+      getSession: vi.fn()
     }
   }
 }));
@@ -59,6 +62,15 @@ describe('SuperAdmin Component', () => {
     });
 
     supabase.rpc.mockResolvedValue({ data: true, error: null });
+    supabase.auth.getSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { email: 'superadmin@jamia.com' },
+          access_token: 'valid-token'
+        }
+      },
+      error: null
+    });
   });
 
   it('renders the madrasa list with status pills and action buttons', async () => {
@@ -217,6 +229,77 @@ describe('SuperAdmin Component', () => {
       expect(mockProfileUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ full_name: 'مولانا احمد بلال' })
       );
+    });
+  });
+
+  it('prevents adding mohtamim with super admin own email address', async () => {
+    render(<SuperAdmin />);
+
+    await waitFor(() => {
+      expect(screen.getByText('جامعہ دارالعلوم')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/مدرسے کا نام/), {
+      target: { value: 'نیا مدرسہ' }
+    });
+    fireEvent.change(screen.getByLabelText(/منتظم \/ مہتمم کا نام/), {
+      target: { value: 'مہتمم صاحب' }
+    });
+    fireEvent.change(screen.getByLabelText(/منتظم کا ای میل ایڈریس/), {
+      target: { value: 'superadmin@jamia.com' }
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /نیا مدرسہ و منتظم شامل کریں/ });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      const msgs = screen.getAllByText(
+        'یہ ای میل ایڈریس آپ کے سپر ایڈمن اکاؤنٹ کے لیے استعمال ہو رہا ہے۔ نئے مہتمم کے لیے الگ ای میل ایڈریس درج کریں۔'
+      );
+      expect(msgs.length).toBeGreaterThan(0);
+    });
+
+    expect(supabase.functions.invoke).not.toHaveBeenCalled();
+  });
+
+  it('successfully invokes create-account-invite with unique email', async () => {
+    supabase.functions.invoke.mockResolvedValue({
+      data: {
+        success: true,
+        message: 'اکاؤنٹ کامیابی سے بن گیا ہے۔ نیچے دیا گیا پاسورڈ صارف کو فراہم کریں۔',
+        password: 'Password123!'
+      },
+      error: null
+    });
+
+    render(<SuperAdmin />);
+
+    await waitFor(() => {
+      expect(screen.getByText('جامعہ دارالعلوم')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/مدرسے کا نام/), {
+      target: { value: 'نیا مدرسہ نور' }
+    });
+    fireEvent.change(screen.getByLabelText(/منتظم \/ مہتمم کا نام/), {
+      target: { value: 'قاری نور' }
+    });
+    fireEvent.change(screen.getByLabelText(/منتظم کا ای میل ایڈریس/), {
+      target: { value: 'unique-new-admin@example.com' }
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /نیا مدرسہ و منتظم شامل کریں/ });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(supabase.functions.invoke).toHaveBeenCalledWith('create-account-invite', {
+        body: expect.objectContaining({
+          email: 'unique-new-admin@example.com',
+          fullName: 'قاری نور',
+          madrasaName: 'نیا مدرسہ نور',
+          role: 'admin'
+        })
+      });
     });
   });
 });

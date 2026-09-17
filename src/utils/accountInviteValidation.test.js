@@ -138,6 +138,37 @@ describe('accountInviteValidation', () => {
       expect(result).toBe('Default error message');
     });
 
+    it('translates FunctionsFetchError or "Failed to send a request to the Edge Function" into clear Urdu', async () => {
+      const error1 = {
+        name: 'FunctionsFetchError',
+        message: 'Failed to send a request to the Edge Function'
+      };
+      expect(await extractEdgeFunctionError(error1)).toBe(
+        'سرور (ایج فنکشن) سے رابطہ نہیں ہو سکا۔ برائے مہربانی انٹرنیٹ کنکشن چیک کریں یا دوبارہ لاگ ان کر کے کوشش کریں۔'
+      );
+
+      const error2 = new Error('Failed to send a request to the Edge Function');
+      expect(await extractEdgeFunctionError(error2)).toBe(
+        'سرور (ایج فنکشن) سے رابطہ نہیں ہو سکا۔ برائے مہربانی انٹرنیٹ کنکشن چیک کریں یا دوبارہ لاگ ان کر کے کوشش کریں۔'
+      );
+    });
+
+    it('translates already registered / email_exists error into Urdu', async () => {
+      const error = new Error('User already registered');
+      expect(await extractEdgeFunctionError(error)).toBe('یہ ای میل ایڈریس پہلے سے سسٹم میں رجسٹرڈ ہے۔');
+    });
+
+    it('handles text() fallback when json() throws', async () => {
+      const error = {
+        message: 'Non-2xx status',
+        context: {
+          json: async () => { throw new Error('Not json'); },
+          text: async () => JSON.stringify({ error: 'مخصوص خرابی' })
+        }
+      };
+      expect(await extractEdgeFunctionError(error)).toBe('مخصوص خرابی');
+    });
+
     it('handles falsy or empty errors safely', async () => {
       expect(await extractEdgeFunctionError(null)).toBe('');
       expect(await extractEdgeFunctionError(undefined)).toBe('');

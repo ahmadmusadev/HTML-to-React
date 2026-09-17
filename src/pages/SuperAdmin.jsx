@@ -13,6 +13,7 @@ export default function SuperAdmin() {
   const [adminFullName, setAdminFullName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
 
   const [createdAccount, setCreatedAccount] = useState(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
@@ -197,6 +198,13 @@ export default function SuperAdmin() {
 
   useEffect(() => {
     loadMadrasas();
+    if (supabase.auth?.getSession) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data?.session?.user?.email) {
+          setCurrentUserEmail(data.session.user.email);
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const handleSubmit = async (e) => {
@@ -218,6 +226,37 @@ export default function SuperAdmin() {
     if (!validation.isValid) {
       setErrors(validation.errors);
       return;
+    }
+
+    // Check if entered email matches current logged-in Super Admin email
+    let activeEmail = currentUserEmail;
+    if (!activeEmail && supabase.auth?.getSession) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        activeEmail = data?.session?.user?.email || '';
+      } catch {
+        // ignore
+      }
+    }
+
+    if (activeEmail && adminEmail.trim().toLowerCase() === activeEmail.trim().toLowerCase()) {
+      const selfEmailErr = 'یہ ای میل ایڈریس آپ کے سپر ایڈمن اکاؤنٹ کے لیے استعمال ہو رہا ہے۔ نئے مہتمم کے لیے الگ ای میل ایڈریس درج کریں۔';
+      setErrors({ email: selfEmailErr });
+      setErrorMsg(selfEmailErr);
+      return;
+    }
+
+    if (supabase.auth?.getSession) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
+        if (!session || !session.access_token || session.access_token === 'emergency-session-token') {
+          setErrorMsg('آپ کا لاگ ان سیشن ختم ہو چکا ہے۔ برائے مہربانی صفحہ ریفریش کریں یا دوبارہ لاگ ان کریں۔');
+          return;
+        }
+      } catch {
+        // ignore
+      }
     }
 
     setIsSubmitting(true);

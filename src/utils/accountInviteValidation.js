@@ -112,16 +112,55 @@ export async function extractEdgeFunctionError(error) {
 
   if (error.context && typeof error.context.json === 'function') {
     try {
-      const parsedBody = await error.context.json();
+      const responseToRead = typeof error.context.clone === 'function'
+        ? error.context.clone()
+        : error.context;
+      const parsedBody = await responseToRead.json();
       if (parsedBody && parsedBody.error) {
         return typeof parsedBody.error === 'string'
           ? parsedBody.error
           : JSON.stringify(parsedBody.error);
       }
     } catch {
-      // Fall back to error.message if extraction fails for any reason
+      try {
+        const responseToRead = typeof error.context.clone === 'function'
+          ? error.context.clone()
+          : error.context;
+        const textBody = typeof responseToRead.text === 'function' ? await responseToRead.text() : '';
+        if (textBody) {
+          try {
+            const parsed = JSON.parse(textBody);
+            if (parsed && parsed.error) {
+              return typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+            }
+          } catch {
+            // text was not JSON
+          }
+        }
+      } catch {
+        // Fall back to error.message
+      }
     }
   }
 
-  return error.message || '';
+  const rawMsg = error.message || '';
+  const lowerMsg = rawMsg.toLowerCase();
+
+  if (
+    error.name === 'FunctionsFetchError' ||
+    lowerMsg.includes('failed to send a request to the edge function') ||
+    lowerMsg.includes('functionsfetcherror')
+  ) {
+    return 'سرور (ایج فنکشن) سے رابطہ نہیں ہو سکا۔ برائے مہربانی انٹرنیٹ کنکشن چیک کریں یا دوبارہ لاگ ان کر کے کوشش کریں۔';
+  }
+
+  if (
+    lowerMsg.includes('already been registered') ||
+    lowerMsg.includes('already registered') ||
+    lowerMsg.includes('email_exists')
+  ) {
+    return 'یہ ای میل ایڈریس پہلے سے سسٹم میں رجسٹرڈ ہے۔';
+  }
+
+  return rawMsg;
 }
