@@ -155,4 +155,69 @@ describe('SuperAdmin Component', () => {
     });
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
+
+  it('renders Tarmeem (Edit) buttons for all madrasas', async () => {
+    render(<SuperAdmin />);
+
+    await waitFor(() => {
+      expect(screen.getByText('جامعہ دارالعلوم')).toBeInTheDocument();
+    });
+
+    const editButtons = screen.getAllByText('ترمیم کریں');
+    expect(editButtons.length).toBe(2);
+  });
+
+  it('opens edit modal and updates mohtamim details on submit', async () => {
+    const mockProfileUpdate = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ data: null, error: null })
+    });
+    const mockMadrasaUpdate = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ data: null, error: null })
+    });
+
+    supabase.from.mockImplementation((tableName) => {
+      if (tableName === 'profiles') {
+        return {
+          update: mockProfileUpdate
+        };
+      }
+      if (tableName === 'madrasas') {
+        return {
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: mockMadrasas, error: null })
+          }),
+          update: mockMadrasaUpdate
+        };
+      }
+      return {};
+    });
+
+    render(<SuperAdmin />);
+
+    await waitFor(() => {
+      expect(screen.getByText('جامعہ دارالعلوم')).toBeInTheDocument();
+    });
+
+    const editButtons = screen.getAllByText('ترمیم کریں');
+    fireEvent.click(editButtons[0]);
+
+    // Modal should be open
+    expect(screen.getByText('مہتمم کی تفصیلات میں ترمیم')).toBeInTheDocument();
+    const nameInput = screen.getByLabelText(/مہتمم \/ منتظم کا نام/);
+    expect(nameInput.value).toBe('مولانا احمد');
+
+    // Change the name
+    fireEvent.change(nameInput, { target: { value: 'مولانا احمد بلال' } });
+
+    // Click submit
+    const submitBtn = screen.getByText('تبدیلیاں محفوظ کریں');
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockProfileUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ full_name: 'مولانا احمد بلال' })
+      );
+    });
+  });
 });
+

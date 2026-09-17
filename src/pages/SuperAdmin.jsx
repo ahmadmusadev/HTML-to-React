@@ -28,6 +28,85 @@ export default function SuperAdmin() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [actionFeedback, setActionFeedback] = useState({ type: '', message: '' });
 
+  // Edit Mohtamim State
+  const [editingMadrasa, setEditingMadrasa] = useState(null);
+  const [editAdminName, setEditAdminName] = useState('');
+  const [editAdminPhone, setEditAdminPhone] = useState('');
+  const [editMadrasaName, setEditMadrasaName] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  const handleOpenEdit = (m) => {
+    const adminProfile = (m.profiles || []).find(p => p.role === 'admin');
+    setEditingMadrasa(m);
+    setEditMadrasaName(m.name || '');
+    setEditAdminName(adminProfile?.full_name || '');
+    setEditAdminPhone(adminProfile?.phone || m.phone || '');
+    setEditError('');
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingMadrasa) return;
+
+    if (!editAdminName.trim()) {
+      setEditError('مہتمم / منتظم کا نام درج کرنا لازمی ہے۔');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError('');
+    setActionFeedback({ type: '', message: '' });
+
+    try {
+      const adminProfile = (editingMadrasa.profiles || []).find(p => p.role === 'admin');
+
+      // 1. Update Mohtamim profile name and phone if profile exists
+      if (adminProfile?.id) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: editAdminName.trim(),
+            phone: editAdminPhone.trim() || null
+          })
+          .eq('id', adminProfile.id);
+
+        if (profileError) throw profileError;
+      }
+
+      // 2. Also update madrasa name and phone if modified
+      const madrasaUpdates = {};
+      if (editMadrasaName.trim() && editMadrasaName.trim() !== editingMadrasa.name) {
+        madrasaUpdates.name = editMadrasaName.trim();
+      }
+      if (editAdminPhone.trim() !== (editingMadrasa.phone || '')) {
+        madrasaUpdates.phone = editAdminPhone.trim() || null;
+      }
+
+      if (Object.keys(madrasaUpdates).length > 0) {
+        const { error: madrasaError } = await supabase
+          .from('madrasas')
+          .update(madrasaUpdates)
+          .eq('id', editingMadrasa.id);
+
+        if (madrasaError) throw madrasaError;
+      }
+
+      setActionFeedback({
+        type: 'success',
+        message: `مہتمم "${editAdminName.trim()}" کی تفصیلات کامیابی سے تبدیل ہو گئیں۔`
+      });
+
+      setEditingMadrasa(null);
+      await loadMadrasas();
+    } catch (err) {
+      console.error('Error updating mohtamim:', err);
+      setEditError(err.message || 'معلومات تبدیل کرنے میں خرابی پیش آئی۔');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   const handleCopyPassword = (pwd) => {
     if (!pwd) return;
     if (navigator?.clipboard?.writeText) {
@@ -393,7 +472,7 @@ export default function SuperAdmin() {
                   <th>مہتمم / منتظم</th>
                   <th>فون نمبر</th>
                   <th>حالت</th>
-                  <th>اقدامات</th>
+                  <th className="actions-col-header">اقدامات</th>
                   <th>تاریخ اندراج</th>
                 </tr>
               </thead>
@@ -422,8 +501,17 @@ export default function SuperAdmin() {
                           {isSuspended ? 'معطل' : 'فعال'}
                         </span>
                       </td>
-                      <td>
+                      <td className="actions-col-cell">
                         <div className="madrasa-actions-cell">
+                          <button
+                            type="button"
+                            className="btn-action-edit"
+                            onClick={() => handleOpenEdit(m)}
+                            disabled={actionInProgress === m.id || isDeleting}
+                            title="مہتمم کی تفصیلات میں ترمیم کریں"
+                          >
+                            ترمیم کریں
+                          </button>
                           <button
                             type="button"
                             className={`btn-action-toggle ${isSuspended ? 'action-enable' : 'action-disable'}`}
@@ -457,6 +545,84 @@ export default function SuperAdmin() {
           </div>
         )}
       </div>
+
+      {/* Edit Mohtamim Modal */}
+      {editingMadrasa && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
+          <div className="modal-content-card">
+            <div className="modal-header">
+              <h3 id="modal-edit-title" style={{ color: 'var(--text, #1e293b)' }}>
+                مہتمم کی تفصیلات میں ترمیم
+              </h3>
+            </div>
+            <form onSubmit={handleSaveEdit}>
+              <div className="modal-body" style={{ marginBottom: '16px' }}>
+                {editError && (
+                  <div className="super-admin-alert-error" role="alert" style={{ marginBottom: '14px' }}>
+                    {editError}
+                  </div>
+                )}
+
+                <div className="form-field-item" style={{ marginBottom: '14px' }}>
+                  <label htmlFor="editMadrasaNameInput">مدرسے کا نام</label>
+                  <input
+                    id="editMadrasaNameInput"
+                    type="text"
+                    className="form-field-input"
+                    value={editMadrasaName}
+                    onChange={(e) => setEditMadrasaName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-field-item" style={{ marginBottom: '14px' }}>
+                  <label htmlFor="editAdminNameInput">مہتمم / منتظم کا نام *</label>
+                  <input
+                    id="editAdminNameInput"
+                    type="text"
+                    className="form-field-input"
+                    placeholder="مثال: مولانا مفتی احمد صاحب"
+                    value={editAdminName}
+                    onChange={(e) => setEditAdminName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-field-item" style={{ marginBottom: '8px' }}>
+                  <label htmlFor="editAdminPhoneInput">رابطہ نمبر / فون</label>
+                  <input
+                    id="editAdminPhoneInput"
+                    type="tel"
+                    className="form-field-input"
+                    placeholder="مثال: 0300-1234567"
+                    value={editAdminPhone}
+                    onChange={(e) => setEditAdminPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="modal-btn-cancel"
+                  onClick={() => setEditingMadrasa(null)}
+                  disabled={isSavingEdit}
+                >
+                  منسوخ کریں
+                </button>
+                <button
+                  type="submit"
+                  className="super-admin-btn-primary"
+                  style={{ padding: '9px 20px', fontSize: '0.88rem' }}
+                  disabled={isSavingEdit}
+                >
+                  {isSavingEdit ? 'محفوظ ہو رہا ہے...' : 'تبدیلیاں محفوظ کریں'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Permanent Deletion Confirmation Modal */}
       {madrasaToDelete && (
