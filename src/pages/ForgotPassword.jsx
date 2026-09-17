@@ -31,12 +31,50 @@ export default function ForgotPassword() {
       setEmail('');
     } catch (err) {
       console.error('Password reset error:', err);
-      let msg = 'پاسورڈ ری سیٹ لنک بھیجنے میں مسئلہ پیش آیا۔';
-      if (err?.message?.includes('rate limit')) {
+      const status = err?.status || err?.statusCode;
+      const rawMsg = typeof err?.message === 'string' ? err.message.trim() : '';
+
+      let msg = 'پاسورڈ ری سیٹ لنک بھیجنے میں مسئلہ پیش آیا۔ برائے مہربانی دوبارہ کوشش کریں۔';
+
+      if (
+        status === 429 ||
+        rawMsg.toLowerCase().includes('rate limit') ||
+        rawMsg.toLowerCase().includes('too many requests')
+      ) {
         msg = 'بہت زیادہ کوششیں کی گئیں۔ براہ کرم کچھ دیر بعد دوبارہ کوشش کریں۔';
-      } else if (err?.message) {
-        msg = `خرابی: ${err.message}`;
+      } else if (
+        err?.name === 'AuthRetryableFetchError' ||
+        rawMsg.includes('Failed to fetch') ||
+        (typeof navigator !== 'undefined' && !navigator.onLine)
+      ) {
+        msg = 'سرور یا انٹرنیٹ سے رابطہ نہیں ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔';
+      } else if (
+        status >= 500 ||
+        rawMsg === '{}' ||
+        rawMsg === '' ||
+        rawMsg === '[]' ||
+        rawMsg === '[object Object]' ||
+        rawMsg.includes('unexpected_failure') ||
+        rawMsg.includes('BadCredentials') ||
+        rawMsg.includes('535') ||
+        rawMsg.includes('SMTP') ||
+        rawMsg.includes('Internal Server Error')
+      ) {
+        msg = 'ای میل سرور (SMTP) میں مسئلہ کی وجہ سے لنک نہیں بھیجا جا سکا۔ برائے مہربانی ادارے کے منتظم یا سپر ایڈمن سے رابطہ کریں۔';
+      } else if (
+        rawMsg.toLowerCase().includes('user not found') ||
+        rawMsg.toLowerCase().includes('email not found')
+      ) {
+        msg = 'یہ ای میل ایڈریس سسٹم میں موجود نہیں ہے۔ برائے مہربانی درست ای میل درج کریں۔';
+      } else if (
+        rawMsg.toLowerCase().includes('invalid email') ||
+        rawMsg.toLowerCase().includes('valid email')
+      ) {
+        msg = 'برائے مہربانی درست ای میل ایڈریس درج کریں۔';
+      } else if (rawMsg && rawMsg !== '{}' && rawMsg !== '[object Object]') {
+        msg = `خرابی: ${rawMsg}`;
       }
+
       setErrorMsg(msg);
     } finally {
       setIsSubmitting(false);
@@ -78,11 +116,6 @@ export default function ForgotPassword() {
         {/* Error Alert */}
         {errorMsg && (
           <div className="login-error-alert" role="alert">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
             <span>{errorMsg}</span>
           </div>
         )}

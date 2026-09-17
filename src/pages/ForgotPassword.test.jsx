@@ -56,7 +56,7 @@ describe('ForgotPassword Component', () => {
     });
   });
 
-  it('displays error message when Supabase fails', async () => {
+  it('displays clear Urdu message when user is not found', async () => {
     supabase.auth.resetPasswordForEmail.mockResolvedValue({
       data: null,
       error: new Error('User not found'),
@@ -75,7 +75,62 @@ describe('ForgotPassword Component', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(/User not found/i);
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent(/سسٹم میں موجود نہیں ہے/i);
+      expect(alert.querySelector('svg')).toBeNull(); // Strictly no decorative icons
+    });
+  });
+
+  it('handles empty object or SMTP 500 failure gracefully without displaying {}', async () => {
+    const error500 = new Error('{}');
+    error500.status = 500;
+
+    supabase.auth.resetPasswordForEmail.mockResolvedValue({
+      data: null,
+      error: error500,
+    });
+
+    render(
+      <MemoryRouter>
+        <ForgotPassword />
+      </MemoryRouter>
+    );
+
+    const emailInput = screen.getByLabelText(/رجسٹرڈ ای میل ایڈریس/i);
+    fireEvent.change(emailInput, { target: { value: 'm4074566@gmail.com' } });
+
+    const submitBtn = screen.getByRole('button', { name: /پاسورڈ ری سیٹ لنک بھیجیں/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      const alert = screen.getByRole('alert');
+      expect(alert.textContent).not.toContain('{}');
+      expect(alert).toHaveTextContent(/ای میل سرور \(SMTP\) میں مسئلہ کی وجہ سے لنک نہیں بھیجا جا سکا/i);
+      expect(alert.querySelector('svg')).toBeNull(); // Strictly no decorative icons
+    });
+  });
+
+  it('displays rate limit message when request is rate limited', async () => {
+    supabase.auth.resetPasswordForEmail.mockResolvedValue({
+      data: null,
+      error: { message: 'email rate limit exceeded', status: 429 },
+    });
+
+    render(
+      <MemoryRouter>
+        <ForgotPassword />
+      </MemoryRouter>
+    );
+
+    const emailInput = screen.getByLabelText(/رجسٹرڈ ای میل ایڈریس/i);
+    fireEvent.change(emailInput, { target: { value: 'rate@madrasa.com' } });
+
+    const submitBtn = screen.getByRole('button', { name: /پاسورڈ ری سیٹ لنک بھیجیں/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent(/بہت زیادہ کوششیں کی گئیں۔ براہ کرم کچھ دیر بعد دوبارہ کوشش کریں/i);
     });
   });
 });
