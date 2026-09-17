@@ -81,9 +81,18 @@ export function formatPasswordChangeError(err, defaultMsg = 'پاسورڈ تبد
     rawMsg === 'INVALID_CREDENTIALS' ||
     rawMsg.includes('Invalid login credentials') ||
     rawMsg.includes('invalid_credentials') ||
-    rawMsg.includes('invalid_grant')
+    rawMsg.includes('invalid_grant') ||
+    rawMsg.toLowerCase().includes('invalid current password') ||
+    rawMsg.toLowerCase().includes('current password is incorrect')
   ) {
     return 'موجودہ پاسورڈ غلط ہے';
+  }
+
+  if (
+    rawMsg.toLowerCase().includes('current password required') ||
+    rawMsg.toLowerCase().includes('current_password required')
+  ) {
+    return 'موجودہ پاسورڈ درج کرنا لازمی ہے۔';
   }
 
   if (rawMsg.includes('rate limit') || rawMsg.includes('over_email_send_rate_limit')) {

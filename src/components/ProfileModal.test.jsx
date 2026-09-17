@@ -283,6 +283,7 @@ describe('ProfileModal Component', () => {
       });
       expect(supabase.auth.updateUser).toHaveBeenCalledWith({
         password: 'newValidPass123',
+        current_password: 'correctCurrentPass',
       });
       expect(screen.getByRole('status')).toHaveTextContent('پاسورڈ کامیابی سے تبدیل ہو گیا ہے');
       // Inputs should be cleared
@@ -315,6 +316,39 @@ describe('ProfileModal Component', () => {
       expect(supabase.auth.updateUser).toHaveBeenCalled();
       expect(screen.getByRole('alert')).toHaveTextContent('نیا پاسورڈ کم از کم 6 حروف پر مشتمل ہونا چاہیے۔');
     });
+  });
+
+  it('toggles password visibility for all three password fields when toggle button is clicked', () => {
+    render(<ProfileModal isOpen={true} onClose={mockOnClose} />);
+
+    const currentInput = screen.getByLabelText('موجودہ پاسورڈ');
+    const newInput = screen.getByLabelText('نیا پاسورڈ');
+    const confirmInput = screen.getByLabelText('نیا پاسورڈ کی تصدیق');
+
+    expect(currentInput).toHaveAttribute('type', 'password');
+    expect(newInput).toHaveAttribute('type', 'password');
+    expect(confirmInput).toHaveAttribute('type', 'password');
+
+    // Toggle current password
+    const toggleCurrentBtn = screen.getByRole('button', { name: 'موجودہ پاسورڈ دکھائیں' });
+    fireEvent.click(toggleCurrentBtn);
+    expect(currentInput).toHaveAttribute('type', 'text');
+    fireEvent.click(screen.getByRole('button', { name: 'موجودہ پاسورڈ چھپائیں' }));
+    expect(currentInput).toHaveAttribute('type', 'password');
+
+    // Toggle new password
+    const toggleNewBtn = screen.getByRole('button', { name: 'نیا پاسورڈ دکھائیں' });
+    fireEvent.click(toggleNewBtn);
+    expect(newInput).toHaveAttribute('type', 'text');
+    fireEvent.click(screen.getByRole('button', { name: 'نیا پاسورڈ چھپائیں' }));
+    expect(newInput).toHaveAttribute('type', 'password');
+
+    // Toggle confirm password
+    const toggleConfirmBtn = screen.getByRole('button', { name: 'تصدیقی پاسورڈ دکھائیں' });
+    fireEvent.click(toggleConfirmBtn);
+    expect(confirmInput).toHaveAttribute('type', 'text');
+    fireEvent.click(screen.getByRole('button', { name: 'تصدیقی پاسورڈ چھپائیں' }));
+    expect(confirmInput).toHaveAttribute('type', 'password');
   });
 
   it('calls onClose when close button or cancel button is clicked', () => {

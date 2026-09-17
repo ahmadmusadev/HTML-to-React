@@ -327,6 +327,44 @@
   border-color: var(--danger, #ef4444);
 }
 
+/* Password Input Wrapper & Visibility Toggle */
+.profile-modal-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.profile-modal-password-input {
+  padding-left: 40px !important;
+}
+
+.profile-modal-password-toggle {
+  position: absolute;
+  left: 8px;
+  background: transparent;
+  border: none;
+  color: var(--muted, #64748b);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+  z-index: 1;
+}
+
+.profile-modal-password-toggle:hover {
+  color: var(--text, #0f172a);
+  background: var(--card-inner, #f1f5f9);
+}
+
+[data-theme='dark'] .profile-modal-password-toggle:hover {
+  color: #f8fafc;
+  background: #27272a;
+}
+
 .profile-modal-field-error {
   color: var(--danger, #ef4444);
   font-size: 0.78rem;

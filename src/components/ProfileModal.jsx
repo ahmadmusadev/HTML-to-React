@@ -14,6 +14,9 @@ export default function ProfileModal({ isOpen, onClose, initialSection = null })
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -41,6 +44,9 @@ export default function ProfileModal({ isOpen, onClose, initialSection = null })
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
       setErrors({});
       setErrorMsg('');
       setSuccessMsg('');
@@ -95,6 +101,9 @@ export default function ProfileModal({ isOpen, onClose, initialSection = null })
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
     setErrors({});
     setErrorMsg('');
     setSuccessMsg('');
@@ -267,9 +276,10 @@ export default function ProfileModal({ isOpen, onClose, initialSection = null })
         return;
       }
 
-      // 3. Update user password
+      // 3. Update user password (pass current_password as required by Supabase auth policy)
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
+        current_password: currentPassword,
       });
 
       if (updateError) {
@@ -436,22 +446,43 @@ export default function ProfileModal({ isOpen, onClose, initialSection = null })
             <label className="profile-modal-label" htmlFor="currentPasswordInput">
               موجودہ پاسورڈ
             </label>
-            <input
-              ref={passwordInputRef}
-              id="currentPasswordInput"
-              type="password"
-              className={`profile-modal-input ${errors.currentPassword ? 'input-error' : ''}`}
-              placeholder="موجودہ پاسورڈ درج کریں"
-              value={currentPassword}
-              onChange={(e) => {
-                setCurrentPassword(e.target.value);
-                if (errors.currentPassword) {
-                  setErrors(prev => ({ ...prev, currentPassword: '' }));
-                }
-              }}
-              required
-              disabled={isSubmitting}
-            />
+            <div className="profile-modal-password-wrapper">
+              <input
+                ref={passwordInputRef}
+                id="currentPasswordInput"
+                type={showCurrentPassword ? 'text' : 'password'}
+                className={`profile-modal-input profile-modal-password-input ${errors.currentPassword ? 'input-error' : ''}`}
+                placeholder="موجودہ پاسورڈ درج کریں"
+                value={currentPassword}
+                onChange={(e) => {
+                  setCurrentPassword(e.target.value);
+                  if (errors.currentPassword) {
+                    setErrors(prev => ({ ...prev, currentPassword: '' }));
+                  }
+                }}
+                required
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                className="profile-modal-password-toggle"
+                onClick={() => setShowCurrentPassword(prev => !prev)}
+                title={showCurrentPassword ? 'پاس ورڈ چھپائیں' : 'پاس ورڈ دکھائیں'}
+                aria-label={showCurrentPassword ? 'موجودہ پاسورڈ چھپائیں' : 'موجودہ پاسورڈ دکھائیں'}
+              >
+                {showCurrentPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
+              </button>
+            </div>
             {errors.currentPassword && (
               <span className="profile-modal-field-error">{errors.currentPassword}</span>
             )}
@@ -461,21 +492,42 @@ export default function ProfileModal({ isOpen, onClose, initialSection = null })
             <label className="profile-modal-label" htmlFor="newPasswordInput">
               نیا پاسورڈ
             </label>
-            <input
-              id="newPasswordInput"
-              type="password"
-              className={`profile-modal-input ${errors.newPassword ? 'input-error' : ''}`}
-              placeholder="کم از کم 6 حروف پر مشتمل پاسورڈ"
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                if (errors.newPassword) {
-                  setErrors(prev => ({ ...prev, newPassword: '' }));
-                }
-              }}
-              required
-              disabled={isSubmitting}
-            />
+            <div className="profile-modal-password-wrapper">
+              <input
+                id="newPasswordInput"
+                type={showNewPassword ? 'text' : 'password'}
+                className={`profile-modal-input profile-modal-password-input ${errors.newPassword ? 'input-error' : ''}`}
+                placeholder="کم از کم 6 حروف پر مشتمل پاسورڈ"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  if (errors.newPassword) {
+                    setErrors(prev => ({ ...prev, newPassword: '' }));
+                  }
+                }}
+                required
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                className="profile-modal-password-toggle"
+                onClick={() => setShowNewPassword(prev => !prev)}
+                title={showNewPassword ? 'پاس ورڈ چھپائیں' : 'پاس ورڈ دکھائیں'}
+                aria-label={showNewPassword ? 'نیا پاسورڈ چھپائیں' : 'نیا پاسورڈ دکھائیں'}
+              >
+                {showNewPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
+              </button>
+            </div>
             {errors.newPassword && (
               <span className="profile-modal-field-error">{errors.newPassword}</span>
             )}
@@ -485,21 +537,42 @@ export default function ProfileModal({ isOpen, onClose, initialSection = null })
             <label className="profile-modal-label" htmlFor="confirmPasswordInput">
               نیا پاسورڈ کی تصدیق
             </label>
-            <input
-              id="confirmPasswordInput"
-              type="password"
-              className={`profile-modal-input ${errors.confirmPassword ? 'input-error' : ''}`}
-              placeholder="نیا پاسورڈ دوبارہ درج کریں"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                if (errors.confirmPassword) {
-                  setErrors(prev => ({ ...prev, confirmPassword: '' }));
-                }
-              }}
-              required
-              disabled={isSubmitting}
-            />
+            <div className="profile-modal-password-wrapper">
+              <input
+                id="confirmPasswordInput"
+                type={showConfirmPassword ? 'text' : 'password'}
+                className={`profile-modal-input profile-modal-password-input ${errors.confirmPassword ? 'input-error' : ''}`}
+                placeholder="نیا پاسورڈ دوبارہ درج کریں"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (errors.confirmPassword) {
+                    setErrors(prev => ({ ...prev, confirmPassword: '' }));
+                  }
+                }}
+                required
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                className="profile-modal-password-toggle"
+                onClick={() => setShowConfirmPassword(prev => !prev)}
+                title={showConfirmPassword ? 'پاس ورڈ چھپائیں' : 'پاس ورڈ دکھائیں'}
+                aria-label={showConfirmPassword ? 'تصدیقی پاسورڈ چھپائیں' : 'تصدیقی پاسورڈ دکھائیں'}
+              >
+                {showConfirmPassword ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
+              </button>
+            </div>
             {errors.confirmPassword && (
               <span className="profile-modal-field-error">{errors.confirmPassword}</span>
             )}

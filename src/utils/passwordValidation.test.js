@@ -88,6 +88,13 @@ describe('passwordValidation', () => {
       expect(formatPasswordChangeError('INVALID_CREDENTIALS')).toBe('موجودہ پاسورڈ غلط ہے');
       expect(formatPasswordChangeError({ message: 'Invalid login credentials' })).toBe('موجودہ پاسورڈ غلط ہے');
       expect(formatPasswordChangeError({ error_description: 'invalid_grant: Invalid credentials' })).toBe('موجودہ پاسورڈ غلط ہے');
+      expect(formatPasswordChangeError({ message: 'Invalid current password' })).toBe('موجودہ پاسورڈ غلط ہے');
+      expect(formatPasswordChangeError({ message: 'current password is incorrect' })).toBe('موجودہ پاسورڈ غلط ہے');
+    });
+
+    it('handles Supabase current password required error by returning clear Urdu message', () => {
+      expect(formatPasswordChangeError({ message: 'Current password required when setting new password' })).toBe('موجودہ پاسورڈ درج کرنا لازمی ہے۔');
+      expect(formatPasswordChangeError('current_password required')).toBe('موجودہ پاسورڈ درج کرنا لازمی ہے۔');
     });
 
     it('handles rate limit errors', () => {
