@@ -124,6 +124,21 @@ serve(async (req) => {
       );
     }
 
+    // 4.1 Validate email availability and auto-cleanup orphaned accounts from previously deleted madrasas
+    try {
+      const { data: emailCheck, error: emailCheckErr } = await supabaseAdmin
+        .rpc('check_or_cleanup_user_for_invite', { p_email: email });
+
+      if (!emailCheckErr && emailCheck?.status === 'error') {
+        return new Response(
+          JSON.stringify({ error: emailCheck.message || 'یہ ای میل ایڈریس پہلے سے سسٹم میں رجسٹرڈ ہے۔' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch (checkEx) {
+      console.warn('[create-account-invite] email check warning:', checkEx);
+    }
+
     // 5. Authorization check
     let createdMadrasaId = null;
 
