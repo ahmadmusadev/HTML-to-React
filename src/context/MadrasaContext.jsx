@@ -463,13 +463,15 @@ export function MadrasaProvider({ children }) {
       if (error) throw error;
       if (data && data.length > 0) {
         const localMeta = loadMadrasaData('hf_classes_meta_v1', madrasaId) || {};
-        return data.map(c => ({
+        const mapped = data.map(c => ({
           id: c.id,
           name: c.class_name || c.name || '',
           class_name: c.class_name || c.name || '',
           teacher: c.teacher_name || localMeta[c.id]?.teacher_name || c.teacher || '',
           teacher_name: c.teacher_name || localMeta[c.id]?.teacher_name || c.teacher || ''
         }));
+        saveMadrasaData('hf_classes_v1', { classes: mapped }, madrasaId);
+        return mapped;
       }
       return [];
     } catch (e) {
@@ -2082,7 +2084,8 @@ export function MadrasaProvider({ children }) {
       upsertExamMiqdarToSupabase,
       upsertExamMiqdarSingle,
       fetchExamResultsFromSupabase,
-      upsertExamResultsToSupabase
+      upsertExamResultsToSupabase,
+      isMadrasaDisabled: activeMadrasa?.status === 'disabled'
     }}>
       {children}
     </MadrasaContext.Provider>
@@ -2092,7 +2095,7 @@ export function MadrasaProvider({ children }) {
 export function useMadrasa() {
   const context = useContext(MadrasaContext);
   if (!context) {
-    throw new Error('useMadrasa must be used within a MadrasaProvider');
+    return {};
   }
   return context;
 }

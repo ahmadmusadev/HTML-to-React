@@ -5,8 +5,14 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import * as AuthContextModule from '../context/AuthContext';
 
+import * as MadrasaContextModule from '../context/MadrasaContext';
+
 vi.mock('../context/AuthContext', () => ({
   useAuth: vi.fn(),
+}));
+
+vi.mock('../context/MadrasaContext', () => ({
+  useMadrasa: vi.fn(() => ({ activeMadrasa: null, madrasaLoading: false })),
 }));
 
 describe('ProtectedRoute Component', () => {
@@ -107,5 +113,73 @@ describe('ProtectedRoute Component', () => {
 
     expect(screen.getByText(/رسائی غیر مجاز/i)).toBeInTheDocument();
     expect(screen.queryByText('Admin Only Content')).not.toBeInTheDocument();
+  });
+
+  it('renders Urdu suspension notice when madrasa is disabled and user is not super_admin', () => {
+    const mockSignOut = vi.fn();
+    vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
+      user: { id: 'test-admin' },
+      isAuthenticated: true,
+      loading: false,
+      role: 'admin',
+      signOut: mockSignOut,
+    });
+
+    vi.spyOn(MadrasaContextModule, 'useMadrasa').mockReturnValue({
+      activeMadrasa: { id: 'm-1', name: 'جامعہ دار العلوم', status: 'disabled' },
+      madrasaLoading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <div>Protected Dashboard Content</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('ادارہ کا اکاؤنٹ معطل ہے')).toBeInTheDocument();
+    expect(screen.getByText('جامعہ دار العلوم')).toBeInTheDocument();
+    expect(screen.getByText('سائن آؤٹ کریں')).toBeInTheDocument();
+    expect(screen.queryByText('Protected Dashboard Content')).not.toBeInTheDocument();
+  });
+
+  it('allows unrestricted access when user is super_admin even if madrasa is disabled', () => {
+    vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
+      user: { id: 'super-admin-user' },
+      isAuthenticated: true,
+      loading: false,
+      role: 'super_admin',
+    });
+
+    vi.spyOn(MadrasaContextModule, 'useMadrasa').mockReturnValue({
+      activeMadrasa: { id: 'm-1', name: 'جامعہ دار العلوم', status: 'disabled' },
+      madrasaLoading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/super-admin']}>
+        <Routes>
+          <Route
+            path="/super-admin"
+            element={
+              <ProtectedRoute allowedRoles={['super_admin']}>
+                <div>Super Admin Management Area</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Super Admin Management Area')).toBeInTheDocument();
+    expect(screen.queryByText('ادارہ کا اکاؤنٹ معطل ہے')).not.toBeInTheDocument();
   });
 });

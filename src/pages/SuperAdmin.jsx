@@ -22,6 +22,12 @@ export default function SuperAdmin() {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Status & Delete Actions State
+  const [madrasaToDelete, setMadrasaToDelete] = useState(null);
+  const [actionInProgress, setActionInProgress] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState({ type: '', message: '' });
+
   const handleCopyPassword = (pwd) => {
     if (!pwd) return;
     if (navigator?.clipboard?.writeText) {
@@ -29,6 +35,63 @@ export default function SuperAdmin() {
         setCopiedPassword(true);
         setTimeout(() => setCopiedPassword(false), 2500);
       }).catch(() => {});
+    }
+  };
+
+  const handleToggleStatus = async (m) => {
+    const newStatus = m.status === 'disabled' ? 'active' : 'disabled';
+    const actionName = newStatus === 'disabled' ? 'معطل' : 'بحال';
+    setActionInProgress(m.id);
+    setActionFeedback({ type: '', message: '' });
+    try {
+      const { error } = await supabase
+        .from('madrasas')
+        .update({ status: newStatus })
+        .eq('id', m.id);
+
+      if (error) throw error;
+
+      setActionFeedback({
+        type: 'success',
+        message: `مدرسہ "${m.name}" کامیابی سے ${actionName} کر دیا گیا ہے۔`
+      });
+      await loadMadrasas();
+    } catch (err) {
+      console.error('Toggle status error:', err);
+      setActionFeedback({
+        type: 'error',
+        message: `حالت تبدیل کرنے میں خرابی پیش آئی: ${err.message || 'نامعلوم خرابی'}`
+      });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!madrasaToDelete) return;
+    setIsDeleting(true);
+    setActionFeedback({ type: '', message: '' });
+    try {
+      const { error } = await supabase.rpc('delete_madrasa_completely', {
+        p_madrasa_id: madrasaToDelete.id
+      });
+
+      if (error) throw error;
+
+      setActionFeedback({
+        type: 'success',
+        message: `مدرسہ "${madrasaToDelete.name}" اور اس کا تمام ریکارڈ کامیابی سے حذف کر دیا گیا ہے۔`
+      });
+      setMadrasaToDelete(null);
+      await loadMadrasas();
+    } catch (err) {
+      console.error('Delete madrasa error:', err);
+      setActionFeedback({
+        type: 'error',
+        message: `مدرسہ حذف کرنے میں خرابی پیش آئی: ${err.message || 'نامعلوم خرابی'}`
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -303,6 +366,16 @@ export default function SuperAdmin() {
           />
         </div>
 
+        {actionFeedback.message && (
+          <div
+            className={actionFeedback.type === 'error' ? 'super-admin-alert-error' : 'super-admin-alert-success'}
+            role={actionFeedback.type === 'error' ? 'alert' : 'status'}
+            style={{ marginBottom: '16px' }}
+          >
+            {actionFeedback.message}
+          </div>
+        )}
+
         {loadingList ? (
           <div style={{ textAlign: 'center', padding: '24px', color: 'var(--muted)' }}>
             مدارس کا ریکارڈ لوڈ ہو رہا ہے...
@@ -319,6 +392,8 @@ export default function SuperAdmin() {
                   <th>مدرسے کا نام</th>
                   <th>مہتمم / منتظم</th>
                   <th>فون نمبر</th>
+                  <th>حالت</th>
+                  <th>اقدامات</th>
                   <th>تاریخ اندراج</th>
                 </tr>
               </thead>
@@ -326,6 +401,7 @@ export default function SuperAdmin() {
                 {filteredMadrasas.map(m => {
                   const adminProfile = (m.profiles || []).find(p => p.role === 'admin');
                   const dateStr = m.created_at ? new Date(m.created_at).toLocaleDateString('ur-PK') : '—';
+                  const isSuspended = m.status === 'disabled';
 
                   return (
                     <tr key={m.id}>
@@ -341,6 +417,37 @@ export default function SuperAdmin() {
                         )}
                       </td>
                       <td>{adminProfile?.phone || m.phone || '—'}</td>
+                      <td>
+                        <span className={`madrasa-status-pill ${isSuspended ? 'status-disabled' : 'status-active'}`}>
+                          {isSuspended ? 'معطل' : 'فعال'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="madrasa-actions-cell">
+                          <button
+                            type="button"
+                            className={`btn-action-toggle ${isSuspended ? 'action-enable' : 'action-disable'}`}
+                            onClick={() => handleToggleStatus(m)}
+                            disabled={actionInProgress === m.id || isDeleting}
+                            title={isSuspended ? 'مدرسہ بحال کریں' : 'مدرسہ عارضی طور پر معطل کریں'}
+                          >
+                            {actionInProgress === m.id
+                              ? '...'
+                              : isSuspended
+                              ? 'بحال کریں'
+                              : 'معطل کریں'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-action-delete"
+                            onClick={() => setMadrasaToDelete(m)}
+                            disabled={actionInProgress === m.id || isDeleting}
+                            title="مدرسہ مستقل طور پر حذف کریں"
+                          >
+                            حذف کریں
+                          </button>
+                        </div>
+                      </td>
                       <td>{dateStr}</td>
                     </tr>
                   );
@@ -350,6 +457,47 @@ export default function SuperAdmin() {
           </div>
         )}
       </div>
+
+      {/* Permanent Deletion Confirmation Modal */}
+      {madrasaToDelete && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title">
+          <div className="modal-content-card">
+            <div className="modal-header">
+              <h3 id="modal-delete-title">مدرسہ مستقل طور پر حذف کریں</h3>
+            </div>
+            <div className="modal-body">
+              <p>
+                کیا آپ واقعی اس مدرسے کو حذف کرنا چاہتے ہیں؟
+              </p>
+              <div className="modal-target-box">
+                <span className="modal-target-label">منتخب مدرسہ:</span>
+                <div className="modal-target-name">{madrasaToDelete.name}</div>
+              </div>
+              <div className="modal-warning-text">
+                <strong>اہم تنبیہ:</strong> اس مدرسے سے وابستہ تمام ڈیٹا بشمول طلباء، اساتذہ، درجات، حاضری، امتحانات اور فیس کا ریکارڈ سپابیس (Supabase) سے مکمل اور مستقل طور پر مٹا دیا جائے گا۔ یہ عمل ناقابل واپسی ہے۔
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="modal-btn-cancel"
+                onClick={() => setMadrasaToDelete(null)}
+                disabled={isDeleting}
+              >
+                منسوخ کریں
+              </button>
+              <button
+                type="button"
+                className="modal-btn-confirm-delete"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'حذف ہو رہا ہے...' : 'ہاں، مستقل حذف کریں'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

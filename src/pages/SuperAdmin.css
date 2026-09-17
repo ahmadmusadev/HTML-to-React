@@ -226,8 +226,95 @@
   border-radius: 6px;
   background: #e0f2fe;
   color: #0369a1;
+  border: 1px solid #bae6fd;
   font-size: 0.78rem;
   font-weight: 600;
+}
+
+.madrasa-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.madrasa-status-pill.status-active {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.madrasa-status-pill.status-disabled {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.madrasa-actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-action-toggle {
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.btn-action-toggle.action-disable {
+  color: #b45309;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.btn-action-toggle.action-disable:hover:not(:disabled) {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.btn-action-toggle.action-enable {
+  color: #15803d;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.btn-action-toggle.action-enable:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+
+.btn-action-delete {
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.btn-action-delete:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #ef4444;
+}
+
+.btn-action-toggle:disabled,
+.btn-action-delete:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* Dark Mode Overrides */
@@ -420,4 +507,229 @@
   background: #451a03 !important;
   border-color: #78350f !important;
   color: #fde68a !important;
+}
+
+/* Dark mode override for Mohtamim Admin badge */
+[data-theme="dark"] .admin-badge {
+  background: #09090b !important;
+  border: 1px solid #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+/* Dark mode overrides for status pills and action buttons */
+[data-theme="dark"] .madrasa-status-pill.status-active {
+  background: #052e16 !important;
+  color: #4ade80 !important;
+  border-color: #166534 !important;
+}
+
+[data-theme="dark"] .madrasa-status-pill.status-disabled {
+  background: #450a0a !important;
+  color: #f87171 !important;
+  border-color: #991b1b !important;
+}
+
+[data-theme="dark"] .btn-action-toggle.action-disable {
+  color: #fcd34d !important;
+  background: #451a03 !important;
+  border-color: #78350f !important;
+}
+
+[data-theme="dark"] .btn-action-toggle.action-disable:hover:not(:disabled) {
+  background: #78350f !important;
+  border-color: #d97706 !important;
+}
+
+[data-theme="dark"] .btn-action-toggle.action-enable {
+  color: #86efac !important;
+  background: #052e16 !important;
+  border-color: #14532d !important;
+}
+
+[data-theme="dark"] .btn-action-toggle.action-enable:hover:not(:disabled) {
+  background: #14532d !important;
+  border-color: #22c55e !important;
+}
+
+[data-theme="dark"] .btn-action-delete {
+  color: #fca5a5 !important;
+  background: #450a0a !important;
+  border-color: #7f1d1d !important;
+}
+
+[data-theme="dark"] .btn-action-delete:hover:not(:disabled) {
+  background: #7f1d1d !important;
+  border-color: #ef4444 !important;
+}
+
+/* Delete Confirmation Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+  animation: fadeInModal 0.2s ease-out;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content-card {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  direction: rtl;
+  box-sizing: border-box;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #b91c1c;
+}
+
+.modal-body {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text, #334155);
+  margin-bottom: 24px;
+}
+
+.modal-target-box {
+  background: var(--card-inner, #f8fafc);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 14px 0;
+}
+
+.modal-target-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.modal-target-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text, #0f172a);
+}
+
+.modal-warning-text {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.modal-btn-cancel {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: var(--card-inner, #f1f5f9);
+  color: var(--text, #475569);
+  border: 1px solid var(--border, #cbd5e1);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.modal-btn-cancel:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.modal-btn-confirm-delete {
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.modal-btn-confirm-delete:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.modal-btn-cancel:disabled,
+.modal-btn-confirm-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Dark mode overrides for modal */
+[data-theme="dark"] .modal-content-card {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .modal-header {
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] .modal-header h3 {
+  color: #f87171 !important;
+}
+
+[data-theme="dark"] .modal-target-box {
+  background: #09090b !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] .modal-target-label {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .modal-target-name {
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .modal-warning-text {
+  background: #450a0a !important;
+  border-color: #7f1d1d !important;
+  color: #fca5a5 !important;
+}
+
+[data-theme="dark"] .modal-btn-cancel {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #e4e4e7 !important;
+}
+
+[data-theme="dark"] .modal-btn-cancel:hover:not(:disabled) {
+  background: #3f3f46 !important;
 }

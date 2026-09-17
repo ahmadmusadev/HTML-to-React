@@ -191,3 +191,14 @@ Always use the **latest live version deployed on GitHub Pages** as the browser t
 Before performing any browser-based verification, make sure you are accessing the correct **live GitHub Pages URL**. Use the live deployment as the source of truth for the application's current UI, behavior, and functionality.
 
 Only use `localhost` when the task specifically requires testing an unreleased local change or when live deployment testing is not applicable.
+
+### 14. Madrasa Lifecycle & Access Control Standards
+
+Whenever madrasa status or lifecycle operations are modified:
+
+- **Access Enforcement**: Access control for disabled madrasas is enforced at both route level (`ProtectedRoute.jsx`) and context level (`MadrasaContext.jsx`).
+- **Urdu Suspension Notice**: When an institution status is `disabled`, access for regular users (admins and teachers) must remain blocked with an Urdu suspension notice and sign-out button, while `super_admin` retains unrestricted management access.
+- **Permanent Deletion**: Permanent deletion of madrasas must always use the atomic `delete_madrasa_completely(p_madrasa_id UUID)` RPC function to cleanly delete child records across all 10 tables (`exam_results`, `exam_miqdar`, `staff_attendance`, `staff`, `student_attendance`, `hifz_half_year_records`, `hifz_records`, `fees`, `students`, `classes`) and detach profiles (`madrasa_id = NULL`) without leaving orphaned records.
+- **Dark Mode Contrast for Badges**: The Mohtamim Admin badge under dark mode must maintain high contrast with a black background (`#09090b`), dark border (`#27272a`), and clear white text (`#f4f4f5`).
+- **No Emojis**: All status pills, action buttons, modals, and suspension screens must remain strictly text-only without emojis or decorative icons.
+
