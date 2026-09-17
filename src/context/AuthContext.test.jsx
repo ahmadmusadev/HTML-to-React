@@ -218,4 +218,26 @@ describe('AuthContext Strict Supabase Auth', () => {
 
     expect(screen.getByTestId('is-auth').textContent).toBe('no');
   });
+
+  it('throws credential error for ahmadmusa.dev@gmail.com when password is wrong (status 400)', async () => {
+    const credErr = new Error('Invalid login credentials');
+    credErr.status = 400;
+    supabase.auth.signInWithPassword.mockResolvedValue({ data: { user: null }, error: credErr });
+
+    let authContextRef = null;
+
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <TestConsumer onAuthReady={(auth) => { authContextRef = auth; }} />
+        </AuthProvider>
+      );
+    });
+
+    await act(async () => {
+      await expect(authContextRef.signIn('ahmadmusa.dev@gmail.com', 'wrongPassword')).rejects.toThrow('Invalid login credentials');
+    });
+
+    expect(screen.getByTestId('is-auth').textContent).toBe('no');
+  });
 });
