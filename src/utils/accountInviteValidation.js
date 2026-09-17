@@ -48,6 +48,8 @@ export function validateInvitePayload(payload = {}) {
   const madrasaName = (payload.madrasaName || '').trim();
   const madrasaId = (payload.madrasaId || '').trim();
   const phone = (payload.phone || '').trim();
+  const district = (payload.district || '').trim();
+  const address = (payload.address || '').trim();
 
   // Email validation
   if (!email) {
@@ -90,6 +92,16 @@ export function validateInvitePayload(payload = {}) {
   // Optional Phone validation
   if (phone && phone.length > 25) {
     errors.phone = 'فون نمبر بہت طویل ہے۔';
+  }
+
+  // Optional District validation
+  if (district && district.length > 100) {
+    errors.district = 'ضلع کا نام بہت طویل ہے۔';
+  }
+
+  // Optional Address validation
+  if (address && address.length > 300) {
+    errors.address = 'ایڈریس بہت طویل ہے۔';
   }
 
   return {

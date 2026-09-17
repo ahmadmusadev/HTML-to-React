@@ -13,6 +13,8 @@ export default function SuperAdmin() {
   const [adminFullName, setAdminFullName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
+  const [madrasaDistrict, setMadrasaDistrict] = useState('');
+  const [madrasaAddress, setMadrasaAddress] = useState('');
   const [currentUserEmail, setCurrentUserEmail] = useState('');
 
   const [createdAccount, setCreatedAccount] = useState(null);
@@ -34,8 +36,14 @@ export default function SuperAdmin() {
   const [editAdminName, setEditAdminName] = useState('');
   const [editAdminPhone, setEditAdminPhone] = useState('');
   const [editMadrasaName, setEditMadrasaName] = useState('');
+  const [editMadrasaDistrict, setEditMadrasaDistrict] = useState('');
+  const [editMadrasaAddress, setEditMadrasaAddress] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // District Filter & Sort State
+  const [selectedDistrict, setSelectedDistrict] = useState('all');
+  const [sortByDistrict, setSortByDistrict] = useState(false);
 
   const handleOpenEdit = (m) => {
     const adminProfile = (m.profiles || []).find(p => p.role === 'admin');
@@ -43,6 +51,8 @@ export default function SuperAdmin() {
     setEditMadrasaName(m.name || '');
     setEditAdminName(adminProfile?.full_name || '');
     setEditAdminPhone(adminProfile?.phone || m.phone || '');
+    setEditMadrasaDistrict(m.district || '');
+    setEditMadrasaAddress(m.address || '');
     setEditError('');
   };
 
@@ -75,13 +85,19 @@ export default function SuperAdmin() {
         if (profileError) throw profileError;
       }
 
-      // 2. Also update madrasa name and phone if modified
+      // 2. Also update madrasa name, phone, district, address if modified
       const madrasaUpdates = {};
       if (editMadrasaName.trim() && editMadrasaName.trim() !== editingMadrasa.name) {
         madrasaUpdates.name = editMadrasaName.trim();
       }
       if (editAdminPhone.trim() !== (editingMadrasa.phone || '')) {
         madrasaUpdates.phone = editAdminPhone.trim() || null;
+      }
+      if (editMadrasaDistrict.trim() !== (editingMadrasa.district || '')) {
+        madrasaUpdates.district = editMadrasaDistrict.trim() || null;
+      }
+      if (editMadrasaAddress.trim() !== (editingMadrasa.address || '')) {
+        madrasaUpdates.address = editMadrasaAddress.trim() || null;
       }
 
       if (Object.keys(madrasaUpdates).length > 0) {
@@ -219,7 +235,9 @@ export default function SuperAdmin() {
       fullName: adminFullName,
       email: adminEmail,
       role: 'admin',
-      phone: adminPhone
+      phone: adminPhone,
+      district: madrasaDistrict,
+      address: madrasaAddress
     };
 
     const validation = validateInvitePayload(payload);
@@ -285,6 +303,8 @@ export default function SuperAdmin() {
       setAdminFullName('');
       setAdminEmail('');
       setAdminPhone('');
+      setMadrasaDistrict('');
+      setMadrasaAddress('');
       await loadMadrasas();
     } catch (err) {
       console.error('Create admin error:', err);
@@ -295,14 +315,48 @@ export default function SuperAdmin() {
     }
   };
 
-  const filteredMadrasas = madrasas.filter(m => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    const mName = (m.name || '').toLowerCase();
-    const admin = (m.profiles || []).find(p => p.role === 'admin');
-    const aName = (admin?.full_name || '').toLowerCase();
-    return mName.includes(q) || aName.includes(q);
-  });
+  const uniqueDistricts = Array.from(
+    new Set(
+      madrasas
+        .map(m => (m.district || '').trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b, 'ur'));
+
+  const filteredMadrasas = madrasas
+    .filter(m => {
+      // 1. District filter
+      if (selectedDistrict !== 'all') {
+        const mDist = (m.district || '').trim();
+        if (mDist !== selectedDistrict) return false;
+      }
+
+      // 2. Search query filter
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+      const mName = (m.name || '').toLowerCase();
+      const admin = (m.profiles || []).find(p => p.role === 'admin');
+      const aName = (admin?.full_name || '').toLowerCase();
+      const mDist = (m.district || '').toLowerCase();
+      const mAddr = (m.address || '').toLowerCase();
+      return (
+        mName.includes(q) ||
+        aName.includes(q) ||
+        mDist.includes(q) ||
+        mAddr.includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (sortByDistrict) {
+        const distA = (a.district || '').trim();
+        const distB = (b.district || '').trim();
+        if (distA && !distB) return -1;
+        if (!distA && distB) return 1;
+        const comp = distA.localeCompare(distB, 'ur');
+        if (comp !== 0) return comp;
+      }
+      return 0;
+    });
 
   const totalAdminsCount = madrasas.reduce((acc, m) => {
     const admins = (m.profiles || []).filter(p => p.role === 'admin');
@@ -448,6 +502,32 @@ export default function SuperAdmin() {
               />
               {errors.phone && <span className="form-field-error">{errors.phone}</span>}
             </div>
+
+            <div className="form-field-item">
+              <label htmlFor="inputMadrasaDistrict">ضلع</label>
+              <input
+                id="inputMadrasaDistrict"
+                type="text"
+                className="form-field-input"
+                placeholder="مثال: لاہور، کراچی، راولپنڈی"
+                value={madrasaDistrict}
+                onChange={(e) => setMadrasaDistrict(e.target.value)}
+              />
+              {errors.district && <span className="form-field-error">{errors.district}</span>}
+            </div>
+
+            <div className="form-field-item">
+              <label htmlFor="inputMadrasaAddress">تفصیلی ایڈریس</label>
+              <input
+                id="inputMadrasaAddress"
+                type="text"
+                className="form-field-input"
+                placeholder="مثال: محلہ مدینہ کالونی، نزد جامع مسجد"
+                value={madrasaAddress}
+                onChange={(e) => setMadrasaAddress(e.target.value)}
+              />
+              {errors.address && <span className="form-field-error">{errors.address}</span>}
+            </div>
           </div>
 
           <button
@@ -474,14 +554,50 @@ export default function SuperAdmin() {
           </button>
         </div>
 
-        <div className="super-admin-search-box">
-          <input
-            type="text"
-            className="form-field-input"
-            placeholder="مدرسہ یا منتظم کے نام سے تلاش کریں..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="super-admin-search-row" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
+          <div style={{ flex: '1 1 240px' }}>
+            <input
+              type="text"
+              className="form-field-input"
+              placeholder="مدرسہ، منتظم، ضلع یا ایڈریس سے تلاش کریں..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="مدرسہ یا منتظم کے نام سے تلاش کریں"
+            />
+          </div>
+
+          <div style={{ minWidth: '180px' }}>
+            <select
+              className="form-field-input"
+              value={selectedDistrict}
+              onChange={(e) => setSelectedDistrict(e.target.value)}
+              aria-label="ضلع کے لحاظ سے فلٹر"
+            >
+              <option value="all">تمام اضلاع {uniqueDistricts.length > 0 ? `(${uniqueDistricts.length})` : ''}</option>
+              {uniqueDistricts.map(dist => (
+                <option key={dist} value={dist}>ضلع {dist}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              className="super-admin-btn-primary"
+              onClick={() => setSortByDistrict(!sortByDistrict)}
+              style={{
+                padding: '9px 16px',
+                fontSize: '0.84rem',
+                backgroundColor: sortByDistrict ? '#0284c7' : 'transparent',
+                color: sortByDistrict ? '#ffffff' : 'var(--text, #1e293b)',
+                border: '1px solid var(--border, #cbd5e1)',
+                cursor: 'pointer'
+              }}
+              title="اضلاع کی حروف تہجی کے مطابق ترتیب دیں"
+            >
+              {sortByDistrict ? 'ضلعی ترتیب: فعال' : 'ضلعی ترتیب'}
+            </button>
+          </div>
         </div>
 
         {actionFeedback.message && (
@@ -509,6 +625,7 @@ export default function SuperAdmin() {
                 <tr>
                   <th>مدرسے کا نام</th>
                   <th>مہتمم / منتظم</th>
+                  <th>ضلع</th>
                   <th>فون نمبر</th>
                   <th>حالت</th>
                   <th className="actions-col-header">اقدامات</th>
@@ -523,7 +640,14 @@ export default function SuperAdmin() {
 
                   return (
                     <tr key={m.id}>
-                      <td style={{ fontWeight: 700 }}>{m.name}</td>
+                      <td style={{ fontWeight: 700 }}>
+                        <div>{m.name}</div>
+                        {m.address && (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: '2px', fontWeight: 'normal' }}>
+                            {m.address}
+                          </div>
+                        )}
+                      </td>
                       <td>
                         {adminProfile ? (
                           <div>
@@ -534,6 +658,7 @@ export default function SuperAdmin() {
                           <span style={{ color: 'var(--muted)' }}>کوئی منتظم نہیں</span>
                         )}
                       </td>
+                      <td>{m.district || '—'}</td>
                       <td>{adminProfile?.phone || m.phone || '—'}</td>
                       <td>
                         <span className={`madrasa-status-pill ${isSuspended ? 'status-disabled' : 'status-active'}`}>
@@ -627,7 +752,7 @@ export default function SuperAdmin() {
                   />
                 </div>
 
-                <div className="form-field-item" style={{ marginBottom: '8px' }}>
+                <div className="form-field-item" style={{ marginBottom: '14px' }}>
                   <label htmlFor="editAdminPhoneInput">رابطہ نمبر / فون</label>
                   <input
                     id="editAdminPhoneInput"
@@ -636,6 +761,30 @@ export default function SuperAdmin() {
                     placeholder="مثال: 0300-1234567"
                     value={editAdminPhone}
                     onChange={(e) => setEditAdminPhone(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field-item" style={{ marginBottom: '14px' }}>
+                  <label htmlFor="editMadrasaDistrictInput">ضلع</label>
+                  <input
+                    id="editMadrasaDistrictInput"
+                    type="text"
+                    className="form-field-input"
+                    placeholder="مثال: لاہور، کراچی، راولپنڈی"
+                    value={editMadrasaDistrict}
+                    onChange={(e) => setEditMadrasaDistrict(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field-item" style={{ marginBottom: '8px' }}>
+                  <label htmlFor="editMadrasaAddressInput">تفصیلی ایڈریس</label>
+                  <input
+                    id="editMadrasaAddressInput"
+                    type="text"
+                    className="form-field-input"
+                    placeholder="مثال: محلہ مدینہ کالونی، نزد جامع مسجد"
+                    value={editMadrasaAddress}
+                    onChange={(e) => setEditMadrasaAddress(e.target.value)}
                   />
                 </div>
               </div>

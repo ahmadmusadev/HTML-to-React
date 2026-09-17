@@ -22,6 +22,8 @@ describe('SuperAdmin Component', () => {
     {
       id: 'm-1',
       name: 'جامعہ دارالعلوم',
+      district: 'لاہور',
+      address: 'گلبرگ، مین روڈ',
       status: 'active',
       phone: '0300-1111111',
       created_at: '2026-09-01T00:00:00.000Z',
@@ -32,6 +34,8 @@ describe('SuperAdmin Component', () => {
     {
       id: 'm-2',
       name: 'جامعہ عثمانیہ',
+      district: 'کراچی',
+      address: 'کورنگی، سیکٹر 4',
       status: 'disabled',
       phone: '0300-2222222',
       created_at: '2026-09-02T00:00:00.000Z',
@@ -84,6 +88,11 @@ describe('SuperAdmin Component', () => {
     // Check status pills
     expect(screen.getByText('فعال')).toBeInTheDocument();
     expect(screen.getByText('معطل')).toBeInTheDocument();
+
+    // Check districts and addresses
+    expect(screen.getByText('لاہور')).toBeInTheDocument();
+    expect(screen.getByText('کراچی')).toBeInTheDocument();
+    expect(screen.getByText('گلبرگ، مین روڈ')).toBeInTheDocument();
 
     // Check action buttons
     expect(screen.getByText('معطل کریں')).toBeInTheDocument();
@@ -262,7 +271,7 @@ describe('SuperAdmin Component', () => {
     expect(supabase.functions.invoke).not.toHaveBeenCalled();
   });
 
-  it('successfully invokes create-account-invite with unique email', async () => {
+  it('successfully invokes create-account-invite with unique email, district and address', async () => {
     supabase.functions.invoke.mockResolvedValue({
       data: {
         success: true,
@@ -287,6 +296,12 @@ describe('SuperAdmin Component', () => {
     fireEvent.change(screen.getByLabelText(/منتظم کا ای میل ایڈریس/), {
       target: { value: 'unique-new-admin@example.com' }
     });
+    fireEvent.change(screen.getByLabelText(/^ضلع$/), {
+      target: { value: 'راولپنڈی' }
+    });
+    fireEvent.change(screen.getByLabelText(/تفصیلی ایڈریس/), {
+      target: { value: 'صدر بازار، راولپنڈی' }
+    });
 
     const submitBtn = screen.getByRole('button', { name: /نیا مدرسہ و منتظم شامل کریں/ });
     fireEvent.click(submitBtn);
@@ -297,9 +312,28 @@ describe('SuperAdmin Component', () => {
           email: 'unique-new-admin@example.com',
           fullName: 'قاری نور',
           madrasaName: 'نیا مدرسہ نور',
+          district: 'راولپنڈی',
+          address: 'صدر بازار، راولپنڈی',
           role: 'admin'
         })
       });
+    });
+  });
+
+  it('filters madrasas by selected district', async () => {
+    render(<SuperAdmin />);
+
+    await waitFor(() => {
+      expect(screen.getByText('جامعہ دارالعلوم')).toBeInTheDocument();
+      expect(screen.getByText('جامعہ عثمانیہ')).toBeInTheDocument();
+    });
+
+    const districtSelect = screen.getByLabelText('ضلع کے لحاظ سے فلٹر');
+    fireEvent.change(districtSelect, { target: { value: 'کراچی' } });
+
+    await waitFor(() => {
+      expect(screen.queryByText('جامعہ دارالعلوم')).not.toBeInTheDocument();
+      expect(screen.getByText('جامعہ عثمانیہ')).toBeInTheDocument();
     });
   });
 });

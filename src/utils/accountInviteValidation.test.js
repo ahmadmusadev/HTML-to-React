@@ -90,6 +90,35 @@ describe('accountInviteValidation', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors.email).toBeTruthy();
     });
+
+    it('accepts valid district and address for admin invite', () => {
+      const payload = {
+        email: 'admin@jamia.com',
+        fullName: 'مولانا احمد',
+        role: 'admin',
+        madrasaName: 'دار العلوم',
+        district: 'لاہور',
+        address: 'مین بازار، گلبرگ'
+      };
+      const result = validateInvitePayload(payload);
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toEqual({});
+    });
+
+    it('flags excessively long district or address', () => {
+      const payload = {
+        email: 'admin@jamia.com',
+        fullName: 'مولانا احمد',
+        role: 'admin',
+        madrasaName: 'دار العلوم',
+        district: 'A'.repeat(101),
+        address: 'B'.repeat(301)
+      };
+      const result = validateInvitePayload(payload);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.district).toBeTruthy();
+      expect(result.errors.address).toBeTruthy();
+    });
   });
 
   describe('extractEdgeFunctionError', () => {

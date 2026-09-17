@@ -89,7 +89,9 @@ serve(async (req) => {
       role: targetRole,
       madrasaName: rawMadrasaName,
       madrasaId: rawMadrasaId,
-      phone: rawPhone
+      phone: rawPhone,
+      district: rawDistrict,
+      address: rawAddress
     } = body;
 
     const email = (rawEmail || '').trim().toLowerCase();
@@ -97,6 +99,8 @@ serve(async (req) => {
     const madrasaName = (rawMadrasaName || '').trim();
     let targetMadrasaId = (rawMadrasaId || '').trim();
     const phone = (rawPhone || '').trim();
+    const district = (rawDistrict || '').trim();
+    const address = (rawAddress || '').trim();
 
     // 4. Basic input validations
     if (!email || !EMAIL_REGEX.test(email)) {
@@ -140,9 +144,16 @@ serve(async (req) => {
       }
 
       // Create the new madrasa in public.madrasas
+      const madrasaInsertData: Record<string, any> = {
+        name: madrasaName
+      };
+      if (district) madrasaInsertData.district = district;
+      if (address) madrasaInsertData.address = address;
+      if (phone) madrasaInsertData.phone = phone;
+
       const { data: newMadrasa, error: madrasaInsertErr } = await supabaseAdmin
         .from('madrasas')
-        .insert([{ name: madrasaName }])
+        .insert([madrasaInsertData])
         .select('id')
         .single();
 
