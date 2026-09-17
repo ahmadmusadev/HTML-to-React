@@ -77,8 +77,9 @@ export const calculateStudentsByClass = (classesList = [], students = []) => {
   const activeStudents = safeStudents.filter(s => normalizeStudentStatus(s?.status) === 'active');
 
   return safeClasses.map(cls => {
+    const clsName = resolveClassName(cls);
     const count = activeStudents.filter(s =>
-      s.admClass === cls.id || s.class_id === cls.id || s.classId === cls.id
+      s.admClass === cls.id || s.class_id === cls.id || s.classId === cls.id || s.admClass === clsName || (cls.name && s.admClass === cls.name)
     ).length;
 
     return {

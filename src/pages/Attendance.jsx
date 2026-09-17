@@ -146,12 +146,15 @@ export default function Attendance() {
     const loadInitialData = async () => {
       if (isMounted) {
         if (!isValidUUID(activeMadrasaId)) {
-          const d = loadMadrasaData('hf_records_v1') || {};
-          const localAttList = loadMadrasaData('hf_student_attendance_v1') || [];
-          const localStaffAtt = loadMadrasaData('hf_staff_attendance_v1') || [];
+          const d = loadMadrasaData('hf_records_v1', activeMadrasaId) || {};
+          const localClassesData = loadMadrasaData('hf_classes_v1', activeMadrasaId) || {};
+          const localAttList = loadMadrasaData('hf_student_attendance_v1', activeMadrasaId) || [];
+          const localStaffAtt = loadMadrasaData('hf_staff_attendance_v1', activeMadrasaId) || [];
           
           setRecords(d.records || []);
-          if (d.classes && d.classes.length > 0) {
+          if (localClassesData.classes && localClassesData.classes.length > 0) {
+            setClassesList(localClassesData.classes);
+          } else if (d.classes && d.classes.length > 0) {
             setClassesList(d.classes);
           } else {
             setClassesList(DEFAULT_CLASSES);
@@ -170,7 +173,8 @@ export default function Attendance() {
           }
         } else {
           setRecords([]);
-          setClassesList([]);
+          const cachedClasses = loadMadrasaData('hf_classes_v1', activeMadrasaId)?.classes || [];
+          setClassesList(cachedClasses);
           setStaffProfiles([]);
           setStudentAttendanceList([]);
           setStaffAttendance({});
@@ -192,7 +196,7 @@ export default function Attendance() {
           if (stdData && stdData.length > 0) {
             setRecords(stdData.map(s => mapStudentToUi(s)));
           }
-          if (clsData && clsData.length > 0) {
+          if (clsData && Array.isArray(clsData) && clsData.length > 0) {
             setClassesList(clsData);
           }
           if (attData && attData.length > 0) {
@@ -283,9 +287,10 @@ export default function Attendance() {
   const [studentAttFormData, setStudentAttFormData] = useState(null);
   const [isSavingBulk, setIsSavingBulk] = useState(false);
 
+  const selectedClsObj = classesList.find(c => c.id === studentAttClass);
   const studentsInClass = records.filter(r =>
     (r.isAdmissionProfile || r.roll_number) &&
-    (r.admClass === studentAttClass || r.class_id === studentAttClass || r.classId === studentAttClass) &&
+    (r.admClass === studentAttClass || r.class_id === studentAttClass || r.classId === studentAttClass || (selectedClsObj && r.admClass === selectedClsObj.name)) &&
     !r.isWithdrawn && r.status !== 'left'
   );
 

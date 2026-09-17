@@ -471,8 +471,15 @@ export function MadrasaProvider({ children }) {
           teacher_name: c.teacher_name || localMeta[c.id]?.teacher_name || c.teacher || ''
         }));
         saveMadrasaData('hf_classes_v1', { classes: mapped }, madrasaId);
+        const rec = loadMadrasaData('hf_records_v1', madrasaId) || {};
+        rec.classes = mapped;
+        saveMadrasaData('hf_records_v1', rec, madrasaId);
         return mapped;
       }
+      saveMadrasaData('hf_classes_v1', { classes: [] }, madrasaId);
+      const rec = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      rec.classes = [];
+      saveMadrasaData('hf_records_v1', rec, madrasaId);
       return [];
     } catch (e) {
       console.error('[MadrasaContext] Error fetching classes from Supabase:', e);
@@ -604,13 +611,23 @@ export function MadrasaProvider({ children }) {
         saveMadrasaData('hf_classes_meta_v1', localMeta, madrasaId);
       }
 
-      return {
+      const createdObj = {
         id: createdRow.id,
         name: createdRow.class_name || className,
         class_name: createdRow.class_name || className,
         teacher: createdRow.teacher_name || teacherName,
         teacher_name: createdRow.teacher_name || teacherName
       };
+
+      const localClasses = loadMadrasaData('hf_classes_v1', madrasaId) || { classes: [] };
+      localClasses.classes = [...(localClasses.classes || []).filter(c => c.id !== createdRow.id), createdObj];
+      saveMadrasaData('hf_classes_v1', localClasses, madrasaId);
+
+      const localRec = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      localRec.classes = [...(localRec.classes || []).filter(c => c.id !== createdRow.id), createdObj];
+      saveMadrasaData('hf_records_v1', localRec, madrasaId);
+
+      return createdObj;
     } catch (e) {
       console.error('[MadrasaContext] Error adding class to Supabase:', e);
       throw new Error(e?.message || 'کلاس شامل کرنے میں مسئلہ پیش آیا۔');
@@ -678,13 +695,23 @@ export function MadrasaProvider({ children }) {
       localMeta[classId] = { teacher_name: teacherName };
       saveMadrasaData('hf_classes_meta_v1', localMeta, madrasaId);
 
-      return {
+      const updatedObj = {
         id: updatedRow.id,
         name: updatedRow.class_name || className,
         class_name: updatedRow.class_name || className,
         teacher: updatedRow.teacher_name || teacherName,
         teacher_name: updatedRow.teacher_name || teacherName
       };
+
+      const localClasses = loadMadrasaData('hf_classes_v1', madrasaId) || { classes: [] };
+      localClasses.classes = (localClasses.classes || []).map(c => c.id === updatedRow.id ? updatedObj : c);
+      saveMadrasaData('hf_classes_v1', localClasses, madrasaId);
+
+      const localRec = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      localRec.classes = (localRec.classes || []).map(c => c.id === updatedRow.id ? updatedObj : c);
+      saveMadrasaData('hf_records_v1', localRec, madrasaId);
+
+      return updatedObj;
     } catch (e) {
       console.error('[MadrasaContext] Error updating class:', e);
       throw new Error(e?.message || 'کلاس میں ترمیم کرنے میں مسئلہ پیش آیا۔');
@@ -719,6 +746,14 @@ export function MadrasaProvider({ children }) {
         .eq('madrasa_id', madrasaId);
 
       if (error) throw error;
+
+      const localData = loadMadrasaData('hf_classes_v1', madrasaId) || { classes: [] };
+      localData.classes = (localData.classes || []).filter(c => c.id !== classId);
+      saveMadrasaData('hf_classes_v1', localData, madrasaId);
+
+      const rec = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      rec.classes = (rec.classes || []).filter(c => c.id !== classId);
+      saveMadrasaData('hf_records_v1', rec, madrasaId);
 
       try {
         const localMeta = loadMadrasaData('hf_classes_meta_v1', madrasaId) || {};

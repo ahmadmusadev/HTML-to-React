@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { getCurrentAcademicYearStart, formatAcademicYear, getAcademicYearOptions } from '../utils/academicYear';
 import { DEFAULT_CLASSES } from '../constants/defaults';
+import { isValidUUID } from '../lib/supabaseClient';
+import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import './Entry.css';
 
 // Constants from edit.html
@@ -86,6 +88,7 @@ export default function Entry() {
     loadMadrasaData,
     saveMadrasaData,
     fetchStudentsFromSupabase,
+    fetchClassesFromSupabase,
     saveHifzHalfYearRecordToSupabase,
     updateStudentHifzStartDate
   } = useMadrasa();
@@ -100,22 +103,42 @@ export default function Entry() {
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      const storedData = loadMadrasaData('hf_records_v1') || {};
+      const storedData = loadMadrasaData('hf_records_v1', activeMadrasaId) || {};
+      const storedClasses = loadMadrasaData('hf_classes_v1', activeMadrasaId) || {};
+
       setRecords(storedData.records || []);
-      if (storedData.classes && storedData.classes.length > 0) {
-        setClassesList(storedData.classes);
-      } else {
-        setClassesList(DEFAULT_CLASSES);
-      }
       setMonthlyExams(storedData.monthlyExams || []);
 
+      const initialClasses = (storedClasses.classes && storedClasses.classes.length > 0)
+        ? storedClasses.classes
+        : ((storedData.classes && storedData.classes.length > 0)
+          ? storedData.classes
+          : (isValidUUID(activeMadrasaId) ? [] : DEFAULT_CLASSES));
+      setClassesList(initialClasses);
+
       try {
-        const stds = await fetchStudentsFromSupabase(activeMadrasaId);
-        if (isMounted && stds && stds.length > 0) {
-          setStudentsList(stds);
+        const [stds, clsData] = await Promise.all([
+          fetchStudentsFromSupabase(activeMadrasaId).catch(err => {
+            console.warn('Could not fetch students in Entry:', err);
+            return null;
+          }),
+          fetchClassesFromSupabase(activeMadrasaId).catch(err => {
+            console.warn('Could not fetch classes in Entry:', err);
+            return null;
+          })
+        ]);
+
+        if (isMounted) {
+          if (stds && Array.isArray(stds)) {
+            setStudentsList(stds);
+            setRecords(stds.map(mapStudentToUi).filter(Boolean));
+          }
+          if (clsData && Array.isArray(clsData) && clsData.length > 0) {
+            setClassesList(clsData);
+          }
         }
       } catch (err) {
-        console.warn('Could not fetch students in Entry:', err);
+        console.warn('Could not fetch data in Entry:', err);
       }
     };
     loadData();
@@ -123,9 +146,9 @@ export default function Entry() {
   }, [activeMadrasaId]);
 
   const saveToLocal = (newMonthlyExams) => {
-    let storedData = loadMadrasaData('hf_records_v1') || { monthlyExams: [] };
+    let storedData = loadMadrasaData('hf_records_v1', activeMadrasaId) || { monthlyExams: [] };
     storedData.monthlyExams = newMonthlyExams;
-    saveMadrasaData('hf_records_v1', storedData);
+    saveMadrasaData('hf_records_v1', storedData, activeMadrasaId);
     setMonthlyExams(newMonthlyExams);
   };
 
@@ -159,9 +182,14 @@ export default function Entry() {
   const meLoadStudents = () => {
     if (!meClassSelect) { alert('براہ کرم پہلے کلاس منتخب کریں۔'); return; }
     
-    const cls = classesList.find(c => c.id === meClassSelect);
-    const students = records.filter(r => r.isAdmissionProfile && r.admClass === meClassSelect && !r.isWithdrawn)
-                            .sort((a,b) => Number(a.admRegNo || 0) - Number(b.admRegNo || 0));
+    const cls = classesList.find(c => c.id === meClassSelect || c.name === meClassSelect);
+    const students = records.filter(r => 
+      r.isAdmissionProfile && 
+      (r.admClass === meClassSelect || r.class_id === meClassSelect || (cls && r.admClass === cls.name)) && 
+      !r.isWithdrawn &&
+      r.status !== 'left' &&
+      r.status !== 'withdrawn'
+    ).sort((a,b) => Number(a.admRegNo || 0) - Number(b.admRegNo || 0));
 
     if (students.length === 0) {
       setMeStudents('empty');
@@ -487,8 +515,12 @@ export default function Entry() {
 
   const renderClassReport = () => {
     if (!crClassSelect) { alert('کلاس منتخب کریں'); return; }
-    const cls = classesList.find(c => c.id === crClassSelect);
-    const exam = monthlyExams.find(r => r.classId === crClassSelect && r.month === crMonth && r.year == crYear);
+    const cls = classesList.find(c => c.id === crClassSelect || c.name === crClassSelect);
+    const exam = monthlyExams.find(r => 
+      (r.classId === crClassSelect || (cls && (r.className === cls.name || r.classId === cls.id))) && 
+      r.month === crMonth && 
+      String(r.year) === String(crYear)
+    );
     
     if (!exam) { setCrResultsData('empty'); return; }
     const avg = exam.students.reduce((s, r) => s + (r.pct || 0), 0) / exam.students.length;
@@ -652,7 +684,7 @@ export default function Entry() {
               </div>
               <div id="meHistoryArea">
                 {(()=>{
-                    const filtered = monthlyExams.filter(r => (!meHistoryClassFilter || r.classId === meHistoryClassFilter) && (!meHistoryMonthFilter || r.month === meHistoryMonthFilter))
+                    const filtered = monthlyExams.filter(r => (!meHistoryClassFilter || r.classId === meHistoryClassFilter || (classesList.find(c => c.id === meHistoryClassFilter)?.name === r.className)) && (!meHistoryMonthFilter || r.month === meHistoryMonthFilter))
                                                  .sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
                     if (!filtered.length) return <div className="empty-dashboard-state">کوئی ریکارڈ موجود نہیں۔</div>;
                     return filtered.map((exam, ei) => {

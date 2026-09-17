@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import { DEFAULT_CLASSES } from '../constants/defaults';
+import { isValidUUID } from '../lib/supabaseClient';
 import {
   calculateTargetRuku,
   calculatePct,
@@ -39,10 +40,17 @@ export default function Exams() {
     let isMounted = true;
 
     const loadInitialData = async () => {
-      const storedData = loadMadrasaData('hf_records_v1') || {};
+      const storedData = loadMadrasaData('hf_records_v1', activeMadrasaId) || {};
+      const storedClasses = loadMadrasaData('hf_classes_v1', activeMadrasaId) || {};
+      const initialClasses = storedClasses.classes && storedClasses.classes.length > 0
+        ? storedClasses.classes
+        : (storedData.classes && storedData.classes.length > 0
+          ? storedData.classes
+          : (isValidUUID(activeMadrasaId) ? [] : DEFAULT_CLASSES));
+
       if (isMounted) {
         setRecords(storedData.records || []);
-        setClassesList(storedData.classes && storedData.classes.length > 0 ? storedData.classes : DEFAULT_CLASSES);
+        setClassesList(initialClasses);
         setExamMiqdar((storedData.examMiqdar || []).map(mapExamMiqdarToUi).filter(Boolean));
         setExamResults((storedData.examResults || []).map(mapExamResultToUi).filter(Boolean));
       }
@@ -59,7 +67,7 @@ export default function Exams() {
           if (stdData && stdData.length > 0) {
             setRecords(stdData.map(s => mapStudentToUi(s)));
           }
-          if (clsData && clsData.length > 0) {
+          if (clsData && Array.isArray(clsData) && clsData.length > 0) {
             setClassesList(clsData);
           }
           if (miqdarData && miqdarData.length > 0) {
@@ -124,9 +132,10 @@ export default function Exams() {
 
   // Helper to filter active students by class
   const getActiveStudentsByClass = (clsId) => {
+    const selectedClsObj = classesList.find(c => c.id === clsId);
     return records.filter(r => 
       r.isAdmissionProfile && 
-      (r.admClass === clsId || r.classId === clsId || r.class_id === clsId) && 
+      (r.admClass === clsId || r.classId === clsId || r.class_id === clsId || (selectedClsObj && r.admClass === selectedClsObj.name)) && 
       !r.isWithdrawn && 
       r.status !== 'left' &&
       r.status !== 'withdrawn'
