@@ -29,7 +29,7 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      await signIn(email.trim(), password);
+      await signIn(email.trim(), password.trim());
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
@@ -90,6 +90,10 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
+              autoComplete="username email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
             />
           </div>
 
@@ -109,6 +113,10 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
               />
               <button
                 type="button"

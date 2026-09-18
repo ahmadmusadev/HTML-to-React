@@ -202,3 +202,24 @@ Whenever madrasa status or lifecycle operations are modified:
 - **Dark Mode Contrast for Badges**: The Mohtamim Admin badge under dark mode must maintain high contrast with a black background (`#09090b`), dark border (`#27272a`), and clear white text (`#f4f4f5`).
 - **No Emojis**: All status pills, action buttons, modals, and suspension screens must remain strictly text-only without emojis or decorative icons.
 
+### User-Facing Language Rule
+
+All messages displayed to the user within the application must be written in **Urdu**, not English.
+
+This includes, without limitation:
+
+* Error messages
+* Success messages
+* Confirmation messages
+* Warning messages
+* Validation messages
+* Alerts and notifications
+* Form submission messages
+* Permission/access messages
+* Empty-state messages
+* Loading/status messages
+* Delete, update, save, and other action confirmations
+
+The user-facing interface should use clear, natural, and professional **Urdu** throughout. English should not appear in user-facing messages unless it is technically necessary, such as a proper name, standard technical term, or user-provided content.
+
+**Important:** This rule applies to all current and future features and changes. Whenever you add or modify functionality, check that every new user-facing message follows this Urdu-language requirement.
