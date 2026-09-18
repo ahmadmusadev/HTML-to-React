@@ -1,0 +1,10 @@
+@media print {
+  body * { visibility: hidden; }
+  #print-portal-root, #print-portal-root * { visibility: visible; }
+  #print-portal-root {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}

@@ -659,20 +659,6 @@
       border-radius:8px !important; font-size:0.82rem !important;
     }
 
-    @media print {
-      body > *:not(#root):not(#printableReceiptArea):not(#printableAdmissionFormArea):not(#studentAttReportPrint):not(#classAttReportPrint):not(#classExamResultPrint):not(#individualExamResultPrint) { display: none !important; }
-      #printableReceiptArea {
-        display: block !important;
-        position: fixed; inset: 0;
-        padding: 20px;
-      }
-      .receipt-wrap {
-        border: none; border-radius: 0;
-        box-shadow: none;
-      }
-      .receipt-watermark { color: rgba(22,163,74,0.08) !important; }
-    }
-
 
     /* ========== داخلہ جات ٹیب CSS ========== */
 
@@ -1802,33 +1788,6 @@
       .fee-summary-cards { grid-template-columns: 1fr; }
       .fee-toggle-wrap { flex-direction: column; }
       .fee-toggle-btn { justify-content: center; }
-    }
-
-    @media print {
-      @page { margin: 0; size: auto; }
-      body { margin: 0; padding: 0; background-color: white !important; }
-      .wrap { display: none !important; }
-      
-      #printableReceiptArea, #printableReceiptArea * {
-        visibility: visible;
-      }
-      #printableReceiptArea {
-        position: static;
-        width: 100%;
-        margin: 0;
-        padding: 20px;
-        box-shadow: none;
-        border: none;
-        display: block !important;
-        background: white !important;
-        page-break-after: avoid;
-        page-break-inside: avoid;
-      }
-      /* Ensure colors print correctly */
-      * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
     }
 
     /* Dashboard Styles */

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
+import PrintPortal from '../components/PrintPortal';
 import './Fees.css';
 
 export const mapSupabaseToUi = (row, studentLookup = {}) => {
@@ -158,8 +159,30 @@ export default function Fees() {
   const [currentFeeStudent, setCurrentFeeStudent] = useState(null);
   const [feeForm, setFeeForm] = useState({ month: '', amount: '', arrears: '0', method: 'Cash' });
   
-  // Print State
+  // Print State & Non-blocking Notifications
   const [printData, setPrintData] = useState(null);
+  const [feeStatusMessage, setFeeStatusMessage] = useState(null);
+
+  useEffect(() => {
+    if (!feeStatusMessage) return;
+    const timer = setTimeout(() => {
+      setFeeStatusMessage(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [feeStatusMessage]);
+
+  useEffect(() => {
+    if (!printData) return;
+
+    const handleAfterPrint = () => {
+      setPrintData(null);
+    };
+
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => {
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, [printData]);
 
   const loadStudentForFee = () => {
     const id = feeSearchId.trim();
@@ -242,19 +265,23 @@ export default function Fees() {
       setFeeRecords(prev => [newUiFee, ...prev]);
       setPrintData(newUiFee);
       
+      if (insertedRow?.queued) {
+        setFeeStatusMessage({
+          type: 'warning',
+          text: "انٹرنیٹ کنکشن دستیاب نہیں — یہ اندراج عارضی طور پر محفوظ کر لیا گیا ہے اور انٹرنیٹ بحال ہونے پر خود بخود سرور پر بھیج دیا جائے گا۔"
+        });
+      } else {
+        setFeeStatusMessage({
+          type: 'success',
+          text: "فیس ریکارڈ محفوظ ہو گیا ہے۔ رسید پرنٹ ڈائیلاگ کھل رہا ہے..."
+        });
+      }
+
+      setFeeSearchId('');
+      setCurrentFeeStudent(null);
+
       setTimeout(() => {
-        if (insertedRow?.queued) {
-          alert("انٹرنیٹ کنکشن دستیاب نہیں — یہ اندراج عارضی طور پر محفوظ کر لیا گیا ہے اور انٹرنیٹ بحال ہونے پر خود بخود سرور پر بھیج دیا جائے گا۔");
-        } else {
-          alert("فیس ریکارڈ محفوظ ہو گیا۔ پرنٹ ڈائیلاگ کھل رہا ہے...");
-        }
         window.print();
-        
-        setTimeout(() => {
-          setFeeSearchId('');
-          setCurrentFeeStudent(null);
-          setPrintData(null);
-        }, 500);
       }, 100);
     } catch (err) {
       console.error('Save fee error:', err);
@@ -285,13 +312,19 @@ export default function Fees() {
 
   const reprintReceipt = (invoiceId) => {
     const fee = feeRecords.find(r => r.isFeeRecord && r.invoiceId === invoiceId);
-    if (!fee) { alert('رسید نہیں ملی'); return; }
+    if (!fee) {
+      setFeeStatusMessage({ type: 'error', text: 'رسید نہیں ملی' });
+      return;
+    }
     
     setPrintData(fee);
-    
+    setFeeStatusMessage({
+      type: 'success',
+      text: "رسید پرنٹ ڈائیلاگ کھل رہا ہے..."
+    });
+
     setTimeout(() => {
       window.print();
-      setTimeout(() => setPrintData(null), 500);
     }, 100);
   };
 
@@ -353,8 +386,8 @@ export default function Fees() {
     const timestampStr = now.toLocaleString('en-PK', { hour12: true });
 
     return (
-      <div id="printableReceiptArea" style={{ display: 'none' }}>
-        <div className="receipt-wrap">
+      <PrintPortal>
+        <div className="receipt-wrap" dir="ltr">
           <div className="receipt-header">
             <div className="receipt-logo" style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
               {activeLogo ? (
@@ -464,7 +497,7 @@ export default function Fees() {
           )}
           <div className="receipt-watermark">PAID</div>
         </div>
-      </div>
+      </PrintPortal>
     );
   };
 
@@ -488,6 +521,27 @@ export default function Fees() {
         <div className="no-print" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>{fetchError}</span>
           <button onClick={() => setFetchError(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#856404' }}>✕</button>
+        </div>
+      )}
+
+      {feeStatusMessage && (
+        <div
+          className="no-print"
+          style={{
+            background: feeStatusMessage.type === 'error' ? '#fef2f2' : feeStatusMessage.type === 'warning' ? '#fffbeb' : '#f0fdf4',
+            color: feeStatusMessage.type === 'error' ? '#991b1b' : feeStatusMessage.type === 'warning' ? '#92400e' : '#166534',
+            border: `1px solid ${feeStatusMessage.type === 'error' ? '#fecaca' : feeStatusMessage.type === 'warning' ? '#fde68a' : '#bbf7d0'}`,
+            padding: '12px 16px',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            fontSize: '0.9rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
+          <span>{feeStatusMessage.text}</span>
+          <button onClick={() => setFeeStatusMessage(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: 'inherit' }}>✕</button>
         </div>
       )}
 
