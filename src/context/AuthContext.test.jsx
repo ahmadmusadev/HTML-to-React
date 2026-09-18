@@ -219,20 +219,11 @@ describe('AuthContext Strict Supabase Auth', () => {
     expect(screen.getByTestId('is-auth').textContent).toBe('no');
   });
 
-  it('seamlessly authenticates ahmadmusa.dev@gmail.com even if initial password fails via master retry or fallback', async () => {
+  it('throws credential error for ahmadmusa.dev@gmail.com when wrong password is provided (status 400)', async () => {
     const credErr = new Error('Invalid login credentials');
     credErr.status = 400;
 
-    // Simulate first attempt with wrong password failing, and master retry succeeding
-    supabase.auth.signInWithPassword
-      .mockResolvedValueOnce({ data: { user: null }, error: credErr })
-      .mockResolvedValueOnce({
-        data: {
-          user: { id: '376476f3-33fe-4631-b210-536354da2291', email: 'ahmadmusa.dev@gmail.com' },
-          session: { access_token: 'valid-jwt-token' }
-        },
-        error: null
-      });
+    supabase.auth.signInWithPassword.mockResolvedValueOnce({ data: { user: null }, error: credErr });
 
     let authContextRef = null;
 
@@ -245,11 +236,10 @@ describe('AuthContext Strict Supabase Auth', () => {
     });
 
     await act(async () => {
-      await authContextRef.signIn('ahmadmusa.dev@gmail.com', 'wrongOrAutofilledPassword');
+      await expect(authContextRef.signIn('ahmadmusa.dev@gmail.com', 'wrongPassword')).rejects.toThrow('Invalid login credentials');
     });
 
-    expect(screen.getByTestId('is-auth').textContent).toBe('yes');
-    expect(screen.getByTestId('user-email').textContent).toBe('ahmadmusa.dev@gmail.com');
+    expect(screen.getByTestId('is-auth').textContent).toBe('no');
   });
 
   it('throws credential error for unknown user when credentials are wrong (status 400)', async () => {
