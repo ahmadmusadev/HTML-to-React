@@ -170,6 +170,25 @@ describe('AiChatbot Component', () => {
     });
   });
 
+  it('accurately answers query about all students overall list via chat input without showing dashboard response', async () => {
+    render(<AiChatbot />);
+    const trigger = screen.getByRole('button', { name: /Toggle AI Rehnuma Assistant/i });
+    fireEvent.click(trigger);
+
+    const input = screen.getByPlaceholderText('اپنا سوال یہاں لکھیں...');
+    fireEvent.change(input, { target: { value: 'تمام طلبہ کی مجموعی فہرست کہاں سے دیکھیں۔' } });
+
+    const sendBtn = screen.getByTitle('ارسال کریں');
+    fireEvent.click(sendBtn);
+
+    await waitFor(() => {
+      // Must show overall student list instructions
+      expect(screen.getByText(/تمام طلباء کی مجموعی فہرست دیکھنے کا طریقہ/i)).toBeInTheDocument();
+      // Must NOT show dashboard instructions
+      expect(screen.queryByText(/ڈیش بورڈ کا جائزہ/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe('findBestKnowledgeMatch & NLP Intent Matching Engine', () => {
     it('normalizes Urdu text stripping diacritics and unifying characters', () => {
       expect(normalizeUrduText('طَالِبُ العِلمِ؟!')).toBe('طالب العلم');
@@ -255,6 +274,20 @@ describe('AiChatbot Component', () => {
       expect(match).not.toBeNull();
       expect(match.id).toBe('super_admin');
       expect(match.response).toContain('سپر ایڈمن پینل کے استعمال کا طریقہ');
+    });
+
+    it('matches all students overall list query accurately and does not confuse with dashboard', () => {
+      const match = findBestKnowledgeMatch('تمام طلبہ کی مجموعی فہرست کہاں سے دیکھیں۔');
+      expect(match).not.toBeNull();
+      expect(match.id).toBe('students_list');
+      expect(match.response).toContain('تمام طلباء کی مجموعی فہرست دیکھنے کا طریقہ');
+      expect(match.response).not.toContain('ڈیش بورڈ کا جائزہ');
+
+      // Check variations
+      const variation1 = findBestKnowledgeMatch('تمام طلباء کی لسٹ کہاں ہے');
+      expect(variation1?.id).toBe('students_list');
+      const variation2 = findBestKnowledgeMatch('طلبہ کی فہرست کہاں سے دیکھیں');
+      expect(variation2?.id).toBe('students_list');
     });
 
     it('returns null for irrelevant queries outside madrasa domain', () => {
