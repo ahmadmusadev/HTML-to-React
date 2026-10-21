@@ -2,6 +2,18 @@
   margin: 6mm;
 }
 
+/* Screen mode: print portal is strictly hidden from screen view */
+#print-portal-root {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  top: -99999px !important;
+  left: -99999px !important;
+}
+
 @media print {
   html, body {
     background: #FFFFFF !important;
@@ -55,6 +67,9 @@
     margin: 0 !important;
     padding: 0 !important;
     z-index: 9999999 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   #print-portal-root * {
@@ -88,9 +103,10 @@
   #print-portal-root .class-print-sheet th *,
   [data-theme="dark"] #print-portal-root .class-print-sheet th,
   [data-theme="dark"] #print-portal-root .class-print-sheet th * {
-    background-color: #0f172a !important;
-    color: #ffffff !important;
+    background-color: #f1f5f9 !important;
+    color: #000000 !important;
     text-align: center !important;
+    font-weight: 900 !important;
   }
 }
 

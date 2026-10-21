@@ -251,10 +251,11 @@ export default function Admissions() {
       document.body.classList.add('printing-class-sheet');
       const cleanup = () => {
         document.body.classList.remove('printing-class-sheet');
+        setPrintClassData(null);
         window.removeEventListener('afterprint', cleanup);
       };
       window.addEventListener('afterprint', cleanup);
-      setTimeout(cleanup, 5000);
+      setTimeout(cleanup, 2500);
     }
     setTimeout(() => {
       window.print();
@@ -2315,9 +2316,13 @@ export default function Admissions() {
               .class-print-sheet th *,
               [data-theme="dark"] .class-print-sheet th,
               [data-theme="dark"] .class-print-sheet th * {
-                background-color: #0f172a !important;
-                color: #ffffff !important;
-                -webkit-text-fill-color: #ffffff !important;
+                background-color: #f1f5f9 !important;
+                color: #000000 !important;
+                -webkit-text-fill-color: #000000 !important;
+                text-align: center !important;
+                font-weight: 900 !important;
+                border: 1px solid #000000 !important;
+                border-bottom: 2px solid #000000 !important;
               }
             `}</style>
             
@@ -2372,14 +2377,14 @@ export default function Admissions() {
                   {/* Students Table */}
                   <table className="class-print-table" style={{ border: '1.5px solid #000000', tableLayout: 'fixed', width: '100%' }}>
                     <thead>
-                      <tr>
-                        <th style={{ width: '5%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>شمار</th>
-                        <th style={{ width: '12%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>داخلہ نمبر</th>
-                        <th style={{ width: '20%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>نام طالب علم</th>
-                        <th style={{ width: '20%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>ولدیت</th>
-                        <th style={{ width: '15%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>رابطہ نمبر</th>
-                        <th style={{ width: '11%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>رہائش</th>
-                        <th style={{ width: '17%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>کیفیت / دستخط</th>
+                      <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #000000' }}>
+                        <th style={{ width: '5%', textAlign: 'center', color: '#000000', backgroundColor: '#f1f5f9', padding: '5px 6px', border: '1px solid #000000', fontWeight: '900' }}>شمار</th>
+                        <th style={{ width: '12%', textAlign: 'center', color: '#000000', backgroundColor: '#f1f5f9', padding: '5px 6px', border: '1px solid #000000', fontWeight: '900' }}>داخلہ نمبر</th>
+                        <th style={{ width: '20%', textAlign: 'center', color: '#000000', backgroundColor: '#f1f5f9', padding: '5px 6px', border: '1px solid #000000', fontWeight: '900' }}>نام طالب علم</th>
+                        <th style={{ width: '20%', textAlign: 'center', color: '#000000', backgroundColor: '#f1f5f9', padding: '5px 6px', border: '1px solid #000000', fontWeight: '900' }}>ولدیت</th>
+                        <th style={{ width: '15%', textAlign: 'center', color: '#000000', backgroundColor: '#f1f5f9', padding: '5px 6px', border: '1px solid #000000', fontWeight: '900' }}>رابطہ نمبر</th>
+                        <th style={{ width: '11%', textAlign: 'center', color: '#000000', backgroundColor: '#f1f5f9', padding: '5px 6px', border: '1px solid #000000', fontWeight: '900' }}>رہائش</th>
+                        <th style={{ width: '17%', textAlign: 'center', color: '#000000', backgroundColor: '#f1f5f9', padding: '5px 6px', border: '1px solid #000000', fontWeight: '900' }}>کیفیت / دستخط</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -2539,13 +2539,15 @@ textarea:focus {
 
 .class-print-table th,
 [data-theme="dark"] .class-print-table th {
-  background-color: #0f172a !important;
-  color: #ffffff !important;
-  font-weight: 800;
-  font-size: 0.78rem;
+  background-color: #f1f5f9 !important;
+  color: #000000 !important;
+  font-weight: 900 !important;
+  font-size: 0.8rem;
   letter-spacing: 0.2px;
   text-align: center !important;
   padding: 6px 6px !important;
+  border: 1px solid #000000 !important;
+  border-bottom: 2px solid #000000 !important;
 }
 
 .class-print-table tbody tr,

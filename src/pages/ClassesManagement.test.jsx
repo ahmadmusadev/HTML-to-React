@@ -335,6 +335,8 @@ describe('Classes Management in Admissions ("All Classes" tab)', () => {
       expect(screen.getByText('کلاس وائز تفصیلی فہرست')).toBeInTheDocument();
       // Ensure the enrolled student's name is rendered in the printable table
       expect(screen.getByText('محمد عثمان')).toBeInTheDocument();
+      const thEl = screen.getByText('نام طالب علم');
+      expect(thEl).toHaveStyle({ color: '#000000' });
       expect(printSpy).toHaveBeenCalled();
     });
 
