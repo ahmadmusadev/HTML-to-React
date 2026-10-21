@@ -2370,22 +2370,22 @@ export default function Admissions() {
                   </div>
 
                   {/* Students Table */}
-                  <table className="class-print-table" style={{ border: '1.5px solid #000000' }}>
+                  <table className="class-print-table" style={{ border: '1.5px solid #000000', tableLayout: 'fixed', width: '100%' }}>
                     <thead>
                       <tr>
-                        <th style={{ width: '6%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a' }}>شمار</th>
-                        <th style={{ width: '13%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a' }}>داخلہ نمبر</th>
-                        <th style={{ width: '25%', color: '#ffffff', backgroundColor: '#0f172a' }}>نام طالب علم</th>
-                        <th style={{ width: '22%', color: '#ffffff', backgroundColor: '#0f172a' }}>ولدیت</th>
-                        <th style={{ width: '14%', color: '#ffffff', backgroundColor: '#0f172a' }}>رابطہ نمبر</th>
-                        <th style={{ width: '10%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a' }}>رہائش</th>
-                        <th style={{ width: '10%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a' }}>کیفیت / دستخط</th>
+                        <th style={{ width: '5%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>شمار</th>
+                        <th style={{ width: '12%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>داخلہ نمبر</th>
+                        <th style={{ width: '20%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>نام طالب علم</th>
+                        <th style={{ width: '20%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>ولدیت</th>
+                        <th style={{ width: '15%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>رابطہ نمبر</th>
+                        <th style={{ width: '11%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>رہائش</th>
+                        <th style={{ width: '17%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a', padding: '5px 6px' }}>کیفیت / دستخط</th>
                       </tr>
                     </thead>
                     <tbody>
                       {enrolledStudents.length === 0 ? (
                         <tr>
-                          <td colSpan="7" style={{ textAlign: 'center', padding: '18px', color: '#475569', backgroundColor: '#ffffff' }}>
+                          <td colSpan="7" style={{ textAlign: 'center', padding: '16px', color: '#475569', backgroundColor: '#ffffff' }}>
                             اس کلاس میں فی الحال کوئی طالب علم داخل نہیں ہے۔
                           </td>
                         </tr>
@@ -2399,21 +2399,21 @@ export default function Admissions() {
 
                           return (
                             <tr key={std.id || idx} style={{ color: '#000000', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                              <td className="center" style={{ color: '#000000', border: '1px solid #000000' }}>{idx + 1}</td>
-                              <td className="center" style={{ color: '#000000', border: '1px solid #000000', fontFamily: 'monospace, sans-serif', fontWeight: 'bold' }}>
+                              <td style={{ textAlign: 'center', color: '#000000', border: '1px solid #000000', padding: '5px 6px' }}>{idx + 1}</td>
+                              <td style={{ textAlign: 'center', color: '#000000', border: '1px solid #000000', padding: '5px 6px', fontFamily: 'monospace, sans-serif', fontWeight: 'bold' }}>
                                 {regNo}
                               </td>
-                              <td className="strong" style={{ color: '#000000', border: '1px solid #000000' }}>
+                              <td style={{ textAlign: 'center', color: '#000000', border: '1px solid #000000', padding: '5px 6px', fontWeight: '800' }}>
                                 <strong style={{ color: '#000000', fontWeight: '800' }}>{studentName}</strong>
                               </td>
-                              <td style={{ color: '#000000', border: '1px solid #000000' }}>
+                              <td style={{ textAlign: 'center', color: '#000000', border: '1px solid #000000', padding: '5px 6px' }}>
                                 <span style={{ color: '#000000' }}>{fatherName}</span>
                               </td>
-                              <td dir="ltr" style={{ color: '#000000', border: '1px solid #000000', textAlign: 'right', fontFamily: 'monospace, sans-serif' }}>
+                              <td dir="ltr" style={{ textAlign: 'center', color: '#000000', border: '1px solid #000000', padding: '5px 6px', fontFamily: 'monospace, sans-serif' }}>
                                 {mobile}
                               </td>
-                              <td className="center" style={{ color: '#000000', border: '1px solid #000000' }}>{residential}</td>
-                              <td className="empty-cell" style={{ color: '#000000', border: '1px solid #000000', backgroundColor: '#ffffff' }}></td>
+                              <td style={{ textAlign: 'center', color: '#000000', border: '1px solid #000000', padding: '5px 6px' }}>{residential}</td>
+                              <td className="empty-cell" style={{ textAlign: 'center', color: '#000000', border: '1px solid #000000', padding: '5px 6px', backgroundColor: '#ffffff' }}></td>
                             </tr>
                           );
                         })

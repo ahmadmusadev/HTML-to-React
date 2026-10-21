@@ -2519,18 +2519,22 @@ textarea:focus {
 .class-print-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   margin-bottom: 12px;
   border: 1.5px solid #000000 !important;
+  table-layout: fixed;
 }
 
 .class-print-table th,
 .class-print-table td,
+[data-theme="dark"] .class-print-table th,
 [data-theme="dark"] .class-print-table td {
   border: 1px solid #000000 !important;
-  padding: 6px 8px;
-  text-align: right;
+  padding: 5px 6px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
   color: #000000 !important;
+  word-break: break-word;
 }
 
 .class-print-table th,
@@ -2540,6 +2544,8 @@ textarea:focus {
   font-weight: 800;
   font-size: 0.78rem;
   letter-spacing: 0.2px;
+  text-align: center !important;
+  padding: 6px 6px !important;
 }
 
 .class-print-table tbody tr,
@@ -2565,10 +2571,11 @@ textarea:focus {
 [data-theme="dark"] .class-print-table td div {
   color: #000000 !important;
   background-color: transparent;
+  text-align: center !important;
 }
 
 .class-print-table td.center {
-  text-align: center;
+  text-align: center !important;
 }
 
 .class-print-table td.strong,
@@ -2577,6 +2584,7 @@ textarea:focus {
 [data-theme="dark"] .class-print-table td.strong * {
   font-weight: 800 !important;
   color: #000000 !important;
+  text-align: center !important;
 }
 
 .class-print-table td.empty-cell {
