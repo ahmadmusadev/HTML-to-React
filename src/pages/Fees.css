@@ -186,13 +186,13 @@
 }
 
 /* ==========================================================================
-   FEE RECEIPT REDESIGN (A6 Portrait, 100% English, Single-Page Fit)
+   FEE RECEIPT REDESIGN (A6 Single-Page, English-Only, Compact & Centered)
    ========================================================================== */
 
 .receipt-wrap {
   width: 100%;
   max-width: 96mm;
-  margin: 0 auto;
+  margin: auto;
   background-color: #FFFFFF !important;
   color: #000000 !important;
   position: relative;
@@ -205,7 +205,7 @@
   padding: 6px 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .receipt-wrap *,
@@ -217,12 +217,18 @@
 /* Header Row */
 .receipt-header {
   border-bottom: 1.5px solid #000000;
-  padding-bottom: 6px;
+  padding-bottom: 4px;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+}
+
+.receipt-header-top {
+  display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 8px;
   text-align: center;
-  gap: 3px;
 }
 
 .receipt-logo-backing {
@@ -232,143 +238,122 @@
 }
 
 .receipt-logo-img {
-  max-height: 32px;
-  max-width: 80px;
+  max-height: 28px;
+  max-width: 65px;
   object-fit: contain;
+}
+
+.receipt-header-text {
+  text-align: center;
 }
 
 .receipt-org {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 900;
   color: #000000 !important;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .receipt-branch {
-  margin: 0;
-  font-size: 0.62rem;
+  margin: 1px 0 0;
+  font-size: 0.58rem;
   color: #475569 !important;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
+}
+
+.receipt-header-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.62rem;
+  margin-top: 1px;
 }
 
 .receipt-badge {
-  display: inline-block;
   background-color: #0f172a !important;
   color: #ffffff !important;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  letter-spacing: 0.8px;
-  padding: 2px 8px;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
   border-radius: 3px;
-  margin-top: 2px;
   text-transform: uppercase;
 }
 
-/* Receipt Meta Bar (2x2 Grid) */
-.receipt-meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3px 6px;
-  background-color: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 4px 6px;
-  font-size: 0.68rem;
-}
-
-.receipt-meta-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 4px;
-}
-
-.receipt-meta-label {
-  color: #64748b;
-  font-weight: 700;
+.receipt-inv-badge {
   font-size: 0.64rem;
-}
-
-.receipt-meta-val {
-  color: #000000;
   font-weight: 800;
+  color: #0f172a !important;
 }
 
-/* Student & Payment Details Box */
-.receipt-details-box {
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  padding: 4px 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+/* Student & Payment Info Table (Compact 4-column key-value) */
+.receipt-info-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 0.68rem;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  border-radius: 4px;
 }
 
-.receipt-detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px dashed #e2e8f0;
-  padding: 2px 0;
+.receipt-info-table td {
+  padding: 2.5px 5px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
 }
 
-.receipt-detail-row:last-child {
+.receipt-info-table tr:last-child td {
   border-bottom: none;
 }
 
-.receipt-detail-label {
-  color: #475569;
+.receipt-info-table .info-lbl {
   font-weight: 700;
+  color: #475569 !important;
+  width: 25%;
+  font-size: 0.62rem;
 }
 
-.receipt-detail-val {
-  color: #000000;
+.receipt-info-table .info-val {
+  font-weight: 800;
+  color: #000000 !important;
+  width: 25%;
+}
+
+.receipt-info-table .info-mono {
+  font-family: monospace, sans-serif !important;
+}
+
+.receipt-info-table .info-month {
+  color: #0369a1 !important;
   font-weight: 800;
 }
 
-/* Table */
+/* Fee Breakdown Table */
 .receipt-table {
   width: 100%;
   border-collapse: collapse;
-  border: 1.5px solid #000000 !important;
-  border-radius: 4px;
-  overflow: hidden;
   font-size: 0.72rem;
+  border: 1.5px solid #000000 !important;
 }
 
-.receipt-table thead tr {
+.receipt-table th {
   background-color: #f1f5f9 !important;
-  border-bottom: 1.5px solid #000000 !important;
-}
-
-.receipt-table thead th {
-  padding: 4px 6px;
+  color: #000000 !important;
   font-weight: 800;
   font-size: 0.66rem;
-  color: #000000 !important;
-  text-transform: uppercase;
+  padding: 4px 6px;
   border: 1px solid #000000;
-}
-
-.receipt-table tbody tr {
-  border-bottom: 1px solid #cbd5e1;
-  background-color: #ffffff !important;
-}
-
-.receipt-table tbody tr:last-child {
-  border-bottom: none;
 }
 
 .receipt-table tbody td {
   padding: 4px 6px;
-  color: #000000 !important;
-  font-size: 0.72rem;
-  font-weight: 700;
   border: 1px solid #000000;
+  font-weight: 600;
+  color: #000000 !important;
+  background-color: #ffffff !important;
 }
 
 .receipt-amount-cell {
@@ -378,27 +363,18 @@
   white-space: nowrap;
 }
 
-/* Total Box */
-.receipt-total-box {
+.receipt-total-tr td {
   background-color: #f0fdf4 !important;
-  border: 1.5px solid #166534 !important;
-  border-radius: 4px;
-  padding: 5px 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.receipt-total-label {
-  font-size: 0.75rem;
-  font-weight: 900;
   color: #166534 !important;
-  letter-spacing: 0.5px;
+  padding: 5px 6px;
+  border: 1.5px solid #166534 !important;
+  font-size: 0.78rem;
 }
 
-.receipt-total-val {
-  font-size: 1.15rem;
-  font-weight: 900;
+.receipt-total-amount-cell {
+  text-align: right !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
   color: #166534 !important;
   font-family: monospace, sans-serif !important;
 }
@@ -407,21 +383,14 @@
 .receipt-footer {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-top: 4px;
-}
-
-.receipt-note {
-  font-size: 0.58rem;
-  color: #64748b !important;
-  text-align: center;
-  line-height: 1.25;
+  gap: 4px;
+  padding-top: 2px;
 }
 
 .receipt-signatures-wrap {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   margin-top: 2px;
 }
 
@@ -432,14 +401,22 @@
 
 .receipt-sig-line {
   border-bottom: 1px solid #000000 !important;
-  height: 16px;
+  height: 14px;
   margin-bottom: 2px;
 }
 
 .receipt-sig-name {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 700;
   color: #000000 !important;
+}
+
+.receipt-note {
+  font-size: 0.54rem;
+  color: #64748b !important;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 2px;
 }
 
 /* Watermark */
@@ -473,23 +450,45 @@
   object-fit: contain;
 }
 
-/* Scoped Print Overrides for Single A6 Page */
+/* Scoped Print Overrides for Single A6 Page Centered */
 @media print {
   @page {
     size: A6 portrait;
     margin: 4mm;
   }
 
-  body.printing-fee-receipt {
+  html, body {
+    height: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
+  body.printing-fee-receipt {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 100vh !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.printing-fee-receipt #print-portal-root {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 100vh !important;
+    height: 100vh !important;
+    width: 100% !important;
+    position: static !important;
+    margin: auto !important;
+  }
+
   .receipt-wrap {
     width: 100% !important;
-    max-width: 97mm !important;
+    max-width: 96mm !important;
     height: auto !important;
-    max-height: 140mm !important;
+    margin: auto !important;
     border: 1.5px solid #000000 !important;
     box-shadow: none !important;
     page-break-inside: avoid !important;

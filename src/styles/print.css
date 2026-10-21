@@ -55,7 +55,7 @@
     border: none !important;
   }
 
-  /* Make print portal root visible and positioned at top */
+  /* Make print portal root visible */
   #print-portal-root {
     display: block !important;
     visibility: visible !important;
@@ -70,6 +70,28 @@
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
+  }
+
+  /* Center fee receipt both vertically and horizontally on the printed page */
+  body.printing-fee-receipt {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 100vh !important;
+    height: 100vh !important;
+  }
+
+  body.printing-fee-receipt #print-portal-root {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 100vh !important;
+    height: 100vh !important;
+    width: 100% !important;
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    margin: auto !important;
   }
 
   #print-portal-root * {

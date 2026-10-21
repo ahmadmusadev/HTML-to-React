@@ -413,6 +413,34 @@ export default function Fees() {
               size: A6 portrait;
               margin: 4mm;
             }
+            html, body {
+              height: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            body.printing-fee-receipt {
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              min-height: 100vh !important;
+              height: 100vh !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            body.printing-fee-receipt #print-portal-root {
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              min-height: 100vh !important;
+              height: 100vh !important;
+              width: 100% !important;
+              position: static !important;
+              margin: auto !important;
+              padding: 0 !important;
+            }
+            .receipt-wrap {
+              margin: auto !important;
+            }
             .receipt-wrap,
             .receipt-wrap *,
             [data-theme="dark"] .receipt-wrap,
@@ -434,10 +462,11 @@ export default function Fees() {
               color: #000000 !important;
               -webkit-text-fill-color: #000000 !important;
             }
-            .receipt-total-box,
-            .receipt-total-box *,
-            [data-theme="dark"] .receipt-total-box,
-            [data-theme="dark"] .receipt-total-box * {
+            .receipt-total-tr td,
+            .receipt-total-tr td *,
+            [data-theme="dark"] .receipt-total-tr td,
+            [data-theme="dark"] .receipt-total-tr td * {
+              background-color: #f0fdf4 !important;
               color: #166534 !important;
               -webkit-text-fill-color: #166534 !important;
             }
@@ -445,71 +474,64 @@ export default function Fees() {
 
           {/* Header */}
           <div className="receipt-header">
-            {activeLogo ? (
-              <div className="receipt-logo-backing">
-                <img src={activeLogo} alt={activeMadrasa.name} className="receipt-logo-img" />
+            <div className="receipt-header-top">
+              {activeLogo ? (
+                <div className="receipt-logo-backing">
+                  <img src={activeLogo} alt={activeMadrasa.name} className="receipt-logo-img" />
+                </div>
+              ) : null}
+              <div className="receipt-header-text">
+                <h1 className="receipt-org">{activeMadrasa.name}</h1>
+                <p className="receipt-branch">ACADEMIC & FINANCIAL FEE RECEIPT</p>
               </div>
-            ) : null}
-            <h1 className="receipt-org">{activeMadrasa.name}</h1>
-            <p className="receipt-branch">ACADEMIC & FINANCIAL FEE RECEIPT</p>
-            <div className="receipt-badge">STUDENT COPY</div>
-          </div>
-
-          {/* Receipt Metadata Grid */}
-          <div className="receipt-meta-grid">
-            <div className="receipt-meta-item">
-              <span className="receipt-meta-label">Receipt #:</span>
-              <span className="receipt-meta-val">#{printData.invoiceId}</span>
             </div>
-            <div className="receipt-meta-item">
-              <span className="receipt-meta-label">Date:</span>
-              <span className="receipt-meta-val">{formattedDate}</span>
-            </div>
-            <div className="receipt-meta-item">
-              <span className="receipt-meta-label">Student ID:</span>
-              <span className="receipt-meta-val">{printData.studentId || '-'}</span>
-            </div>
-            <div className="receipt-meta-item">
-              <span className="receipt-meta-label">Class:</span>
-              <span className="receipt-meta-val">{studentClass || '-'}</span>
+            <div className="receipt-header-badge-row">
+              <span className="receipt-badge">STUDENT COPY</span>
+              <span className="receipt-inv-badge">INVOICE: #{printData.invoiceId}</span>
             </div>
           </div>
 
-          {/* Student & Payment Details Box */}
-          <div className="receipt-details-box">
-            <div className="receipt-detail-row">
-              <span className="receipt-detail-label">Student Name:</span>
-              <span className="receipt-detail-val">{(printData.studentName || '').toUpperCase()}</span>
-            </div>
-            <div className="receipt-detail-row">
-              <span className="receipt-detail-label">Father Name:</span>
-              <span className="receipt-detail-val">{(printData.studentFather || '').toUpperCase()}</span>
-            </div>
-            <div className="receipt-detail-row">
-              <span className="receipt-detail-label">Payment Method:</span>
-              <span className="receipt-detail-val">{printData.feeMethod || 'Cash'}</span>
-            </div>
-            <div className="receipt-detail-row">
-              <span className="receipt-detail-label">Fee Month:</span>
-              <span className="receipt-detail-val" style={{ color: '#0369a1' }}>{readableFeeMonth.toUpperCase()}</span>
-            </div>
-            <div className="receipt-detail-row">
-              <span className="receipt-detail-label">Time:</span>
-              <span className="receipt-detail-val">{timestampStr}</span>
-            </div>
-          </div>
+          {/* Student & Payment Info Table (Compact 4-column key-value) */}
+          <table className="receipt-info-table">
+            <tbody>
+              <tr>
+                <td className="info-lbl">Student:</td>
+                <td className="info-val">{(printData.studentName || '').toUpperCase()}</td>
+                <td className="info-lbl">Student ID:</td>
+                <td className="info-val info-mono">{printData.studentId || '-'}</td>
+              </tr>
+              <tr>
+                <td className="info-lbl">Father:</td>
+                <td className="info-val">{(printData.studentFather || '').toUpperCase()}</td>
+                <td className="info-lbl">Class:</td>
+                <td className="info-val">{studentClass || '-'}</td>
+              </tr>
+              <tr>
+                <td className="info-lbl">Fee Month:</td>
+                <td className="info-val info-month">{readableFeeMonth.toUpperCase()}</td>
+                <td className="info-lbl">Date:</td>
+                <td className="info-val">{formattedDate}</td>
+              </tr>
+              <tr>
+                <td className="info-lbl">Method:</td>
+                <td className="info-val">{printData.feeMethod || 'Cash'}</td>
+                <td className="info-lbl">Time:</td>
+                <td className="info-val info-mono">{timestampStr}</td>
+              </tr>
+            </tbody>
+          </table>
 
-          {/* Fee Table */}
+          {/* Fee Table with integrated Total Row */}
           <table className="receipt-table">
             <thead>
               <tr>
                 <th style={{ width: '65%', textAlign: 'left' }}>Description</th>
-                <th style={{ width: '35%', textAlign: 'right' }}>Amount</th>
+                <th style={{ width: '35%', textAlign: 'right' }}>Amount (PKR)</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Monthly Fee ({readableFeeMonth.toUpperCase()})</td>
+                <td>Monthly Tuition Fee ({readableFeeMonth.toUpperCase()})</td>
                 <td className="receipt-amount-cell">
                   Rs. {(printData.feeAmount || 0).toLocaleString()}
                 </td>
@@ -521,21 +543,18 @@ export default function Fees() {
                 </td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr className="receipt-total-tr">
+                <td style={{ textAlign: 'left', fontWeight: '800' }}>TOTAL RECEIVED</td>
+                <td className="receipt-total-amount-cell">
+                  Rs. {(printData.totalPaid || 0).toLocaleString()}
+                </td>
+              </tr>
+            </tfoot>
           </table>
-
-          {/* Total Box */}
-          <div className="receipt-total-box">
-            <span className="receipt-total-label">TOTAL RECEIVED</span>
-            <span className="receipt-total-val">
-              Rs. {(printData.totalPaid || 0).toLocaleString()}
-            </span>
-          </div>
 
           {/* Footer & Signatures */}
           <div className="receipt-footer">
-            <div className="receipt-note">
-              Computerized proof of payment. Please retain for school records.
-            </div>
             <div className="receipt-signatures-wrap">
               <div className="receipt-sig">
                 <div className="receipt-sig-line"></div>
@@ -545,6 +564,9 @@ export default function Fees() {
                 <div className="receipt-sig-line"></div>
                 <div className="receipt-sig-name">Parent / Payer Signature</div>
               </div>
+            </div>
+            <div className="receipt-note">
+              Computerized official proof of payment. Please retain for school records.
             </div>
           </div>
 
