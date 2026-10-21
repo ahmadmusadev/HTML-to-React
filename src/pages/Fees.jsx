@@ -410,36 +410,28 @@ export default function Fees() {
         <div className="receipt-wrap" dir="ltr" style={{ color: '#000000', backgroundColor: '#ffffff' }}>
           <style>{`
             @page {
-              size: A6 portrait;
-              margin: 4mm;
-            }
-            html, body {
-              height: 100% !important;
-              margin: 0 !important;
-              padding: 0 !important;
+              size: auto;
+              margin: 8mm;
             }
             body.printing-fee-receipt {
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              min-height: 100vh !important;
-              height: 100vh !important;
+              display: block !important;
               margin: 0 !important;
               padding: 0 !important;
+              background: #FFFFFF !important;
             }
             body.printing-fee-receipt #print-portal-root {
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              min-height: 100vh !important;
-              height: 100vh !important;
-              width: 100% !important;
+              display: block !important;
               position: static !important;
-              margin: auto !important;
-              padding: 0 !important;
+              width: 100% !important;
+              margin: 0 auto !important;
+              padding: 15mm 0 !important;
             }
             .receipt-wrap {
-              margin: auto !important;
+              width: 100% !important;
+              max-width: 580px !important;
+              margin: 0 auto !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
             .receipt-wrap,
             .receipt-wrap *,

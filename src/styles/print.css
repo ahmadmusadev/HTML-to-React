@@ -72,26 +72,24 @@
     overflow: visible !important;
   }
 
-  /* Center fee receipt both vertically and horizontally on the printed page */
+  /* Position and flow for printing fee receipt */
   body.printing-fee-receipt {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    min-height: 100vh !important;
-    height: 100vh !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #FFFFFF !important;
   }
 
   body.printing-fee-receipt #print-portal-root {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    min-height: 100vh !important;
-    height: 100vh !important;
-    width: 100% !important;
+    display: block !important;
     position: static !important;
-    top: auto !important;
-    left: auto !important;
-    margin: auto !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 12mm 0 !important;
+  }
+
+  body.printing-fee-receipt .receipt-wrap {
+    margin: 0 auto !important;
   }
 
   #print-portal-root * {
