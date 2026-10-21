@@ -2521,17 +2521,20 @@ textarea:focus {
   border-collapse: collapse;
   font-size: 0.82rem;
   margin-bottom: 12px;
-  border: 1.5px solid #cbd5e1;
+  border: 1.5px solid #000000 !important;
 }
 
 .class-print-table th,
-.class-print-table td {
-  border: 1px solid #cbd5e1;
+.class-print-table td,
+[data-theme="dark"] .class-print-table td {
+  border: 1px solid #000000 !important;
   padding: 6px 8px;
   text-align: right;
+  color: #000000 !important;
 }
 
-.class-print-table th {
+.class-print-table th,
+[data-theme="dark"] .class-print-table th {
   background-color: #0f172a !important;
   color: #ffffff !important;
   font-weight: 800;
@@ -2539,25 +2542,45 @@ textarea:focus {
   letter-spacing: 0.2px;
 }
 
-.class-print-table tbody tr:nth-child(even) {
+.class-print-table tbody tr,
+[data-theme="dark"] .class-print-table tbody tr {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.class-print-table tbody tr:nth-child(even),
+[data-theme="dark"] .class-print-table tbody tr:nth-child(even) {
   background-color: #f8fafc !important;
 }
 
-.class-print-table tbody tr {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+.class-print-table td,
+.class-print-table td *,
+.class-print-table td strong,
+.class-print-table td span,
+.class-print-table td div,
+[data-theme="dark"] .class-print-table td,
+[data-theme="dark"] .class-print-table td *,
+[data-theme="dark"] .class-print-table td strong,
+[data-theme="dark"] .class-print-table td span,
+[data-theme="dark"] .class-print-table td div {
+  color: #000000 !important;
+  background-color: transparent;
 }
 
 .class-print-table td.center {
   text-align: center;
 }
 
-.class-print-table td.strong {
-  font-weight: 800;
+.class-print-table td.strong,
+.class-print-table td.strong *,
+[data-theme="dark"] .class-print-table td.strong,
+[data-theme="dark"] .class-print-table td.strong * {
+  font-weight: 800 !important;
+  color: #000000 !important;
 }
 
 .class-print-table td.empty-cell {
-  background-color: #fafafa !important;
+  background-color: #ffffff !important;
 }
 
 /* Summary Bar */

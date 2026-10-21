@@ -2292,11 +2292,32 @@ export default function Admissions() {
       {/* Class Print Sheet Portal */}
       {printClassData && (
         <PrintPortal>
-          <div className="class-print-sheet" dir="rtl">
+          <div className="class-print-sheet" dir="rtl" style={{ color: '#000000', backgroundColor: '#ffffff' }}>
             <style>{`
               @page {
                 size: A4 portrait;
                 margin: 8mm;
+              }
+              .class-print-sheet,
+              .class-print-sheet *,
+              .class-print-sheet td,
+              .class-print-sheet td *,
+              .class-print-sheet td strong,
+              [data-theme="dark"] .class-print-sheet,
+              [data-theme="dark"] .class-print-sheet *,
+              [data-theme="dark"] .class-print-sheet td,
+              [data-theme="dark"] .class-print-sheet td *,
+              [data-theme="dark"] .class-print-sheet td strong {
+                color: #000000 !important;
+                -webkit-text-fill-color: #000000 !important;
+              }
+              .class-print-sheet th,
+              .class-print-sheet th *,
+              [data-theme="dark"] .class-print-sheet th,
+              [data-theme="dark"] .class-print-sheet th * {
+                background-color: #0f172a !important;
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
               }
             `}</style>
             
@@ -2307,13 +2328,13 @@ export default function Admissions() {
                   <img src={activeLogo} alt={activeMadrasa?.name || ''} className="class-print-logo" />
                 ) : null}
                 <div className="class-print-title-area">
-                  <h1>{activeMadrasa?.name || 'جامعہ حفظ القرآن الکریم'}</h1>
-                  <p>تعلیمی ریکارڈ و باضابطہ فہرستِ طلباء (Official Class Register)</p>
+                  <h1 style={{ color: '#000000' }}>{activeMadrasa?.name || 'جامعہ حفظ القرآن الکریم'}</h1>
+                  <p style={{ color: '#334155' }}>تعلیمی ریکارڈ و باضابطہ فہرستِ طلباء (Official Class Register)</p>
                 </div>
               </div>
               <div className="class-print-badge-area">
-                <div className="class-print-badge">کلاس وائز تفصیلی فہرست</div>
-                <div className="class-print-date">
+                <div className="class-print-badge" style={{ color: '#000000' }}>کلاس وائز تفصیلی فہرست</div>
+                <div className="class-print-date" style={{ color: '#475569' }}>
                   تاریخِ پرنٹ: {new Date().toLocaleDateString('ur-PK', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </div>
               </div>
@@ -2331,40 +2352,40 @@ export default function Admissions() {
                 <>
                   <div className="class-print-info-grid">
                     <div className="class-print-info-item">
-                      <span className="class-print-info-label">کلاس / شعبہ:</span>
-                      <span className="class-print-info-val">{printClassData.name || printClassData.class_name}</span>
+                      <span className="class-print-info-label" style={{ color: '#475569' }}>کلاس / شعبہ:</span>
+                      <span className="class-print-info-val" style={{ color: '#000000' }}>{printClassData.name || printClassData.class_name}</span>
                     </div>
                     <div className="class-print-info-item">
-                      <span className="class-print-info-label">نگران استاد / مدرس:</span>
-                      <span className="class-print-info-val">{printClassData.teacher || printClassData.teacher_name || 'استاد کا نام درج نہیں'}</span>
+                      <span className="class-print-info-label" style={{ color: '#475569' }}>نگران استاد / مدرس:</span>
+                      <span className="class-print-info-val" style={{ color: '#000000' }}>{printClassData.teacher || printClassData.teacher_name || 'استاد کا نام درج نہیں'}</span>
                     </div>
                     <div className="class-print-info-item">
-                      <span className="class-print-info-label">کل داخل شدہ طلباء:</span>
-                      <span className="class-print-info-val">{enrolledStudents.length} طلباء</span>
+                      <span className="class-print-info-label" style={{ color: '#475569' }}>کل داخل شدہ طلباء:</span>
+                      <span className="class-print-info-val" style={{ color: '#000000' }}>{enrolledStudents.length} طلباء</span>
                     </div>
                     <div className="class-print-info-item">
-                      <span className="class-print-info-label">تعلیمی سال:</span>
-                      <span className="class-print-info-val">{new Date().getFullYear()}ء - {new Date().getFullYear() + 1}ء</span>
+                      <span className="class-print-info-label" style={{ color: '#475569' }}>تعلیمی سال:</span>
+                      <span className="class-print-info-val" style={{ color: '#000000' }}>{new Date().getFullYear()}ء - {new Date().getFullYear() + 1}ء</span>
                     </div>
                   </div>
 
                   {/* Students Table */}
-                  <table className="class-print-table">
+                  <table className="class-print-table" style={{ border: '1.5px solid #000000' }}>
                     <thead>
                       <tr>
-                        <th style={{ width: '6%', textAlign: 'center' }}>شمار</th>
-                        <th style={{ width: '13%', textAlign: 'center' }}>داخلہ نمبر</th>
-                        <th style={{ width: '25%' }}>نام طالب علم</th>
-                        <th style={{ width: '22%' }}>ولدیت</th>
-                        <th style={{ width: '14%' }}>رابطہ نمبر</th>
-                        <th style={{ width: '10%', textAlign: 'center' }}>رہائش</th>
-                        <th style={{ width: '10%', textAlign: 'center' }}>کیفیت / دستخط</th>
+                        <th style={{ width: '6%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a' }}>شمار</th>
+                        <th style={{ width: '13%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a' }}>داخلہ نمبر</th>
+                        <th style={{ width: '25%', color: '#ffffff', backgroundColor: '#0f172a' }}>نام طالب علم</th>
+                        <th style={{ width: '22%', color: '#ffffff', backgroundColor: '#0f172a' }}>ولدیت</th>
+                        <th style={{ width: '14%', color: '#ffffff', backgroundColor: '#0f172a' }}>رابطہ نمبر</th>
+                        <th style={{ width: '10%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a' }}>رہائش</th>
+                        <th style={{ width: '10%', textAlign: 'center', color: '#ffffff', backgroundColor: '#0f172a' }}>کیفیت / دستخط</th>
                       </tr>
                     </thead>
                     <tbody>
                       {enrolledStudents.length === 0 ? (
                         <tr>
-                          <td colSpan="7" style={{ textAlign: 'center', padding: '18px', color: '#64748b' }}>
+                          <td colSpan="7" style={{ textAlign: 'center', padding: '18px', color: '#475569', backgroundColor: '#ffffff' }}>
                             اس کلاس میں فی الحال کوئی طالب علم داخل نہیں ہے۔
                           </td>
                         </tr>
@@ -2377,18 +2398,22 @@ export default function Admissions() {
                           const residential = std.admResidential || std.residential || (std.isHostel ? 'مقیم' : 'غیر مقیم');
 
                           return (
-                            <tr key={std.id || idx}>
-                              <td className="center">{idx + 1}</td>
-                              <td className="center" style={{ fontFamily: 'monospace, sans-serif', fontWeight: 'bold' }}>
+                            <tr key={std.id || idx} style={{ color: '#000000', backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                              <td className="center" style={{ color: '#000000', border: '1px solid #000000' }}>{idx + 1}</td>
+                              <td className="center" style={{ color: '#000000', border: '1px solid #000000', fontFamily: 'monospace, sans-serif', fontWeight: 'bold' }}>
                                 {regNo}
                               </td>
-                              <td className="strong">{studentName}</td>
-                              <td>{fatherName}</td>
-                              <td dir="ltr" style={{ textAlign: 'right', fontFamily: 'monospace, sans-serif' }}>
+                              <td className="strong" style={{ color: '#000000', border: '1px solid #000000' }}>
+                                <strong style={{ color: '#000000', fontWeight: '800' }}>{studentName}</strong>
+                              </td>
+                              <td style={{ color: '#000000', border: '1px solid #000000' }}>
+                                <span style={{ color: '#000000' }}>{fatherName}</span>
+                              </td>
+                              <td dir="ltr" style={{ color: '#000000', border: '1px solid #000000', textAlign: 'right', fontFamily: 'monospace, sans-serif' }}>
                                 {mobile}
                               </td>
-                              <td className="center">{residential}</td>
-                              <td className="empty-cell"></td>
+                              <td className="center" style={{ color: '#000000', border: '1px solid #000000' }}>{residential}</td>
+                              <td className="empty-cell" style={{ color: '#000000', border: '1px solid #000000', backgroundColor: '#ffffff' }}></td>
                             </tr>
                           );
                         })
@@ -2397,28 +2422,28 @@ export default function Admissions() {
                   </table>
 
                   {/* Summary Row */}
-                  <div className="class-print-summary">
-                    <span>کل تعدادِ طلباء: {enrolledStudents.length}</span>
-                    <span>مقیم طلباء: {muqeemCount}</span>
-                    <span>غیر مقیم طلباء: {ghairMuqeemCount}</span>
+                  <div className="class-print-summary" style={{ color: '#000000', border: '1px solid #000000' }}>
+                    <span style={{ color: '#000000' }}>کل تعدادِ طلباء: {enrolledStudents.length}</span>
+                    <span style={{ color: '#000000' }}>مقیم طلباء: {muqeemCount}</span>
+                    <span style={{ color: '#000000' }}>غیر مقیم طلباء: {ghairMuqeemCount}</span>
                   </div>
 
                   {/* Signatures */}
                   <div className="class-print-signatures">
                     <div className="class-print-sig-col">
-                      <div className="class-print-sig-line"></div>
-                      <div className="class-print-sig-title">دستخط نگران استاد</div>
-                      <div className="class-print-sig-sub">{printClassData.teacher || printClassData.teacher_name || '—'}</div>
+                      <div className="class-print-sig-line" style={{ borderBottom: '1.5px solid #000000' }}></div>
+                      <div className="class-print-sig-title" style={{ color: '#000000' }}>دستخط نگران استاد</div>
+                      <div className="class-print-sig-sub" style={{ color: '#475569' }}>{printClassData.teacher || printClassData.teacher_name || '—'}</div>
                     </div>
                     <div className="class-print-sig-col">
-                      <div className="class-print-sig-line"></div>
-                      <div className="class-print-sig-title">دستخط ناظمِ تعلیمات</div>
-                      <div className="class-print-sig-sub">شعبہ حفظ و تجوید</div>
+                      <div className="class-print-sig-line" style={{ borderBottom: '1.5px solid #000000' }}></div>
+                      <div className="class-print-sig-title" style={{ color: '#000000' }}>دستخط ناظمِ تعلیمات</div>
+                      <div className="class-print-sig-sub" style={{ color: '#475569' }}>شعبہ حفظ و تجوید</div>
                     </div>
                     <div className="class-print-sig-col">
-                      <div className="class-print-sig-line"></div>
-                      <div className="class-print-sig-title">مہر و دستخط مہتمم / ایڈمن</div>
-                      <div className="class-print-sig-sub">{activeMadrasa?.name || 'ادارہ'}</div>
+                      <div className="class-print-sig-line" style={{ borderBottom: '1.5px solid #000000' }}></div>
+                      <div className="class-print-sig-title" style={{ color: '#000000' }}>مہر و دستخط مہتمم / ایڈمن</div>
+                      <div className="class-print-sig-sub" style={{ color: '#475569' }}>{activeMadrasa?.name || 'ادارہ'}</div>
                     </div>
                   </div>
                 </>

@@ -62,6 +62,26 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  /* Force all class print sheet text to pitch black */
+  #print-portal-root .class-print-sheet,
+  #print-portal-root .class-print-sheet *,
+  #print-portal-root .class-print-sheet td,
+  #print-portal-root .class-print-sheet td *,
+  #print-portal-root .class-print-sheet td strong,
+  [data-theme="dark"] #print-portal-root .class-print-sheet td,
+  [data-theme="dark"] #print-portal-root .class-print-sheet td *,
+  [data-theme="dark"] #print-portal-root .class-print-sheet td strong {
+    color: #000000 !important;
+  }
+
+  #print-portal-root .class-print-sheet th,
+  #print-portal-root .class-print-sheet th *,
+  [data-theme="dark"] #print-portal-root .class-print-sheet th,
+  [data-theme="dark"] #print-portal-root .class-print-sheet th * {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+  }
 }
 
 
