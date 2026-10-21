@@ -280,13 +280,29 @@ export default function Fees() {
       setFeeSearchId('');
       setCurrentFeeStudent(null);
 
-      setTimeout(() => {
-        window.print();
-      }, 100);
+      triggerReceiptPrint(newFeeRecord);
     } catch (err) {
       console.error('Save fee error:', err);
       alert(`فیس ریکارڈ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
     }
+  };
+
+  const triggerReceiptPrint = (feeObj) => {
+    setPrintData(feeObj);
+    if (typeof document !== 'undefined') {
+      document.body.classList.add('printing-fee-receipt');
+      const cleanup = () => {
+        document.body.classList.remove('printing-fee-receipt');
+        setPrintData(null);
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      setTimeout(cleanup, 2500);
+    }
+
+    setTimeout(() => {
+      window.print();
+    }, 150);
   };
 
   // --- View 2: Receipt ---
@@ -317,15 +333,12 @@ export default function Fees() {
       return;
     }
     
-    setPrintData(fee);
     setFeeStatusMessage({
       type: 'success',
       text: "رسید پرنٹ ڈائیلاگ کھل رہا ہے..."
     });
 
-    setTimeout(() => {
-      window.print();
-    }, 100);
+    triggerReceiptPrint(fee);
   };
 
   // --- View 3: Analytics ---
@@ -385,114 +398,192 @@ export default function Fees() {
     const readableFeeMonth = monthDateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     const timestampStr = now.toLocaleString('en-PK', { hour12: true });
 
+    const matchedStudent = students.find(s =>
+      (s.id && (s.id === printData.studentUuid || s.id === printData.studentId)) ||
+      (s.admRegNo && s.admRegNo === printData.studentId) ||
+      (s.roll_number && s.roll_number === printData.studentId)
+    );
+    const studentClass = matchedStudent?.admClass || matchedStudent?.className || matchedStudent?.class_id || '-';
+
     return (
       <PrintPortal>
-        <div className="receipt-wrap" dir="ltr">
+        <div className="receipt-wrap" dir="rtl" style={{ color: '#000000', backgroundColor: '#ffffff' }}>
+          <style>{`
+            @page {
+              size: A5 landscape;
+              margin: 6mm;
+            }
+            .receipt-wrap,
+            .receipt-wrap *,
+            [data-theme="dark"] .receipt-wrap,
+            [data-theme="dark"] .receipt-wrap * {
+              color: #000000 !important;
+              -webkit-text-fill-color: #000000 !important;
+            }
+            .receipt-header,
+            .receipt-header *,
+            [data-theme="dark"] .receipt-header,
+            [data-theme="dark"] .receipt-header * {
+              background-color: #0f172a !important;
+              color: #ffffff !important;
+              -webkit-text-fill-color: #ffffff !important;
+            }
+            .receipt-badge,
+            [data-theme="dark"] .receipt-badge {
+              background-color: rgba(255, 255, 255, 0.15) !important;
+              color: #ffffff !important;
+              -webkit-text-fill-color: #ffffff !important;
+            }
+            .receipt-table th,
+            .receipt-table th *,
+            [data-theme="dark"] .receipt-table th,
+            [data-theme="dark"] .receipt-table th * {
+              background-color: #f1f5f9 !important;
+              color: #000000 !important;
+              -webkit-text-fill-color: #000000 !important;
+            }
+            .receipt-total-box,
+            .receipt-total-box *,
+            [data-theme="dark"] .receipt-total-box,
+            [data-theme="dark"] .receipt-total-box * {
+              color: #166534 !important;
+              -webkit-text-fill-color: #166534 !important;
+            }
+          `}</style>
+
+          {/* Header Row */}
           <div className="receipt-header">
-            <div className="receipt-logo" style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+            <div className="receipt-header-right">
               {activeLogo ? (
-                <img src={activeLogo} alt={activeMadrasa.name} style={{ maxHeight: '65px', maxWidth: '160px', objectFit: 'contain' }} />
+                <div className="receipt-logo-backing">
+                  <img src={activeLogo} alt={activeMadrasa.name} className="receipt-logo-img" />
+                </div>
               ) : null}
+              <div className="receipt-header-titles">
+                <h1 className="receipt-org">{activeMadrasa.name}</h1>
+                <p className="receipt-branch">تعلیمی و مالیاتی ریکارڈ سسٹم • Fee Collection Voucher</p>
+              </div>
             </div>
-            <h1 className="receipt-org">{activeMadrasa.name}</h1>
-            <p className="receipt-branch">تعلیمی و حاضری ریکارڈ سسٹم</p>
-            <div className="receipt-badge">FEE RECEIPT — STUDENT COPY</div>
+            <div className="receipt-header-left">
+              <div className="receipt-badge">فیس رسید • طالب علم کا نسخہ (Student Copy)</div>
+              <div className="receipt-header-meta">
+                <span><strong>رسید نمبر:</strong> #{printData.invoiceId}</span>
+                <span className="receipt-header-meta-sep">•</span>
+                <span><strong>تاریخ:</strong> {formattedDate}</span>
+              </div>
+            </div>
           </div>
 
+          {/* Top Meta Bar: Student Overview Strip */}
           <div className="receipt-meta-bar">
             <div className="receipt-meta-item">
-              <span className="receipt-meta-label">Invoice #</span>
-              <span className="receipt-meta-val">{printData.invoiceId}</span>
+              <span className="receipt-meta-label">نام طالب علم</span>
+              <span className="receipt-meta-val">{(printData.studentName || '').toUpperCase()}</span>
             </div>
             <div className="receipt-meta-item">
-              <span className="receipt-meta-label">Date</span>
-              <span className="receipt-meta-val">{formattedDate}</span>
+              <span className="receipt-meta-label">ولدیت</span>
+              <span className="receipt-meta-val">{(printData.studentFather || '').toUpperCase()}</span>
             </div>
             <div className="receipt-meta-item">
-              <span className="receipt-meta-label">Class</span>
-              <span className="receipt-meta-val">-</span>
+              <span className="receipt-meta-label">داخلہ / شناختی نمبر</span>
+              <span className="receipt-meta-val receipt-info-mono">{printData.studentId || '-'}</span>
             </div>
             <div className="receipt-meta-item">
-              <span className="receipt-meta-label">Student ID</span>
-              <span className="receipt-meta-val">{printData.studentId}</span>
+              <span className="receipt-meta-label">کلاس / شعبہ</span>
+              <span className="receipt-meta-val">{studentClass || '-'}</span>
             </div>
           </div>
 
-          <div className="receipt-student-box">
-            <div className="receipt-section-title">Student Information</div>
-            <div className="receipt-student-row">
-              <div>
-                <span className="receipt-field-label">Name</span>
-                <span className="receipt-field-val">{(printData.studentName || '').toUpperCase()}</span>
+          {/* Spacious Two-Column Body Grid */}
+          <div className="receipt-body-grid">
+            {/* Right Column: Payment Information */}
+            <div className="receipt-col-info">
+              <div className="receipt-card-block">
+                <div className="receipt-card-title">ادائیگی کے کوائف • Payment Details</div>
+                
+                <div className="receipt-info-row">
+                  <span className="receipt-info-label">طریقہ ادائیگی (Method):</span>
+                  <span className="receipt-info-val">{printData.feeMethod || 'نقد (Cash)'}</span>
+                </div>
+
+                <div className="receipt-info-row">
+                  <span className="receipt-info-label">متعلقہ فیس کا مہینہ (Month):</span>
+                  <span className="receipt-info-val" style={{ color: '#0369a1' }}>{readableFeeMonth.toUpperCase()}</span>
+                </div>
+
+                <div className="receipt-info-row">
+                  <span className="receipt-info-label">وصولی کی تاریخ و وقت:</span>
+                  <span className="receipt-info-val receipt-info-sm" dir="ltr">{timestampStr}</span>
+                </div>
+
+                <div className="receipt-status-pill">
+                  ادائیگی تصدیق شدہ (VERIFIED PAID)
+                </div>
               </div>
-              <div>
-                <span className="receipt-field-label">Father</span>
-                <span className="receipt-field-val">{(printData.studentFather || '').toUpperCase()}</span>
+            </div>
+
+            {/* Left Column: Table & Total Received */}
+            <div className="receipt-col-table">
+              <table className="receipt-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '60%', textAlign: 'right' }}>تفصیلات / Fee Particulars</th>
+                    <th style={{ width: '40%', textAlign: 'left' }}>رقم / Amount (PKR)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>ماہانہ فیس ({readableFeeMonth.toUpperCase()})</td>
+                    <td className="receipt-amount-cell" dir="ltr">
+                      Rs. {(printData.feeAmount || 0).toLocaleString()}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>سابقہ بقایا جات (Previous Arrears)</td>
+                    <td className="receipt-amount-cell" dir="ltr">
+                      Rs. {(printData.feeArrears || 0).toLocaleString()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="receipt-total-box">
+                <div className="receipt-total-label">
+                  <span className="receipt-total-label-ur">کل وصول شدہ رقم</span>
+                  <span className="receipt-total-label-en">TOTAL RECEIVED</span>
+                </div>
+                <div className="receipt-total-val" dir="ltr">
+                  <span className="receipt-total-currency">Rs.</span>
+                  <span className="receipt-total-figure">{(printData.totalPaid || 0).toLocaleString()}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <table className="receipt-table">
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", width: "65%" }}>Payment Detail</th>
-                <th style={{ textAlign: "right", width: "35%" }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Monthly Fee — <span>{readableFeeMonth.toUpperCase()}</span></td>
-                <td className="receipt-amount-cell">
-                  <span className="receipt-rs">Rs.</span>
-                  <span>{(printData.feeAmount || 0).toLocaleString()}</span>
-                </td>
-              </tr>
-              <tr>
-                <td>Arrears (Previous Pending)</td>
-                <td className="receipt-amount-cell">
-                  <span className="receipt-rs">Rs.</span>
-                  <span>{(printData.feeArrears || 0).toLocaleString()}</span>
-                </td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr className="receipt-total-row">
-                <td style={{ textAlign: "right", fontWeight: 800, color: "#14532d", letterSpacing: "0.3px" }}>
-                  TOTAL RECEIVED
-                </td>
-                <td className="receipt-total-amount">
-                  <span className="receipt-total-rs">Rs.</span>
-                  <span className="receipt-total-num">{(printData.totalPaid || 0).toLocaleString()}</span>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-
-          <div className="receipt-method-row">
-            <div>
-              <span className="receipt-meta-label">Payment Method</span>
-              <span className="receipt-meta-val">{printData.feeMethod}</span>
-            </div>
-            <div>
-              <span className="receipt-meta-label">Received On</span>
-              <span className="receipt-meta-val">{timestampStr}</span>
-            </div>
-          </div>
-
+          {/* Footer Row */}
           <div className="receipt-footer">
             <div className="receipt-note">
-              Please save this voucher for your records.
+              <div>نوٹ: یہ رسید کمپیوٹرائزڈ ہے اور بوقتِ ضرورت پیش کرنا لازمی ہے۔</div>
+              <div>Please retain this computerized official receipt for school records.</div>
             </div>
-            <div className="receipt-sig">
-              <div className="receipt-sig-line"></div>
-              <div className="receipt-sig-name">Authorized Administrator</div>
-              <div className="receipt-sig-org">{activeMadrasa.name}</div>
+            <div className="receipt-signatures-wrap">
+              <div className="receipt-sig">
+                <div className="receipt-sig-line"></div>
+                <div className="receipt-sig-name">دستخط وصول کنندہ / کیشیئر</div>
+                <div className="receipt-sig-org">{activeMadrasa.name}</div>
+              </div>
+              <div className="receipt-sig">
+                <div className="receipt-sig-line"></div>
+                <div className="receipt-sig-name">دستخط سرپرست / والد</div>
+                <div className="receipt-sig-org">برائے توثیق ادائیگی</div>
+              </div>
             </div>
           </div>
 
+          {/* Watermarks */}
           {activeLogo && (
-            <div className="receipt-watermark-image" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.08, pointerEvents: 'none', zIndex: 0 }}>
-              <img src={activeLogo} alt="" style={{ width: '220px', height: '220px', objectFit: 'contain' }} />
+            <div className="receipt-watermark-image">
+              <img src={activeLogo} alt="" />
             </div>
           )}
           <div className="receipt-watermark">PAID</div>
