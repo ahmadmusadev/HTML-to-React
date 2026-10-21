@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
+import PrintPortal from '../components/PrintPortal';
 import './Admissions.css';
 
 export const calculateAge = (dVal, mVal, yVal, admVal) => {
@@ -183,6 +184,8 @@ export const mapUiToSupabase = (data) => {
 export default function Admissions() {
   const {
     activeMadrasaId,
+    activeMadrasa,
+    activeLogo,
     fetchClassesFromSupabase,
     seedDefaultClassesForMadrasa,
     addClassToSupabase,
@@ -205,6 +208,23 @@ export default function Admissions() {
   const [classSearchQuery, setClassSearchQuery] = useState('');
   const [expandedClassId, setExpandedClassId] = useState(null);
   const [classActionLoading, setClassActionLoading] = useState(false);
+  const [printClassData, setPrintClassData] = useState(null);
+
+  const triggerClassPrint = (cls) => {
+    setPrintClassData(cls);
+    if (typeof document !== 'undefined') {
+      document.body.classList.add('printing-class-sheet');
+      const cleanup = () => {
+        document.body.classList.remove('printing-class-sheet');
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      setTimeout(cleanup, 5000);
+    }
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
 
   // Class Add/Edit Modal State
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
@@ -1497,6 +1517,15 @@ export default function Admissions() {
 
                       <button
                         type="button"
+                        className="class-action-btn print-class-btn"
+                        onClick={() => triggerClassPrint(cls)}
+                        title="اس کلاس کے تمام طلباء کی باضابطہ فہرست پرنٹ کریں"
+                      >
+                        پرنٹ لسٹ
+                      </button>
+
+                      <button
+                        type="button"
                         className="class-action-btn delete-class-btn"
                         onClick={() => handleDeleteClass(cls.id, cls.name || cls.class_name)}
                         title="کلاس کو حذف کریں"
@@ -1510,13 +1539,23 @@ export default function Admissions() {
                       <div className="class-enrolled-drawer slide-down">
                         <div className="class-drawer-header">
                           <h4>اس کلاس میں داخل شدہ طلباء ({enrolled.length}):</h4>
-                          <button
-                            type="button"
-                            className="drawer-add-student-btn"
-                            onClick={() => openAddStudentToClass(cls.id)}
-                          >
-                            + نیا طالب علم
-                          </button>
+                          <div className="class-drawer-header-actions">
+                            <button
+                              type="button"
+                              className="drawer-print-btn"
+                              onClick={() => triggerClassPrint(cls)}
+                              title="اس کلاس کے تمام طلباء کی باضابطہ فہرست پرنٹ کریں"
+                            >
+                              پرنٹ لسٹ
+                            </button>
+                            <button
+                              type="button"
+                              className="drawer-add-student-btn"
+                              onClick={() => openAddStudentToClass(cls.id)}
+                            >
+                              + نیا طالب علم
+                            </button>
+                          </div>
                         </div>
 
                         {enrolled.length === 0 ? (
@@ -2215,6 +2254,137 @@ export default function Admissions() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Class Print Sheet Portal */}
+      {printClassData && (
+        <PrintPortal>
+          <div className="class-print-sheet" dir="rtl">
+            <style>{`
+              @page {
+                size: A4 portrait;
+                margin: 8mm;
+              }
+            `}</style>
+            
+            {/* Header */}
+            <div className="class-print-header">
+              <div className="class-print-brand">
+                {activeLogo ? (
+                  <img src={activeLogo} alt={activeMadrasa?.name || ''} className="class-print-logo" />
+                ) : null}
+                <div className="class-print-title-area">
+                  <h1>{activeMadrasa?.name || 'جامعہ حفظ القرآن الکریم'}</h1>
+                  <p>تعلیمی ریکارڈ و باضابطہ فہرستِ طلباء (Official Class Register)</p>
+                </div>
+              </div>
+              <div className="class-print-badge-area">
+                <div className="class-print-badge">کلاس وائز تفصیلی فہرست</div>
+                <div className="class-print-date">
+                  تاریخِ پرنٹ: {new Date().toLocaleDateString('ur-PK', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+              </div>
+            </div>
+
+            {/* Class Meta Box & Table */}
+            {(() => {
+              const enrolledStudents = records.filter(
+                r => r.isAdmissionProfile && !r.isWithdrawn && (r.admClass === printClassData.id || r.class_id === printClassData.id)
+              );
+              const muqeemCount = enrolledStudents.filter(s => s.admResidential === 'مقیم').length;
+              const ghairMuqeemCount = enrolledStudents.length - muqeemCount;
+
+              return (
+                <>
+                  <div className="class-print-info-grid">
+                    <div className="class-print-info-item">
+                      <span className="class-print-info-label">کلاس / شعبہ:</span>
+                      <span className="class-print-info-val">{printClassData.name || printClassData.class_name}</span>
+                    </div>
+                    <div className="class-print-info-item">
+                      <span className="class-print-info-label">نگران استاد / مدرس:</span>
+                      <span className="class-print-info-val">{printClassData.teacher || printClassData.teacher_name || 'استاد کا نام درج نہیں'}</span>
+                    </div>
+                    <div className="class-print-info-item">
+                      <span className="class-print-info-label">کل داخل شدہ طلباء:</span>
+                      <span className="class-print-info-val">{enrolledStudents.length} طلباء</span>
+                    </div>
+                    <div className="class-print-info-item">
+                      <span className="class-print-info-label">تعلیمی سال:</span>
+                      <span className="class-print-info-val">{new Date().getFullYear()}ء - {new Date().getFullYear() + 1}ء</span>
+                    </div>
+                  </div>
+
+                  {/* Students Table */}
+                  <table className="class-print-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '6%', textAlign: 'center' }}>شمار</th>
+                        <th style={{ width: '13%', textAlign: 'center' }}>داخلہ نمبر</th>
+                        <th style={{ width: '25%' }}>نام طالب علم</th>
+                        <th style={{ width: '22%' }}>ولدیت</th>
+                        <th style={{ width: '14%' }}>رابطہ نمبر</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>رہائش</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>کیفیت / دستخط</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {enrolledStudents.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: 'center', padding: '18px', color: '#64748b' }}>
+                            اس کلاس میں فی الحال کوئی طالب علم داخل نہیں ہے۔
+                          </td>
+                        </tr>
+                      ) : (
+                        enrolledStudents.map((std, idx) => (
+                          <tr key={std.id || idx}>
+                            <td className="center">{idx + 1}</td>
+                            <td className="center" style={{ fontFamily: 'monospace, sans-serif', fontWeight: 'bold' }}>
+                              {std.admRegNo || std.roll_number || '—'}
+                            </td>
+                            <td className="strong">{std.name}</td>
+                            <td>{std.admFatherName || std.fatherName || std.father_name || '—'}</td>
+                            <td dir="ltr" style={{ textAlign: 'right', fontFamily: 'monospace, sans-serif' }}>
+                              {std.fatherMobile || std.admPhone || '—'}
+                            </td>
+                            <td className="center">{std.admResidential || 'غیر مقیم'}</td>
+                            <td className="empty-cell"></td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+
+                  {/* Summary Row */}
+                  <div className="class-print-summary">
+                    <span>کل تعدادِ طلباء: {enrolledStudents.length}</span>
+                    <span>مقیم طلباء: {muqeemCount}</span>
+                    <span>غیر مقیم طلباء: {ghairMuqeemCount}</span>
+                  </div>
+
+                  {/* Signatures */}
+                  <div className="class-print-signatures">
+                    <div className="class-print-sig-col">
+                      <div className="class-print-sig-line"></div>
+                      <div className="class-print-sig-title">دستخط نگران استاد</div>
+                      <div className="class-print-sig-sub">{printClassData.teacher || printClassData.teacher_name || '—'}</div>
+                    </div>
+                    <div className="class-print-sig-col">
+                      <div className="class-print-sig-line"></div>
+                      <div className="class-print-sig-title">دستخط ناظمِ تعلیمات</div>
+                      <div className="class-print-sig-sub">شعبہ حفظ و تجوید</div>
+                    </div>
+                    <div className="class-print-sig-col">
+                      <div className="class-print-sig-line"></div>
+                      <div className="class-print-sig-title">مہر و دستخط مہتمم / ایڈمن</div>
+                      <div className="class-print-sig-sub">{activeMadrasa?.name || 'ادارہ'}</div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </PrintPortal>
       )}
 
     </div>

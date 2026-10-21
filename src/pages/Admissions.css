@@ -676,12 +676,12 @@ textarea:focus {
   }
 
   /* Strip layout wrappers so printable area takes full static control */
-  #root,
-  .app-container,
-  .wrap,
-  .card,
-  .tab-content,
-  #printFormContainer {
+  body:not(.printing-fee-receipt) #root,
+  body:not(.printing-fee-receipt) .app-container,
+  body:not(.printing-fee-receipt) .wrap,
+  body:not(.printing-fee-receipt) .card,
+  body:not(.printing-fee-receipt) .tab-content,
+  body:not(.printing-fee-receipt) #printFormContainer {
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
@@ -2070,6 +2070,29 @@ textarea:focus {
   color: #fff;
 }
 
+.print-class-btn {
+  background: rgba(14, 116, 144, 0.1);
+  color: #0e7490;
+  border-color: rgba(14, 116, 144, 0.28);
+}
+
+.print-class-btn:hover {
+  background: #0e7490;
+  color: #ffffff;
+  border-color: #0e7490;
+}
+
+[data-theme="dark"] .print-class-btn {
+  background: rgba(14, 116, 144, 0.2);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+[data-theme="dark"] .print-class-btn:hover {
+  background: #0284c7;
+  color: #ffffff;
+}
+
 .delete-class-btn {
   background: rgba(239, 68, 68, 0.1);
   color: #dc2626;
@@ -2096,6 +2119,42 @@ textarea:focus {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.class-drawer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-print-btn {
+  background: rgba(14, 116, 144, 0.1);
+  color: #0e7490;
+  border: 1px solid rgba(14, 116, 144, 0.3);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drawer-print-btn:hover {
+  background: #0e7490;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .drawer-print-btn {
+  background: rgba(14, 116, 144, 0.2);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+[data-theme="dark"] .drawer-print-btn:hover {
+  background: #0284c7;
+  color: #ffffff;
 }
 
 .class-drawer-header h4 {
@@ -2341,4 +2400,220 @@ textarea:focus {
   border-radius: 16px;
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+/* ==========================================================================
+   CLASS PRINT SHEET (A4 Portrait, High-Contrast, Theme-Independent Layout)
+   ========================================================================== */
+
+.class-print-sheet {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  background-color: #FFFFFF !important;
+  color: #0f172a !important;
+  font-family: 'Noto Nastaliq Urdu', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  line-height: 1.4;
+  padding: 10mm;
+  box-sizing: border-box;
+}
+
+.class-print-sheet *,
+.class-print-sheet *::before,
+.class-print-sheet *::after {
+  box-sizing: border-box;
+}
+
+/* Header */
+.class-print-header {
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.class-print-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.class-print-logo {
+  max-height: 52px;
+  max-width: 105px;
+  object-fit: contain;
+}
+
+.class-print-title-area h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #0f172a !important;
+  line-height: 1.25;
+}
+
+.class-print-title-area p {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: #475569 !important;
+  font-weight: 600;
+}
+
+.class-print-badge-area {
+  text-align: left;
+}
+
+.class-print-badge {
+  display: inline-block;
+  background-color: #f1f5f9 !important;
+  border: 1.5px solid #0f172a !important;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #0f172a !important;
+}
+
+.class-print-date {
+  font-size: 0.72rem;
+  color: #64748b !important;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* Class Info Grid */
+.class-print-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  background-color: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+
+.class-print-info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.class-print-info-label {
+  font-size: 0.66rem;
+  color: #64748b !important;
+  font-weight: 700;
+  margin-bottom: 1px;
+}
+
+.class-print-info-val {
+  font-size: 0.92rem;
+  color: #0f172a !important;
+  font-weight: 800;
+  font-family: 'Noto Sans Arabic', sans-serif;
+}
+
+/* Students Table */
+.class-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin-bottom: 12px;
+  border: 1.5px solid #cbd5e1;
+}
+
+.class-print-table th,
+.class-print-table td {
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+  text-align: right;
+}
+
+.class-print-table th {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.2px;
+}
+
+.class-print-table tbody tr:nth-child(even) {
+  background-color: #f8fafc !important;
+}
+
+.class-print-table tbody tr {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.class-print-table td.center {
+  text-align: center;
+}
+
+.class-print-table td.strong {
+  font-weight: 800;
+}
+
+.class-print-table td.empty-cell {
+  background-color: #fafafa !important;
+}
+
+/* Summary Bar */
+.class-print-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f172a !important;
+  margin-bottom: 24px;
+}
+
+/* Official Signatures */
+.class-print-signatures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 28px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.class-print-sig-col {
+  text-align: center;
+}
+
+.class-print-sig-line {
+  border-bottom: 1.5px solid #0f172a !important;
+  height: 30px;
+  margin-bottom: 5px;
+}
+
+.class-print-sig-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f172a !important;
+}
+
+.class-print-sig-sub {
+  font-size: 0.68rem;
+  color: #64748b !important;
+}
+
+@media print {
+  .class-print-sheet {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }

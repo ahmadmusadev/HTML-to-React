@@ -1,10 +1,68 @@
+@page {
+  margin: 6mm;
+}
+
 @media print {
-  body * { visibility: hidden; }
-  #print-portal-root, #print-portal-root * { visibility: visible; }
+  html, body {
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  [data-theme="dark"] body {
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+    color: #0f172a !important;
+  }
+
+  /* When printing fee receipt or class sheet, hide entire screen app */
+  body.printing-fee-receipt #root,
+  body.printing-fee-receipt .wrap,
+  body.printing-fee-receipt .tab-content,
+  body.printing-fee-receipt .card,
+  body.printing-class-sheet #root,
+  body.printing-class-sheet .wrap,
+  body.printing-class-sheet .tab-content,
+  body.printing-class-sheet .card,
+  body:has(#print-portal-root > *) #root,
+  body:has(#print-portal-root > *) .wrap,
+  body:has(#print-portal-root > *) .tab-content,
+  body:has(#print-portal-root > *) .card {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  /* Make print portal root visible and positioned at top */
   #print-portal-root {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    background: #FFFFFF !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 9999999 !important;
+  }
+
+  #print-portal-root * {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
+
+
+

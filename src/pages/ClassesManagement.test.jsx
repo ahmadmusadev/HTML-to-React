@@ -308,4 +308,34 @@ describe('Classes Management in Admissions ("All Classes" tab)', () => {
       expect(screen.queryByText('محمد عثمان غنی')).not.toBeInTheDocument();
     });
   });
+
+  it('renders print button for each class and generates printable class register sheet on click', async () => {
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+
+    render(<Admissions />);
+
+    // Click on "تمام کلاسز" tab
+    const classesTabBtn = screen.getByRole('button', { name: 'تمام کلاسز' });
+    fireEvent.click(classesTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/تمام کلاسز کا انتظام/)).toBeInTheDocument();
+    });
+
+    // Check print button exists for classes
+    const printBtns = screen.getAllByRole('button', { name: 'پرنٹ لسٹ' });
+    expect(printBtns.length).toBeGreaterThanOrEqual(5);
+
+    // Click print for first class
+    fireEvent.click(printBtns[0]);
+
+    await waitFor(() => {
+      expect(document.body.classList.contains('printing-class-sheet')).toBe(true);
+      expect(screen.getByText(/تعلیمی ریکارڈ و باضابطہ فہرستِ طلباء/)).toBeInTheDocument();
+      expect(screen.getByText('کلاس وائز تفصیلی فہرست')).toBeInTheDocument();
+      expect(printSpy).toHaveBeenCalled();
+    });
+
+    printSpy.mockRestore();
+  });
 });
