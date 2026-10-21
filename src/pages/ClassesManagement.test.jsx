@@ -333,6 +333,45 @@ describe('Classes Management in Admissions ("All Classes" tab)', () => {
       expect(document.body.classList.contains('printing-class-sheet')).toBe(true);
       expect(screen.getByText(/تعلیمی ریکارڈ و باضابطہ فہرستِ طلباء/)).toBeInTheDocument();
       expect(screen.getByText('کلاس وائز تفصیلی فہرست')).toBeInTheDocument();
+      // Ensure the enrolled student's name is rendered in the printable table
+      expect(screen.getByText('محمد عثمان')).toBeInTheDocument();
+      expect(printSpy).toHaveBeenCalled();
+    });
+
+    printSpy.mockRestore();
+  });
+
+  it('correctly matches and prints students when student has admName or admClass matching class name', async () => {
+    mockFetchStudents.mockResolvedValueOnce([
+      {
+        id: 'std-2',
+        admName: 'عبداللہ بن عمر',
+        roll_number: '05',
+        father_name: 'عمر بن خطاب',
+        admClass: 'حفظِ قرآن — سال اول', // class name matching
+        status: 'active',
+        isAdmissionProfile: true
+      }
+    ]);
+
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+
+    render(<Admissions />);
+
+    const classesTabBtn = screen.getByRole('button', { name: 'تمام کلاسز' });
+    fireEvent.click(classesTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/تمام کلاسز کا انتظام/)).toBeInTheDocument();
+    });
+
+    // Class 2 is "حفظِ قرآن — سال اول"
+    const printBtns = screen.getAllByRole('button', { name: 'پرنٹ لسٹ' });
+    fireEvent.click(printBtns[1]);
+
+    await waitFor(() => {
+      expect(screen.getByText('عبداللہ بن عمر')).toBeInTheDocument();
+      expect(screen.getByText('عمر بن خطاب')).toBeInTheDocument();
       expect(printSpy).toHaveBeenCalled();
     });
 

@@ -59,6 +59,33 @@ export const parseDobString = (dobStr) => {
   return null;
 };
 
+// Robust helper to check if a student belongs to a given class
+export const isStudentInClass = (student, cls) => {
+  if (!student || !cls) return false;
+  // Exclude withdrawn / left students
+  if (student.isWithdrawn === true || student.status === 'left' || student.status === 'withdrawn') {
+    return false;
+  }
+  if (student.isFeeRecord || student.isExamRecord) return false;
+
+  const targetClassId = String(cls.id || '').trim();
+  const targetClassName = String(cls.name || cls.class_name || cls.className || '').trim();
+
+  const stdClassId = String(student.admClass || student.class_id || student.classId || '').trim();
+  const stdClassName = String(student.className || student.class_name || '').trim();
+
+  // 1. Direct ID match
+  if (targetClassId && stdClassId && targetClassId === stdClassId) return true;
+
+  // 2. Direct Name match
+  if (targetClassName && (stdClassId === targetClassName || stdClassName === targetClassName)) return true;
+
+  // 3. Fallback matching
+  if (targetClassName && student.admClass && String(student.admClass).trim() === targetClassName) return true;
+
+  return false;
+};
+
 export const mapSupabaseToUi = (row) => {
   if (!row) return null;
   if (row.isAdmissionProfile) return row;
@@ -210,8 +237,16 @@ export default function Admissions() {
   const [classActionLoading, setClassActionLoading] = useState(false);
   const [printClassData, setPrintClassData] = useState(null);
 
-  const triggerClassPrint = (cls) => {
-    setPrintClassData(cls);
+  const triggerClassPrint = (cls, studentsList = null) => {
+    const listToPrint = (studentsList && Array.isArray(studentsList))
+      ? studentsList
+      : records.filter(r => isStudentInClass(r, cls));
+
+    setPrintClassData({
+      ...cls,
+      students: listToPrint
+    });
+
     if (typeof document !== 'undefined') {
       document.body.classList.add('printing-class-sheet');
       const cleanup = () => {
@@ -1466,9 +1501,7 @@ export default function Admissions() {
           ) : (
             <div className="classes-cards-grid">
               {filteredClassesList.map((cls) => {
-                const enrolled = records.filter(
-                  r => r.isAdmissionProfile && !r.isWithdrawn && (r.admClass === cls.id || r.class_id === cls.id)
-                );
+                const enrolled = records.filter(r => isStudentInClass(r, cls));
                 const isExpanded = expandedClassId === cls.id;
 
                 return (
@@ -1518,7 +1551,7 @@ export default function Admissions() {
                       <button
                         type="button"
                         className="class-action-btn print-class-btn"
-                        onClick={() => triggerClassPrint(cls)}
+                        onClick={() => triggerClassPrint(cls, enrolled)}
                         title="اس کلاس کے تمام طلباء کی باضابطہ فہرست پرنٹ کریں"
                       >
                         پرنٹ لسٹ
@@ -1543,7 +1576,7 @@ export default function Admissions() {
                             <button
                               type="button"
                               className="drawer-print-btn"
-                              onClick={() => triggerClassPrint(cls)}
+                              onClick={() => triggerClassPrint(cls, enrolled)}
                               title="اس کلاس کے تمام طلباء کی باضابطہ فہرست پرنٹ کریں"
                             >
                               پرنٹ لسٹ
@@ -1578,9 +1611,9 @@ export default function Admissions() {
                               <tbody>
                                 {enrolled.map((std) => (
                                   <tr key={std.id}>
-                                    <td className="std-reg-cell">{std.admRegNo || '—'}</td>
-                                    <td className="std-name-cell"><strong>{std.name}</strong></td>
-                                    <td>{std.admFatherName || std.fatherName || '—'}</td>
+                                    <td className="std-reg-cell">{std.admRegNo || std.roll_number || '—'}</td>
+                                    <td className="std-name-cell"><strong>{std.name || std.admName || std.student_name || '—'}</strong></td>
+                                    <td>{std.admFatherName || std.fatherName || std.father_name || '—'}</td>
                                     <td>{std.fatherMobile || std.admPhone || '—'}</td>
                                     <td>{std.admDate || '—'}</td>
                                     <td className="std-actions-cell">
@@ -2288,10 +2321,10 @@ export default function Admissions() {
 
             {/* Class Meta Box & Table */}
             {(() => {
-              const enrolledStudents = records.filter(
-                r => r.isAdmissionProfile && !r.isWithdrawn && (r.admClass === printClassData.id || r.class_id === printClassData.id)
-              );
-              const muqeemCount = enrolledStudents.filter(s => s.admResidential === 'مقیم').length;
+              const enrolledStudents = (printClassData.students && Array.isArray(printClassData.students))
+                ? printClassData.students
+                : records.filter(r => isStudentInClass(r, printClassData));
+              const muqeemCount = enrolledStudents.filter(s => (s.admResidential === 'مقیم' || s.residential === 'مقیم')).length;
               const ghairMuqeemCount = enrolledStudents.length - muqeemCount;
 
               return (
@@ -2336,21 +2369,29 @@ export default function Admissions() {
                           </td>
                         </tr>
                       ) : (
-                        enrolledStudents.map((std, idx) => (
-                          <tr key={std.id || idx}>
-                            <td className="center">{idx + 1}</td>
-                            <td className="center" style={{ fontFamily: 'monospace, sans-serif', fontWeight: 'bold' }}>
-                              {std.admRegNo || std.roll_number || '—'}
-                            </td>
-                            <td className="strong">{std.name}</td>
-                            <td>{std.admFatherName || std.fatherName || std.father_name || '—'}</td>
-                            <td dir="ltr" style={{ textAlign: 'right', fontFamily: 'monospace, sans-serif' }}>
-                              {std.fatherMobile || std.admPhone || '—'}
-                            </td>
-                            <td className="center">{std.admResidential || 'غیر مقیم'}</td>
-                            <td className="empty-cell"></td>
-                          </tr>
-                        ))
+                        enrolledStudents.map((std, idx) => {
+                          const studentName = std.name || std.admName || std.student_name || std.studentName || '—';
+                          const fatherName = std.admFatherName || std.fatherName || std.father_name || std.studentFather || '—';
+                          const regNo = std.admRegNo || std.roll_number || std.rollNumber || std.regNo || (idx + 1);
+                          const mobile = std.fatherMobile || std.admPhone || std.mobile || std.phone || '—';
+                          const residential = std.admResidential || std.residential || (std.isHostel ? 'مقیم' : 'غیر مقیم');
+
+                          return (
+                            <tr key={std.id || idx}>
+                              <td className="center">{idx + 1}</td>
+                              <td className="center" style={{ fontFamily: 'monospace, sans-serif', fontWeight: 'bold' }}>
+                                {regNo}
+                              </td>
+                              <td className="strong">{studentName}</td>
+                              <td>{fatherName}</td>
+                              <td dir="ltr" style={{ textAlign: 'right', fontFamily: 'monospace, sans-serif' }}>
+                                {mobile}
+                              </td>
+                              <td className="center">{residential}</td>
+                              <td className="empty-cell"></td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
