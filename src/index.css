@@ -24,6 +24,17 @@
   font-display: swap;
 }
 
+    html {
+      font-size: 18px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    @media (max-width: 640px) {
+      html {
+        font-size: 16.5px;
+      }
+    }
+
     *, *::before, *::after {
       box-sizing: border-box;
       font-family: 'Alvi Nastaleeq', serif !important;
@@ -34,7 +45,7 @@
       background: var(--bg);
       margin: 0; padding: 0;
       color: #111111; direction: rtl;
-      font-size: 16px; line-height: 1.7;
+      font-size: 1rem; line-height: 1.65;
       min-height: 100vh;
     }
 
@@ -108,12 +119,12 @@
     }
     h3 { font-size: 1.05rem; color: var(--accent); margin-top: 18px; text-align: center; font-weight: 600; }
 
-    label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.88rem; font-weight: bold; }
+    label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.92rem; font-weight: bold; }
 
-    input[type="text"], input[type="date"], input[type="number"], select {
-      width: 100%; padding: 11px 14px; border-radius: var(--radius);
+    input[type="text"], input[type="password"], input[type="email"], input[type="date"], input[type="number"], input[type="tel"], select, textarea {
+      width: 100%; padding: 10px 14px; border-radius: var(--radius);
       border: 1.5px solid var(--border); background: #fff;
-      font-family: inherit; font-size: 1rem;
+      font-family: inherit; font-size: 1.05rem;
       transition: border-color 0.18s, box-shadow 0.18s;
       color: #111111;
     }
