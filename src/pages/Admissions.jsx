@@ -214,6 +214,8 @@ export default function Admissions() {
     activeMadrasa,
     activeLogo,
     fetchClassesFromSupabase,
+    classesList: contextClassesList,
+    setClassesList: setContextClassesList,
     seedDefaultClassesForMadrasa,
     addClassToSupabase,
     updateClassInSupabase,
@@ -226,7 +228,16 @@ export default function Admissions() {
   } = useMadrasa();
   const [activeTab, setActiveTab] = useState('new');
   const [records, setRecords] = useState([]);
-  const [classesList, setClassesList] = useState([]);
+  const [classesList, setClassesList] = useState(() => (
+    contextClassesList && contextClassesList.length > 0 ? contextClassesList : []
+  ));
+
+  // Sync classes with central MadrasaContext
+  useEffect(() => {
+    if (contextClassesList && Array.isArray(contextClassesList) && contextClassesList.length > 0) {
+      setClassesList(contextClassesList);
+    }
+  }, [contextClassesList]);
   const [loading, setLoading] = useState(true);
   const [wizardStep, setWizardStep] = useState(1);
   const [editingStudentId, setEditingStudentId] = useState(null);
@@ -310,7 +321,7 @@ export default function Admissions() {
 
   const getClassDetails = (clsId) => {
     if (!clsId) return { name: 'غیر معین کلاس', teacher: 'استاد مقرر نہیں' };
-    const cls = classesList.find(c => c.id === clsId || String(c.id) === String(clsId));
+    const cls = classesList.find(c => c.id === clsId || String(c.id) === String(clsId) || c.name === clsId || c.class_name === clsId);
     if (cls) {
       return {
         name: cls.name || cls.class_name || cls.className || 'غیر معین کلاس',
@@ -372,18 +383,24 @@ export default function Admissions() {
 
         if (clsData && clsData.length > 0) {
           setClassesList(clsData);
+          if (setContextClassesList) setContextClassesList(clsData);
         } else {
           // If no classes exist yet in database/storage for this madrasa, auto-seed the 5 default classes!
           try {
             const seeded = await seedDefaultClassesForMadrasa(activeMadrasaId);
             if (isMounted && seeded && seeded.length > 0) {
               setClassesList(seeded);
+              if (setContextClassesList) setContextClassesList(seeded);
             } else if (isMounted) {
               setClassesList(DEFAULT_CLASSES);
+              if (setContextClassesList) setContextClassesList(DEFAULT_CLASSES);
             }
           } catch (seedErr) {
             console.warn('Auto-seed classes warning:', seedErr);
-            if (isMounted) setClassesList(DEFAULT_CLASSES);
+            if (isMounted) {
+              setClassesList(DEFAULT_CLASSES);
+              if (setContextClassesList) setContextClassesList(DEFAULT_CLASSES);
+            }
           }
         }
 
@@ -495,14 +512,20 @@ export default function Admissions() {
           class_name: modalClassName.trim(),
           teacher_name: modalTeacherName.trim()
         }, activeMadrasaId);
-        setClassesList(prev => [...prev, newCls]);
+        setClassesList(prev => [...(prev || []).filter(c => c.id !== newCls.id), newCls]);
+        if (setContextClassesList) {
+          setContextClassesList(prev => [...(prev || []).filter(c => c.id !== newCls.id), newCls]);
+        }
         alert('کلاس کامیابی سے شامل ہو گئی ہے۔');
       } else {
         const updated = await updateClassInSupabase(modalClassId, {
           class_name: modalClassName.trim(),
           teacher_name: modalTeacherName.trim()
         }, activeMadrasaId);
-        setClassesList(prev => prev.map(c => c.id === modalClassId ? { ...c, ...updated } : c));
+        setClassesList(prev => (prev || []).map(c => (c.id === modalClassId || c.id === updated?.id) ? { ...c, ...updated } : c));
+        if (setContextClassesList) {
+          setContextClassesList(prev => (prev || []).map(c => (c.id === modalClassId || c.id === updated?.id) ? { ...c, ...updated } : c));
+        }
         if (updated?.id && updated.id !== modalClassId) {
           setRecords(prev => prev.map(r => (r.admClass === modalClassId || r.class_id === modalClassId) ? { ...r, admClass: updated.id, class_id: updated.id } : r));
         }
@@ -528,7 +551,10 @@ export default function Admissions() {
     setClassActionLoading(true);
     try {
       await deleteClassFromSupabase(classId, activeMadrasaId);
-      setClassesList(prev => prev.filter(c => c.id !== classId));
+      setClassesList(prev => (prev || []).filter(c => c.id !== classId));
+      if (setContextClassesList) {
+        setContextClassesList(prev => (prev || []).filter(c => c.id !== classId));
+      }
       setRecords(prev => prev.map(r => (r.admClass === classId || r.class_id === classId) ? { ...r, admClass: '', class_id: null } : r));
       if (expandedClassId === classId) setExpandedClassId(null);
       alert('کلاس کامیابی سے حذف کر دی گئی ہے۔');

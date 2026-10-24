@@ -89,6 +89,8 @@ export default function Entry() {
     saveMadrasaData,
     fetchStudentsFromSupabase,
     fetchClassesFromSupabase,
+    classesList: contextClassesList,
+    setClassesList: setContextClassesList,
     saveHifzHalfYearRecordToSupabase,
     updateStudentHifzStartDate
   } = useMadrasa();
@@ -97,8 +99,17 @@ export default function Entry() {
   
   const [records, setRecords] = useState([]);
   const [studentsList, setStudentsList] = useState([]);
-  const [classesList, setClassesList] = useState([]);
+  const [classesList, setClassesList] = useState(() => (
+    contextClassesList && contextClassesList.length > 0 ? contextClassesList : []
+  ));
   const [monthlyExams, setMonthlyExams] = useState([]);
+
+  // Keep classes synchronized with central MadrasaContext
+  useEffect(() => {
+    if (contextClassesList && Array.isArray(contextClassesList) && contextClassesList.length > 0) {
+      setClassesList(contextClassesList);
+    }
+  }, [contextClassesList]);
 
   useEffect(() => {
     let isMounted = true;
@@ -109,11 +120,13 @@ export default function Entry() {
       setRecords(storedData.records || []);
       setMonthlyExams(storedData.monthlyExams || []);
 
-      const initialClasses = (storedClasses.classes && storedClasses.classes.length > 0)
-        ? storedClasses.classes
-        : ((storedData.classes && storedData.classes.length > 0)
-          ? storedData.classes
-          : (isValidUUID(activeMadrasaId) ? [] : DEFAULT_CLASSES));
+      const initialClasses = (contextClassesList && contextClassesList.length > 0)
+        ? contextClassesList
+        : ((storedClasses.classes && storedClasses.classes.length > 0)
+          ? storedClasses.classes
+          : ((storedData.classes && storedData.classes.length > 0)
+            ? storedData.classes
+            : (isValidUUID(activeMadrasaId) ? [] : DEFAULT_CLASSES)));
       setClassesList(initialClasses);
 
       try {
@@ -135,6 +148,7 @@ export default function Entry() {
           }
           if (clsData && Array.isArray(clsData) && clsData.length > 0) {
             setClassesList(clsData);
+            if (setContextClassesList) setContextClassesList(clsData);
           }
         }
       } catch (err) {
@@ -182,10 +196,10 @@ export default function Entry() {
   const meLoadStudents = () => {
     if (!meClassSelect) { alert('براہ کرم پہلے کلاس منتخب کریں۔'); return; }
     
-    const cls = classesList.find(c => c.id === meClassSelect || c.name === meClassSelect);
+    const cls = classesList.find(c => c.id === meClassSelect || c.name === meClassSelect || c.class_name === meClassSelect);
     const students = records.filter(r => 
       r.isAdmissionProfile && 
-      (r.admClass === meClassSelect || r.class_id === meClassSelect || (cls && r.admClass === cls.name)) && 
+      (r.admClass === meClassSelect || r.class_id === meClassSelect || r.classId === meClassSelect || (cls && (r.admClass === cls.name || r.admClass === cls.class_name || r.admClass === cls.id))) && 
       !r.isWithdrawn &&
       r.status !== 'left' &&
       r.status !== 'withdrawn'
@@ -515,9 +529,9 @@ export default function Entry() {
 
   const renderClassReport = () => {
     if (!crClassSelect) { alert('کلاس منتخب کریں'); return; }
-    const cls = classesList.find(c => c.id === crClassSelect || c.name === crClassSelect);
+    const cls = classesList.find(c => c.id === crClassSelect || c.name === crClassSelect || c.class_name === crClassSelect);
     const exam = monthlyExams.find(r => 
-      (r.classId === crClassSelect || (cls && (r.className === cls.name || r.classId === cls.id))) && 
+      (r.classId === crClassSelect || (cls && (r.className === cls.name || r.className === cls.class_name || r.classId === cls.id || r.classId === cls.name))) && 
       r.month === crMonth && 
       String(r.year) === String(crYear)
     );
@@ -592,7 +606,7 @@ export default function Entry() {
                 <label>کلاس منتخب کریں</label>
                 <select value={meClassSelect} onChange={e => setMeClassSelect(e.target.value)}>
                   <option value="">کلاس منتخب کریں...</option>
-                  {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>)}
+                  {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.class_name || c.className || c.id}</option>)}
                 </select>
               </div>
               <div>
@@ -675,7 +689,7 @@ export default function Entry() {
               <div className="me-history-controls">
                 <select value={meHistoryClassFilter} onChange={e => setMeHistoryClassFilter(e.target.value)} style={{ maxWidth: "220px" }}>
                   <option value="">تمام کلاسز</option>
-                  {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>)}
+                  {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.class_name || c.className || c.id}</option>)}
                 </select>
                 <select value={meHistoryMonthFilter} onChange={e => setMeHistoryMonthFilter(e.target.value)} style={{ maxWidth: "160px" }}>
                   <option value="">تمام مہینے</option>
@@ -1013,7 +1027,7 @@ export default function Entry() {
                 <label>کلاس منتخب کریں</label>
                 <select value={crClassSelect} onChange={e => setCrClassSelect(e.target.value)}>
                   <option value="">کلاس منتخب کریں...</option>
-                  {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>)}
+                  {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.class_name || c.className || c.id}</option>)}
                 </select>
               </div>
               <div>

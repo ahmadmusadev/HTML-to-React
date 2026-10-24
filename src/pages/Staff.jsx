@@ -14,14 +14,25 @@ export default function Staff() {
     addStaffToSupabase,
     updateStaffInSupabase,
     deleteStaffFromSupabase,
-    fetchClassesFromSupabase
+    fetchClassesFromSupabase,
+    classesList: contextClassesList,
+    setClassesList: setContextClassesList
   } = useMadrasa();
 
   const { role } = useAuth();
   const isAuthorizedToInvite = role === 'admin' || role === 'super_admin';
 
   const [staffProfiles, setStaffProfiles] = useState([]);
-  const [classes, setClasses] = useState([]);
+  const [classes, setClasses] = useState(() => (
+    contextClassesList && contextClassesList.length > 0 ? contextClassesList : []
+  ));
+
+  // Synchronize classes with central MadrasaContext
+  useEffect(() => {
+    if (contextClassesList && Array.isArray(contextClassesList) && contextClassesList.length > 0) {
+      setClasses(contextClassesList);
+    }
+  }, [contextClassesList]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [fetchError, setFetchError] = useState(null);
@@ -149,6 +160,9 @@ export default function Staff() {
         if (isMounted) {
           const loadedClasses = classesData || [];
           setClasses(loadedClasses);
+          if (loadedClasses.length > 0 && setContextClassesList) {
+            setContextClassesList(loadedClasses);
+          }
 
           if (hasError) {
             setFetchError(errorMessage);

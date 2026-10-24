@@ -26,16 +26,27 @@ export default function Dashboard() {
     fetchStudentAttendanceFromSupabase,
     fetchStaffAttendanceFromSupabase,
     fetchFeesFromSupabase,
-    fetchExamResultsFromSupabase
+    fetchExamResultsFromSupabase,
+    classesList: contextClassesList,
+    setClassesList: setContextClassesList
   } = useMadrasa();
 
   const [currentDateStr, setCurrentDateStr] = useState('لوڈ ہو رہا ہے...');
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   
   const [students, setStudents] = useState([]);
-  const [classesList, setClassesList] = useState([]);
+  const [classesList, setClassesList] = useState(() => (
+    contextClassesList && contextClassesList.length > 0 ? contextClassesList : []
+  ));
   const [staffList, setStaffList] = useState([]);
   const [hifzRecords, setHifzRecords] = useState([]);
+
+  // Synchronize classes with central MadrasaContext
+  useEffect(() => {
+    if (contextClassesList && Array.isArray(contextClassesList) && contextClassesList.length > 0) {
+      setClassesList(contextClassesList);
+    }
+  }, [contextClassesList]);
 
   // Today's Snapshot state
   const [todayStudentAttendance, setTodayStudentAttendance] = useState([]);
@@ -102,6 +113,9 @@ export default function Dashboard() {
           }
           if (fetchedClasses && Array.isArray(fetchedClasses)) {
             setClassesList(fetchedClasses);
+            if (fetchedClasses.length > 0 && setContextClassesList) {
+              setContextClassesList(fetchedClasses);
+            }
           }
           if (fetchedStaff && Array.isArray(fetchedStaff)) {
             setStaffList(fetchedStaff);

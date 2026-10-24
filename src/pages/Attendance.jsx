@@ -120,11 +120,15 @@ export default function Attendance() {
     fetchStaffAttendanceFromSupabase,
     upsertStaffAttendanceCheckIn,
     upsertStaffAttendanceCheckOut,
-    fetchStaffAttendancePendingDate
+    fetchStaffAttendancePendingDate,
+    classesList: contextClassesList,
+    setClassesList: setContextClassesList
   } = useMadrasa();
 
   const [records, setRecords] = useState([]);
-  const [classesList, setClassesList] = useState([]);
+  const [classesList, setClassesList] = useState(() => (
+    contextClassesList && contextClassesList.length > 0 ? contextClassesList : []
+  ));
   
   const [dailyAttendance, setDailyAttendance] = useState({});
   const [attendance, setAttendance] = useState({});
@@ -139,6 +143,13 @@ export default function Attendance() {
   
   const [showHistory, setShowHistory] = useState(false);
 
+  // Synchronize classes with central MadrasaContext
+  useEffect(() => {
+    if (contextClassesList && Array.isArray(contextClassesList) && contextClassesList.length > 0) {
+      setClassesList(contextClassesList);
+    }
+  }, [contextClassesList]);
+
   // Initial load
   useEffect(() => {
     let isMounted = true;
@@ -152,13 +163,12 @@ export default function Attendance() {
           const localStaffAtt = loadMadrasaData('hf_staff_attendance_v1', activeMadrasaId) || [];
           
           setRecords(d.records || []);
-          if (localClassesData.classes && localClassesData.classes.length > 0) {
-            setClassesList(localClassesData.classes);
-          } else if (d.classes && d.classes.length > 0) {
-            setClassesList(d.classes);
-          } else {
-            setClassesList(DEFAULT_CLASSES);
-          }
+          const initialClasses = (contextClassesList && contextClassesList.length > 0)
+            ? contextClassesList
+            : (localClassesData.classes && localClassesData.classes.length > 0
+              ? localClassesData.classes
+              : (d.classes && d.classes.length > 0 ? d.classes : DEFAULT_CLASSES));
+          setClassesList(initialClasses);
           setDailyAttendance(d.dailyAttendance || {});
           setAttendance(d.attendance || {});
           setStudentAttendanceList(localAttList);
@@ -198,6 +208,7 @@ export default function Attendance() {
           }
           if (clsData && Array.isArray(clsData) && clsData.length > 0) {
             setClassesList(clsData);
+            if (setContextClassesList) setContextClassesList(clsData);
           }
           if (attData && attData.length > 0) {
             setStudentAttendanceList(attData);
@@ -287,11 +298,11 @@ export default function Attendance() {
   const [studentAttFormData, setStudentAttFormData] = useState(null);
   const [isSavingBulk, setIsSavingBulk] = useState(false);
 
-  const selectedClsObj = classesList.find(c => c.id === studentAttClass);
+  const selectedClsObj = classesList.find(c => c.id === studentAttClass || c.name === studentAttClass || c.class_name === studentAttClass);
   const studentsInClass = records.filter(r =>
     (r.isAdmissionProfile || r.roll_number) &&
-    (r.admClass === studentAttClass || r.class_id === studentAttClass || r.classId === studentAttClass || (selectedClsObj && r.admClass === selectedClsObj.name)) &&
-    !r.isWithdrawn && r.status !== 'left'
+    (r.admClass === studentAttClass || r.class_id === studentAttClass || r.classId === studentAttClass || (selectedClsObj && (r.admClass === selectedClsObj.name || r.admClass === selectedClsObj.class_name || r.admClass === selectedClsObj.id))) &&
+    !r.isWithdrawn && r.status !== 'left' && r.status !== 'withdrawn'
   );
 
   useEffect(() => {
@@ -1329,7 +1340,7 @@ export default function Attendance() {
             <select value={studentAttClass} onChange={(e) => setStudentAttClass(e.target.value)}>
               <option value="">کلاس منتخب کریں...</option>
               {classesList.map(c => (
-                <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>
+                <option key={c.id} value={c.id}>{c.name || c.class_name || c.className || c.id}</option>
               ))}
             </select>
           </div>
@@ -1536,7 +1547,7 @@ export default function Attendance() {
               <select value={crClass} onChange={e => setCrClass(e.target.value)}>
                 <option value="">کلاس منتخب کریں...</option>
                 {classesList.map(c => (
-                  <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>
+                  <option key={c.id} value={c.id}>{c.name || c.class_name || c.className || c.id}</option>
                 ))}
               </select>
             </div>

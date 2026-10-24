@@ -474,6 +474,7 @@ export function MadrasaProvider({ children }) {
         const rec = loadMadrasaData('hf_records_v1', madrasaId) || {};
         rec.classes = mapped;
         saveMadrasaData('hf_records_v1', rec, madrasaId);
+        setClassesList(mapped);
         return mapped;
       }
       saveMadrasaData('hf_classes_v1', { classes: [] }, madrasaId);
@@ -545,13 +546,19 @@ export function MadrasaProvider({ children }) {
       });
       saveMadrasaData('hf_classes_meta_v1', localMeta, madrasaId);
 
-      return insertedRows.map((c, idx) => ({
+      const seededList = insertedRows.map((c, idx) => ({
         id: c.id,
         name: c.class_name || c.name || '',
         class_name: c.class_name || c.name || '',
         teacher: c.teacher_name || defaultList[idx]?.teacher || '',
         teacher_name: c.teacher_name || defaultList[idx]?.teacher || ''
       }));
+      saveMadrasaData('hf_classes_v1', { classes: seededList }, madrasaId);
+      const rec = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      rec.classes = seededList;
+      saveMadrasaData('hf_records_v1', rec, madrasaId);
+      setClassesList(seededList);
+      return seededList;
     } catch (e) {
       console.error('[MadrasaContext] Error seeding default classes:', e);
       throw new Error(e?.message || 'کلاسز سیڈ کرنے میں مسئلہ پیش آیا۔');
@@ -574,6 +581,10 @@ export function MadrasaProvider({ children }) {
       };
       localData.classes = [...(localData.classes || []), newClass];
       saveMadrasaData('hf_classes_v1', localData, madrasaId);
+      const rec = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      rec.classes = [...(rec.classes || []), newClass];
+      saveMadrasaData('hf_records_v1', rec, madrasaId);
+      setClassesList(prev => [...(prev || []).filter(c => c.id !== newClass.id), newClass]);
       return newClass;
     }
 
@@ -626,6 +637,7 @@ export function MadrasaProvider({ children }) {
       const localRec = loadMadrasaData('hf_records_v1', madrasaId) || {};
       localRec.classes = [...(localRec.classes || []).filter(c => c.id !== createdRow.id), createdObj];
       saveMadrasaData('hf_records_v1', localRec, madrasaId);
+      setClassesList(prev => [...(prev || []).filter(c => c.id !== createdObj.id), createdObj]);
 
       return createdObj;
     } catch (e) {
@@ -651,7 +663,12 @@ export function MadrasaProvider({ children }) {
           : c
       );
       saveMadrasaData('hf_classes_v1', localData, madrasaId);
-      return { id: classId, name: className, class_name: className, teacher: teacherName, teacher_name: teacherName };
+      const rec = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      rec.classes = localData.classes;
+      saveMadrasaData('hf_records_v1', rec, madrasaId);
+      const updatedLocalObj = { id: classId, name: className, class_name: className, teacher: teacherName, teacher_name: teacherName };
+      setClassesList(prev => (prev || []).map(c => c.id === classId ? updatedLocalObj : c));
+      return updatedLocalObj;
     }
 
     // If madrasaId is a valid UUID, but classId is NOT a valid UUID (e.g. 'cls-1', 'cls-2', or offline temporary id):
@@ -704,12 +721,13 @@ export function MadrasaProvider({ children }) {
       };
 
       const localClasses = loadMadrasaData('hf_classes_v1', madrasaId) || { classes: [] };
-      localClasses.classes = (localClasses.classes || []).map(c => c.id === updatedRow.id ? updatedObj : c);
+      localClasses.classes = (localClasses.classes || []).map(c => (c.id === classId || c.id === updatedRow.id) ? updatedObj : c);
       saveMadrasaData('hf_classes_v1', localClasses, madrasaId);
 
       const localRec = loadMadrasaData('hf_records_v1', madrasaId) || {};
-      localRec.classes = (localRec.classes || []).map(c => c.id === updatedRow.id ? updatedObj : c);
+      localRec.classes = (localRec.classes || []).map(c => (c.id === classId || c.id === updatedRow.id) ? updatedObj : c);
       saveMadrasaData('hf_records_v1', localRec, madrasaId);
+      setClassesList(prev => (prev || []).map(c => (c.id === classId || c.id === updatedRow.id) ? updatedObj : c));
 
       return updatedObj;
     } catch (e) {
@@ -729,6 +747,7 @@ export function MadrasaProvider({ children }) {
         (r.admClass === classId || r.class_id === classId) ? { ...r, admClass: '', class_id: null } : r
       );
       saveMadrasaData('hf_records_v1', stdData, madrasaId);
+      setClassesList(prev => (prev || []).filter(c => c.id !== classId));
       return true;
     }
 
@@ -754,6 +773,7 @@ export function MadrasaProvider({ children }) {
       const rec = loadMadrasaData('hf_records_v1', madrasaId) || {};
       rec.classes = (rec.classes || []).filter(c => c.id !== classId);
       saveMadrasaData('hf_records_v1', rec, madrasaId);
+      setClassesList(prev => (prev || []).filter(c => c.id !== classId));
 
       try {
         const localMeta = loadMadrasaData('hf_classes_meta_v1', madrasaId) || {};
@@ -767,6 +787,55 @@ export function MadrasaProvider({ children }) {
       throw new Error(e?.message || 'کلاس حذف کرنے میں مسئلہ پیش آیا۔');
     }
   };
+
+  // Central Reactive Classes State Scoped to Active Madrasa
+  const [classesList, setClassesList] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = loadMadrasaData('hf_classes_v1', activeMadrasaId);
+      if (stored?.classes && Array.isArray(stored.classes) && stored.classes.length > 0) {
+        return stored.classes;
+      }
+      const rec = loadMadrasaData('hf_records_v1', activeMadrasaId);
+      if (rec?.classes && Array.isArray(rec.classes) && rec.classes.length > 0) {
+        return rec.classes;
+      }
+    } catch {}
+    return [];
+  });
+
+  // Sync classes whenever active madrasa changes or on mount
+  useEffect(() => {
+    let isMounted = true;
+    if (!activeMadrasaId) {
+      setClassesList([]);
+      return;
+    }
+
+    // 1. Immediately populate from local cache so UI is instantaneous
+    const stored = loadMadrasaData('hf_classes_v1', activeMadrasaId);
+    if (stored?.classes && Array.isArray(stored.classes) && stored.classes.length > 0) {
+      setClassesList(stored.classes);
+    } else {
+      const rec = loadMadrasaData('hf_records_v1', activeMadrasaId);
+      if (rec?.classes && Array.isArray(rec.classes) && rec.classes.length > 0) {
+        setClassesList(rec.classes);
+      }
+    }
+
+    // 2. Fetch authoritative fresh classes from Supabase
+    fetchClassesFromSupabase(activeMadrasaId)
+      .then(fetched => {
+        if (isMounted && fetched && Array.isArray(fetched) && fetched.length > 0) {
+          setClassesList(fetched);
+        }
+      })
+      .catch(err => {
+        console.warn('[MadrasaContext] Classes fetch warning:', err);
+      });
+
+    return () => { isMounted = false; };
+  }, [activeMadrasaId]);
 
   const deleteStudentFromSupabase = async (studentId, madrasaId = activeMadrasaId) => {
     if (!isValidUUID(studentId)) {
@@ -2093,6 +2162,8 @@ export function MadrasaProvider({ children }) {
       pendingSyncCount,
       flushOfflineQueue: () => flushQueue(supabase),
       fetchClassesFromSupabase,
+      classesList,
+      setClassesList,
       seedDefaultClassesForMadrasa,
       addClassToSupabase,
       updateClassInSupabase,

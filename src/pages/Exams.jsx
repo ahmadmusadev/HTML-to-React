@@ -25,15 +25,26 @@ export default function Exams() {
     upsertExamMiqdarToSupabase,
     upsertExamMiqdarSingle,
     fetchExamResultsFromSupabase,
-    upsertExamResultsToSupabase
+    upsertExamResultsToSupabase,
+    classesList: contextClassesList,
+    setClassesList: setContextClassesList
   } = useMadrasa();
 
   const [activeTab, setActiveTab] = useState('miqdar-class');
   
   const [records, setRecords] = useState([]);
-  const [classesList, setClassesList] = useState([]);
+  const [classesList, setClassesList] = useState(() => (
+    contextClassesList && contextClassesList.length > 0 ? contextClassesList : []
+  ));
   const [examMiqdar, setExamMiqdar] = useState([]);
   const [examResults, setExamResults] = useState([]);
+
+  // Synchronize classes with central MadrasaContext
+  useEffect(() => {
+    if (contextClassesList && Array.isArray(contextClassesList) && contextClassesList.length > 0) {
+      setClassesList(contextClassesList);
+    }
+  }, [contextClassesList]);
 
   // Sync state with active madrasa
   useEffect(() => {
@@ -42,11 +53,13 @@ export default function Exams() {
     const loadInitialData = async () => {
       const storedData = loadMadrasaData('hf_records_v1', activeMadrasaId) || {};
       const storedClasses = loadMadrasaData('hf_classes_v1', activeMadrasaId) || {};
-      const initialClasses = storedClasses.classes && storedClasses.classes.length > 0
-        ? storedClasses.classes
-        : (storedData.classes && storedData.classes.length > 0
-          ? storedData.classes
-          : (isValidUUID(activeMadrasaId) ? [] : DEFAULT_CLASSES));
+      const initialClasses = (contextClassesList && contextClassesList.length > 0)
+        ? contextClassesList
+        : (storedClasses.classes && storedClasses.classes.length > 0
+          ? storedClasses.classes
+          : (storedData.classes && storedData.classes.length > 0
+            ? storedData.classes
+            : (isValidUUID(activeMadrasaId) ? [] : DEFAULT_CLASSES)));
 
       if (isMounted) {
         setRecords(storedData.records || []);
@@ -69,6 +82,7 @@ export default function Exams() {
           }
           if (clsData && Array.isArray(clsData) && clsData.length > 0) {
             setClassesList(clsData);
+            if (setContextClassesList) setContextClassesList(clsData);
           }
           if (miqdarData && miqdarData.length > 0) {
             setExamMiqdar(miqdarData.map(mapExamMiqdarToUi).filter(Boolean));
@@ -132,10 +146,10 @@ export default function Exams() {
 
   // Helper to filter active students by class
   const getActiveStudentsByClass = (clsId) => {
-    const selectedClsObj = classesList.find(c => c.id === clsId);
+    const selectedClsObj = classesList.find(c => c.id === clsId || c.name === clsId || c.class_name === clsId);
     return records.filter(r => 
       r.isAdmissionProfile && 
-      (r.admClass === clsId || r.classId === clsId || r.class_id === clsId || (selectedClsObj && r.admClass === selectedClsObj.name)) && 
+      (r.admClass === clsId || r.classId === clsId || r.class_id === clsId || (selectedClsObj && (r.admClass === selectedClsObj.name || r.admClass === selectedClsObj.class_name || r.admClass === selectedClsObj.id))) && 
       !r.isWithdrawn && 
       r.status !== 'left' &&
       r.status !== 'withdrawn'
@@ -148,7 +162,7 @@ export default function Exams() {
     const students = getActiveStudentsByClass(mqClassSelect);
     if (!students.length) { alert('اس کلاس میں کوئی طالب علم نہیں'); setMqClassStudents(null); return; }
     
-    const cls = classesList.find(c => c.id === mqClassSelect);
+    const cls = classesList.find(c => c.id === mqClassSelect || c.name === mqClassSelect || c.class_name === mqClassSelect);
 
     let existing = [];
     try {
@@ -347,7 +361,7 @@ export default function Exams() {
     const students = getActiveStudentsByClass(reClassSelect);
     if (!students.length) { alert('اس کلاس میں کوئی طالب علم نہیں'); setReStudents(null); return; }
     
-    const cls = classesList.find(c => c.id === reClassSelect);
+    const cls = classesList.find(c => c.id === reClassSelect || c.name === reClassSelect || c.class_name === reClassSelect);
 
     let miqdarList = [];
     let resultsList = [];
@@ -462,7 +476,7 @@ export default function Exams() {
   // Sub-tab 4: Class Exam Result
   const renderClassExamResult = async () => {
     if (!crExamClass) { alert('کلاس منتخب کریں'); return; }
-    const cls = classesList.find(c => c.id === crExamClass);
+    const cls = classesList.find(c => c.id === crExamClass || c.name === crExamClass || c.class_name === crExamClass);
     const yr = parseInt(crExamYear);
 
     let results = [];
