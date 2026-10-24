@@ -86,7 +86,7 @@
     position: static !important;
     width: 100% !important;
     margin: 0 auto !important;
-    padding: 12mm 0 !important;
+    padding: 4mm 0 !important;
   }
 
   body.printing-fee-receipt .receipt-wrap {

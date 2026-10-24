@@ -362,19 +362,23 @@
   font-weight: 800;
 }
 
-.receipt-total-tr td {
-  background-color: #f0fdf4 !important;
-  color: #166534 !important;
+.receipt-total-tr td,
+[data-theme="dark"] .receipt-total-tr td {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   padding: 7px 10px;
-  border: 1.5px solid #166534 !important;
+  border: 1.5px solid #0f172a !important;
   font-size: 0.88rem;
 }
 
-.receipt-total-amount-cell {
+.receipt-total-amount-cell,
+[data-theme="dark"] .receipt-total-amount-cell {
   text-align: right !important;
   font-size: 1.15rem !important;
   font-weight: 900 !important;
-  color: #166534 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font-family: monospace, sans-serif !important;
 }
 
@@ -433,11 +437,53 @@
   user-select: none;
 }
 
-/* Scoped Print Overrides: Scalable HTML Flow Centered on Page */
+/* Strong theme-independent white-background / black-text overrides */
+.receipt-wrap,
+.receipt-wrap table,
+.receipt-wrap tbody,
+.receipt-wrap tr,
+.receipt-wrap td,
+.receipt-info-table,
+.receipt-info-table tr,
+.receipt-info-table td,
+.receipt-table,
+.receipt-table tbody tr,
+.receipt-table tbody td,
+[data-theme="dark"] .receipt-wrap,
+[data-theme="dark"] .receipt-wrap table,
+[data-theme="dark"] .receipt-wrap tbody,
+[data-theme="dark"] .receipt-wrap tr,
+[data-theme="dark"] .receipt-wrap td,
+[data-theme="dark"] .receipt-info-table,
+[data-theme="dark"] .receipt-info-table tr,
+[data-theme="dark"] .receipt-info-table td,
+[data-theme="dark"] .receipt-table,
+[data-theme="dark"] .receipt-table tbody tr,
+[data-theme="dark"] .receipt-table tbody td {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+.receipt-info-table .info-lbl,
+[data-theme="dark"] .receipt-info-table .info-lbl {
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
+  font-weight: 700;
+}
+
+.receipt-info-table .info-val,
+[data-theme="dark"] .receipt-info-table .info-val {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-weight: 800;
+}
+
+/* Scoped Print Overrides: Guaranteed Single-Page Fit Centered on Page */
 @media print {
   @page {
     size: auto;
-    margin: 8mm;
+    margin: 4mm;
   }
 
   body.printing-fee-receipt {
@@ -452,18 +498,20 @@
     position: static !important;
     width: 100% !important;
     margin: 0 auto !important;
-    padding: 15mm 0 !important;
+    padding: 4mm 0 !important;
   }
 
   .receipt-wrap {
     width: 100% !important;
-    max-width: 580px !important;
+    max-width: 540px !important;
     height: auto !important;
     margin: 0 auto !important;
     border: 1.5px solid #000000 !important;
     box-shadow: none !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
     -webkit-print-color-adjust: exact !important;

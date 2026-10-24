@@ -411,7 +411,7 @@ export default function Fees() {
           <style>{`
             @page {
               size: auto;
-              margin: 8mm;
+              margin: 4mm;
             }
             body.printing-fee-receipt {
               display: block !important;
@@ -424,21 +424,44 @@ export default function Fees() {
               position: static !important;
               width: 100% !important;
               margin: 0 auto !important;
-              padding: 15mm 0 !important;
+              padding: 4mm 0 !important;
             }
             .receipt-wrap {
               width: 100% !important;
-              max-width: 580px !important;
+              max-width: 540px !important;
               margin: 0 auto !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+              page-break-before: avoid !important;
+              break-before: avoid !important;
             }
             .receipt-wrap,
             .receipt-wrap *,
+            .receipt-info-table,
+            .receipt-info-table tr,
+            .receipt-info-table td,
+            .receipt-table tbody tr,
+            .receipt-table tbody td,
             [data-theme="dark"] .receipt-wrap,
-            [data-theme="dark"] .receipt-wrap * {
+            [data-theme="dark"] .receipt-wrap *,
+            [data-theme="dark"] .receipt-info-table,
+            [data-theme="dark"] .receipt-info-table tr,
+            [data-theme="dark"] .receipt-info-table td,
+            [data-theme="dark"] .receipt-table tbody tr,
+            [data-theme="dark"] .receipt-table tbody td {
+              background-color: #ffffff !important;
               color: #000000 !important;
               -webkit-text-fill-color: #000000 !important;
+            }
+            .receipt-header,
+            .receipt-header *,
+            [data-theme="dark"] .receipt-header,
+            [data-theme="dark"] .receipt-header * {
+              background-color: #0f172a !important;
+              color: #ffffff !important;
+              -webkit-text-fill-color: #ffffff !important;
             }
             .receipt-badge,
             [data-theme="dark"] .receipt-badge {
@@ -454,13 +477,15 @@ export default function Fees() {
               color: #000000 !important;
               -webkit-text-fill-color: #000000 !important;
             }
+            .receipt-total-tr,
             .receipt-total-tr td,
             .receipt-total-tr td *,
+            [data-theme="dark"] .receipt-total-tr,
             [data-theme="dark"] .receipt-total-tr td,
             [data-theme="dark"] .receipt-total-tr td * {
-              background-color: #f0fdf4 !important;
-              color: #166534 !important;
-              -webkit-text-fill-color: #166534 !important;
+              background-color: #0f172a !important;
+              color: #ffffff !important;
+              -webkit-text-fill-color: #ffffff !important;
             }
           `}</style>
 
@@ -484,61 +509,61 @@ export default function Fees() {
           </div>
 
           {/* Student & Payment Info Table (Compact 4-column key-value) */}
-          <table className="receipt-info-table">
+          <table className="receipt-info-table" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
             <tbody>
               <tr>
-                <td className="info-lbl">Student:</td>
-                <td className="info-val">{(printData.studentName || '').toUpperCase()}</td>
-                <td className="info-lbl">Student ID:</td>
-                <td className="info-val info-mono">{printData.studentId || '-'}</td>
+                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Student:</td>
+                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{(printData.studentName || '').toUpperCase()}</td>
+                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Student ID:</td>
+                <td className="info-val info-mono" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{printData.studentId || '-'}</td>
               </tr>
               <tr>
-                <td className="info-lbl">Father:</td>
-                <td className="info-val">{(printData.studentFather || '').toUpperCase()}</td>
-                <td className="info-lbl">Class:</td>
-                <td className="info-val">{studentClass || '-'}</td>
+                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Father:</td>
+                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{(printData.studentFather || '').toUpperCase()}</td>
+                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Class:</td>
+                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{studentClass || '-'}</td>
               </tr>
               <tr>
-                <td className="info-lbl">Fee Month:</td>
-                <td className="info-val info-month">{readableFeeMonth.toUpperCase()}</td>
-                <td className="info-lbl">Date:</td>
-                <td className="info-val">{formattedDate}</td>
+                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Fee Month:</td>
+                <td className="info-val info-month" style={{ backgroundColor: '#ffffff', color: '#0369a1' }}>{readableFeeMonth.toUpperCase()}</td>
+                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Date:</td>
+                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{formattedDate}</td>
               </tr>
               <tr>
-                <td className="info-lbl">Method:</td>
-                <td className="info-val">{printData.feeMethod || 'Cash'}</td>
-                <td className="info-lbl">Time:</td>
-                <td className="info-val info-mono">{timestampStr}</td>
+                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Method:</td>
+                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{printData.feeMethod || 'Cash'}</td>
+                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Time:</td>
+                <td className="info-val info-mono" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{timestampStr}</td>
               </tr>
             </tbody>
           </table>
 
           {/* Fee Table with integrated Total Row */}
-          <table className="receipt-table">
+          <table className="receipt-table" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
             <thead>
-              <tr>
-                <th style={{ width: '65%', textAlign: 'left' }}>Description</th>
-                <th style={{ width: '35%', textAlign: 'right' }}>Amount (PKR)</th>
+              <tr style={{ backgroundColor: '#f1f5f9' }}>
+                <th style={{ width: '65%', textAlign: 'left', backgroundColor: '#f1f5f9', color: '#000000' }}>Description</th>
+                <th style={{ width: '35%', textAlign: 'right', backgroundColor: '#f1f5f9', color: '#000000' }}>Amount (PKR)</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Monthly Tuition Fee ({readableFeeMonth.toUpperCase()})</td>
-                <td className="receipt-amount-cell">
+                <td style={{ backgroundColor: '#ffffff', color: '#000000' }}>Monthly Tuition Fee ({readableFeeMonth.toUpperCase()})</td>
+                <td className="receipt-amount-cell" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
                   Rs. {(printData.feeAmount || 0).toLocaleString()}
                 </td>
               </tr>
               <tr>
-                <td>Previous Arrears</td>
-                <td className="receipt-amount-cell">
+                <td style={{ backgroundColor: '#ffffff', color: '#000000' }}>Previous Arrears</td>
+                <td className="receipt-amount-cell" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
                   Rs. {(printData.feeArrears || 0).toLocaleString()}
                 </td>
               </tr>
             </tbody>
             <tfoot>
-              <tr className="receipt-total-tr">
-                <td style={{ textAlign: 'left', fontWeight: '800' }}>TOTAL RECEIVED</td>
-                <td className="receipt-total-amount-cell">
+              <tr className="receipt-total-tr" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
+                <td style={{ textAlign: 'left', fontWeight: '800', backgroundColor: '#0f172a', color: '#ffffff' }}>TOTAL RECEIVED</td>
+                <td className="receipt-total-amount-cell" style={{ textAlign: 'right', fontWeight: '900', backgroundColor: '#0f172a', color: '#ffffff' }}>
                   Rs. {(printData.totalPaid || 0).toLocaleString()}
                 </td>
               </tr>
