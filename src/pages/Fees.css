@@ -439,28 +439,32 @@
 
 /* Strong theme-independent white-background / black-text overrides */
 .receipt-wrap,
-.receipt-wrap table,
-.receipt-wrap tbody,
-.receipt-wrap tr,
-.receipt-wrap td,
 .receipt-info-table,
 .receipt-info-table tr,
 .receipt-info-table td,
 .receipt-table,
 .receipt-table tbody tr,
 .receipt-table tbody td,
+.receipt-footer,
 [data-theme="dark"] .receipt-wrap,
-[data-theme="dark"] .receipt-wrap table,
-[data-theme="dark"] .receipt-wrap tbody,
-[data-theme="dark"] .receipt-wrap tr,
-[data-theme="dark"] .receipt-wrap td,
 [data-theme="dark"] .receipt-info-table,
 [data-theme="dark"] .receipt-info-table tr,
 [data-theme="dark"] .receipt-info-table td,
 [data-theme="dark"] .receipt-table,
 [data-theme="dark"] .receipt-table tbody tr,
-[data-theme="dark"] .receipt-table tbody td {
+[data-theme="dark"] .receipt-table tbody td,
+[data-theme="dark"] .receipt-footer {
   background-color: #ffffff !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+.receipt-info-table td *,
+.receipt-table tbody td *,
+.receipt-footer *,
+[data-theme="dark"] .receipt-info-table td *,
+[data-theme="dark"] .receipt-table tbody td *,
+[data-theme="dark"] .receipt-footer * {
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
 }

@@ -430,6 +430,9 @@ export default function Fees() {
               width: 100% !important;
               max-width: 540px !important;
               margin: 0 auto !important;
+              background-color: #ffffff !important;
+              color: #000000 !important;
+              border: 1.5px solid #0f172a !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
               page-break-after: avoid !important;
@@ -437,21 +440,31 @@ export default function Fees() {
               page-break-before: avoid !important;
               break-before: avoid !important;
             }
-            .receipt-wrap,
-            .receipt-wrap *,
             .receipt-info-table,
             .receipt-info-table tr,
             .receipt-info-table td,
+            .receipt-table,
             .receipt-table tbody tr,
             .receipt-table tbody td,
+            .receipt-footer,
             [data-theme="dark"] .receipt-wrap,
-            [data-theme="dark"] .receipt-wrap *,
             [data-theme="dark"] .receipt-info-table,
             [data-theme="dark"] .receipt-info-table tr,
             [data-theme="dark"] .receipt-info-table td,
+            [data-theme="dark"] .receipt-table,
             [data-theme="dark"] .receipt-table tbody tr,
-            [data-theme="dark"] .receipt-table tbody td {
+            [data-theme="dark"] .receipt-table tbody td,
+            [data-theme="dark"] .receipt-footer {
               background-color: #ffffff !important;
+              color: #000000 !important;
+              -webkit-text-fill-color: #000000 !important;
+            }
+            .receipt-info-table td *,
+            .receipt-table tbody td *,
+            .receipt-footer *,
+            [data-theme="dark"] .receipt-info-table td *,
+            [data-theme="dark"] .receipt-table tbody td *,
+            [data-theme="dark"] .receipt-footer * {
               color: #000000 !important;
               -webkit-text-fill-color: #000000 !important;
             }
@@ -462,6 +475,10 @@ export default function Fees() {
               background-color: #0f172a !important;
               color: #ffffff !important;
               -webkit-text-fill-color: #ffffff !important;
+            }
+            .receipt-logo-backing,
+            [data-theme="dark"] .receipt-logo-backing {
+              background-color: #ffffff !important;
             }
             .receipt-badge,
             [data-theme="dark"] .receipt-badge {
@@ -476,6 +493,7 @@ export default function Fees() {
               background-color: #f1f5f9 !important;
               color: #000000 !important;
               -webkit-text-fill-color: #000000 !important;
+              border: 1px solid #0f172a !important;
             }
             .receipt-total-tr,
             .receipt-total-tr td,
@@ -486,6 +504,7 @@ export default function Fees() {
               background-color: #0f172a !important;
               color: #ffffff !important;
               -webkit-text-fill-color: #ffffff !important;
+              border: 1.5px solid #0f172a !important;
             }
           `}</style>
 

@@ -1157,3 +1157,79 @@ body, .card, .tab-button, .sub-tab-btn, input, select, textarea, th, td,
 .exam-card, .toast, .badge, .pagination button, .chart-container, .tooltip {
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease !important;
 }
+
+/* --- Fee Receipt Theme-Independence in Dark Mode --- */
+[data-theme="dark"] .receipt-wrap,
+[data-theme="dark"] #print-portal-root .receipt-wrap {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #0f172a !important;
+}
+
+[data-theme="dark"] .receipt-wrap table,
+[data-theme="dark"] .receipt-wrap tbody,
+[data-theme="dark"] .receipt-wrap tr:not(.receipt-total-tr),
+[data-theme="dark"] .receipt-wrap td:not(.receipt-total-tr td) {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .receipt-wrap td:not(.receipt-total-tr td) *,
+[data-theme="dark"] .receipt-wrap td:not(.receipt-total-tr td) span,
+[data-theme="dark"] .receipt-wrap td:not(.receipt-total-tr td) div,
+[data-theme="dark"] .receipt-wrap td:not(.receipt-total-tr td) strong {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+[data-theme="dark"] .receipt-header,
+[data-theme="dark"] .receipt-header * {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+[data-theme="dark"] .receipt-logo-backing {
+  background-color: #ffffff !important;
+}
+
+[data-theme="dark"] .receipt-table th,
+[data-theme="dark"] .receipt-table th * {
+  background-color: #f1f5f9 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  border: 1px solid #0f172a !important;
+}
+
+[data-theme="dark"] .receipt-total-tr,
+[data-theme="dark"] .receipt-total-tr td,
+[data-theme="dark"] .receipt-total-tr td * {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+[data-theme="dark"] .receipt-info-table .info-lbl {
+  color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
+}
+
+[data-theme="dark"] .receipt-info-table .info-val {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+[data-theme="dark"] .receipt-footer,
+[data-theme="dark"] .receipt-footer * {
+  background-color: #ffffff !important;
+}
+
+[data-theme="dark"] .receipt-sig-name {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+[data-theme="dark"] .receipt-note {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+}
