@@ -104,14 +104,22 @@ export const mapSupabaseToUi = (row) => {
     ? calculateAge(dobDay, dobMonth, dobYear, row.admission_date)
     : '';
 
+  const nameEng = (row.name_english || row.nameEnglish || '').toUpperCase();
+  const fatherEng = (row.father_name_english || row.fatherNameEnglish || '').toUpperCase();
+
   return {
     id: row.id,
     isAdmissionProfile: true,
     admRegNo: row.roll_number || '',
     admDate: row.admission_date || '',
     name: row.name || '',
+    admName: row.name || '',
+    nameEnglish: nameEng,
+    admNameEnglish: nameEng,
     admFatherName: fatherNameVal,
     fatherName: fatherNameVal,
+    fatherNameEnglish: fatherEng,
+    admFatherNameEnglish: fatherEng,
     admClass: row.class_id || '',
     admGender: row.gender || 'لڑکا',
     admDobFull: row.date_of_birth || '',
@@ -167,12 +175,16 @@ export const mapUiToSupabase = (data) => {
   }
 
   const father_name = (data.admFatherName || data.fatherName || '').trim();
+  const name_english = (data.admNameEnglish || data.nameEnglish || '').trim().toUpperCase();
+  const father_name_english = (data.admFatherNameEnglish || data.fatherNameEnglish || '').trim().toUpperCase();
 
   return {
     roll_number: data.admRegNo || null,
     admission_date: data.admDate || null,
     name: (data.admName || data.name || '').trim(),
+    name_english: name_english || null,
     father_name: father_name,
+    father_name_english: father_name_english || null,
     class_id: data.admClass || data.class_id || null,
     gender: data.admGender || 'لڑکا',
     date_of_birth: date_of_birth,
@@ -298,7 +310,7 @@ export default function Admissions() {
   const [editStudentClassId, setEditStudentClassId] = useState('');
 
   const initialFormData = {
-    admRegNo: '', admDate: '', admName: '', admFatherName: '', admClass: '', admGender: 'لڑکا',
+    admRegNo: '', admDate: '', admName: '', admNameEnglish: '', admFatherName: '', admFatherNameEnglish: '', admClass: '', admGender: 'لڑکا',
     admDobDay: '', admDobMonth: '', admDobYear: '', admAge: '', admBForm: '', admAddress: '',
     fatherName: '', fatherCnic: '', fatherEdu: '', fatherOcc: '', fatherMobile: '', fatherWhatsapp: '', fatherEmail: '', fatherIncome: '', isFatherGuardian: 'yes',
     motherName: '', motherCnic: '', motherEdu: '', motherOcc: '', motherMobile: '', motherWhatsapp: '', motherIncome: '',
@@ -454,6 +466,7 @@ export default function Admissions() {
 
     if (['admBForm', 'fatherCnic', 'motherCnic', 'guardianCnic'].includes(field)) val = formatBForm(value);
     else if (['fatherMobile', 'fatherWhatsapp', 'motherMobile', 'motherWhatsapp', 'guardianMobile', 'guardianWhatsapp'].includes(field)) val = formatPhoneNumber(value);
+    else if (['admNameEnglish', 'admFatherNameEnglish'].includes(field)) val = value.toUpperCase();
 
     setFormData(prev => {
       const next = { ...prev, [field]: val };
@@ -727,6 +740,7 @@ export default function Admissions() {
     let val = value;
     if (['admBForm', 'fatherCnic', 'motherCnic', 'guardianCnic'].includes(name)) val = formatBForm(value);
     else if (['fatherMobile', 'fatherWhatsapp', 'motherMobile', 'motherWhatsapp', 'guardianMobile', 'guardianWhatsapp'].includes(name)) val = formatPhoneNumber(value);
+    else if (['nameEnglish', 'fatherNameEnglish', 'admNameEnglish', 'admFatherNameEnglish'].includes(name)) val = value.toUpperCase();
 
     setProfileModal(prev => {
       const next = { ...prev, [name]: val };
@@ -889,6 +903,34 @@ export default function Admissions() {
                 <div className="grid-row">
                   <div><label htmlFor="admName">نام</label><input type="text" id="admName" value={formData.admName} onChange={handleInputChange} /></div>
                   <div><label htmlFor="admFatherName">والد کا نام</label><input type="text" id="admFatherName" value={formData.admFatherName} onChange={handleInputChange} /></div>
+                </div>
+                <div className="grid-row">
+                  <div>
+                    <label htmlFor="admNameEnglish">نام طالب علم (انگلش — کیپیٹل حروف)</label>
+                    <input
+                      type="text"
+                      id="admNameEnglish"
+                      name="admNameEnglish"
+                      value={formData.admNameEnglish}
+                      onChange={handleInputChange}
+                      placeholder="STUDENT NAME (CAPITAL)"
+                      dir="ltr"
+                      style={{ textTransform: 'uppercase' }}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="admFatherNameEnglish">ولدیت (انگلش — کیپیٹل حروف)</label>
+                    <input
+                      type="text"
+                      id="admFatherNameEnglish"
+                      name="admFatherNameEnglish"
+                      value={formData.admFatherNameEnglish}
+                      onChange={handleInputChange}
+                      placeholder="FATHER'S NAME (CAPITAL)"
+                      dir="ltr"
+                      style={{ textTransform: 'uppercase' }}
+                    />
+                  </div>
                 </div>
                 <div className="grid-row">  
                   <div>
@@ -1102,13 +1144,16 @@ export default function Admissions() {
 
                       <div className="adm-review-hero-info">
                         <div className="adm-review-hero-title-row">
-                          <h2 className="adm-review-name">{formData.admName || 'نام درج نہیں'}</h2>
+                          <h2 className="adm-review-name">
+                            {formData.admName || 'نام درج نہیں'}
+                            {formData.admNameEnglish && <span style={{ fontSize: '0.85em', fontWeight: 600, marginRight: '10px', opacity: 0.85 }} className="ltr-text">({formData.admNameEnglish})</span>}
+                          </h2>
                           <span className="adm-review-reg-badge">
                             رجسٹریشن نمبر: <strong>{formData.admRegNo || '—'}</strong>
                           </span>
                         </div>
                         <div className="adm-review-hero-subtitle">
-                          <span>ولدیت: <strong>{formData.admFatherName || formData.fatherName || '—'}</strong></span>
+                          <span>ولدیت: <strong>{formData.admFatherName || formData.fatherName || '—'}{formData.admFatherNameEnglish ? ` (${formData.admFatherNameEnglish})` : ''}</strong></span>
                           {formData.admDate && (
                             <>
                               <span className="adm-review-hero-sep">•</span>
@@ -1180,10 +1225,22 @@ export default function Admissions() {
                             <span className="review-field-label">مکمل نام</span>
                             <span className="review-field-val highlight">{formData.admName || '—'}</span>
                           </div>
+                          {formData.admNameEnglish && (
+                            <div className="review-field-row">
+                              <span className="review-field-label">نام طالب علم (انگلش)</span>
+                              <span className="review-field-val ltr-text">{formData.admNameEnglish}</span>
+                            </div>
+                          )}
                           <div className="review-field-row">
                             <span className="review-field-label">والد کا نام</span>
                             <span className="review-field-val">{formData.admFatherName || '—'}</span>
                           </div>
+                          {formData.admFatherNameEnglish && (
+                            <div className="review-field-row">
+                              <span className="review-field-label">ولدیت (انگلش)</span>
+                              <span className="review-field-val ltr-text">{formData.admFatherNameEnglish}</span>
+                            </div>
+                          )}
                           <div className="review-field-row">
                             <span className="review-field-label">رجسٹریشن نمبر</span>
                             <span className="review-field-val">{formData.admRegNo || '—'}</span>
@@ -1974,6 +2031,32 @@ export default function Admissions() {
                <div className="grid-row">
                   <div><label>نام</label><input type="text" name="name" value={profileModal.name || ''} onChange={handleProfileChange} /></div>
                   <div><label>والد کا نام</label><input type="text" name="admFatherName" value={profileModal.admFatherName || ''} onChange={handleProfileChange} /></div>
+               </div>
+               <div className="grid-row">
+                  <div>
+                    <label>نام طالب علم (انگلش — کیپیٹل حروف)</label>
+                    <input
+                      type="text"
+                      name="nameEnglish"
+                      value={profileModal.nameEnglish || profileModal.admNameEnglish || ''}
+                      onChange={handleProfileChange}
+                      placeholder="STUDENT NAME (CAPITAL)"
+                      dir="ltr"
+                      style={{ textTransform: 'uppercase' }}
+                    />
+                  </div>
+                  <div>
+                    <label>ولدیت (انگلش — کیپیٹل حروف)</label>
+                    <input
+                      type="text"
+                      name="fatherNameEnglish"
+                      value={profileModal.fatherNameEnglish || profileModal.admFatherNameEnglish || ''}
+                      onChange={handleProfileChange}
+                      placeholder="FATHER'S NAME (CAPITAL)"
+                      dir="ltr"
+                      style={{ textTransform: 'uppercase' }}
+                    />
+                  </div>
                </div>
                <div className="grid-row">
                   <div>

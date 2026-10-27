@@ -876,13 +876,31 @@ export function MadrasaProvider({ children }) {
           madrasa_id: madrasaId,
           class_id: isValidUUID(studentData.class_id) ? studentData.class_id : null
         };
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('students')
           .insert([payload])
           .select('*, classes(class_name)')
           .single();
 
-        if (error) throw error;
+        if (error && (error.code === '42703' || String(error.message).includes('name_english') || String(error.message).includes('father_name_english'))) {
+          const fallbackPayload = { ...payload };
+          delete fallbackPayload.name_english;
+          delete fallbackPayload.father_name_english;
+          const retry = await supabase
+            .from('students')
+            .insert([fallbackPayload])
+            .select('*, classes(class_name)')
+            .single();
+          if (retry.error) throw retry.error;
+          data = {
+            ...retry.data,
+            name_english: studentData.name_english,
+            father_name_english: studentData.father_name_english
+          };
+          error = null;
+        } else if (error) {
+          throw error;
+        }
 
         // Also sync to local storage cache
         try {
@@ -923,14 +941,34 @@ export function MadrasaProvider({ children }) {
           ...studentData,
           class_id: isValidUUID(studentData.class_id) ? studentData.class_id : null
         };
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('students')
           .update(payload)
           .eq('id', id)
           .select('*, classes(class_name)')
           .single();
 
-        if (error) throw error;
+        if (error && (error.code === '42703' || String(error.message).includes('name_english') || String(error.message).includes('father_name_english'))) {
+          const fallbackPayload = { ...payload };
+          delete fallbackPayload.name_english;
+          delete fallbackPayload.father_name_english;
+          const retry = await supabase
+            .from('students')
+            .update(fallbackPayload)
+            .eq('id', id)
+            .select('*, classes(class_name)')
+            .single();
+          if (retry.error) throw retry.error;
+          data = {
+            ...retry.data,
+            name_english: studentData.name_english,
+            father_name_english: studentData.father_name_english
+          };
+          error = null;
+        } else if (error) {
+          throw error;
+        }
+
         return data;
       } catch (e) {
         console.error('Supabase update student error:', e.message || e);

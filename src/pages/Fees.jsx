@@ -38,8 +38,8 @@ export const mapSupabaseToUi = (row, studentLookup = {}) => {
   // If row has joined student info or lookup from studentLookup map
   const student = row.students || (row.student_id ? studentLookup[row.student_id] : null) || {};
   const studentRollNo = student.roll_number || student.admRegNo || row.student_roll_number || '';
-  const studentName = student.name || row.student_name || '';
-  const studentFather = student.father_name || student.admFatherName || row.student_father || '';
+  const studentName = student.name_english || student.nameEnglish || student.admNameEnglish || student.name || row.student_name || '';
+  const studentFather = student.father_name_english || student.fatherNameEnglish || student.admFatherNameEnglish || student.father_name || student.admFatherName || row.student_father || '';
 
   return {
     id: row.id,
@@ -225,13 +225,16 @@ export default function Fees() {
     const regNo = currentFeeStudent.admRegNo || '00';
     const invoiceId = `${datePrefix}${regNo}-${randSuffix}`;
 
+    const studentEngName = (currentFeeStudent.nameEnglish || currentFeeStudent.admNameEnglish || currentFeeStudent.name_english || currentFeeStudent.name || '').toUpperCase();
+    const fatherEngName = (currentFeeStudent.fatherNameEnglish || currentFeeStudent.admFatherNameEnglish || currentFeeStudent.father_name_english || currentFeeStudent.admFatherName || currentFeeStudent.fatherName || '').toUpperCase();
+
     const feeUiData = {
       isFeeRecord: true,
       invoiceId: invoiceId,
       studentId: regNo,
       studentUuid: currentFeeStudent.id,
-      studentName: currentFeeStudent.name,
-      studentFather: currentFeeStudent.admFatherName || currentFeeStudent.fatherName || '',
+      studentName: studentEngName,
+      studentFather: fatherEngName,
       feeMonth: month,
       feeAmount: feeAmt,
       feeArrears: feeArr,
@@ -246,18 +249,22 @@ export default function Fees() {
       const payload = mapUiToSupabase(feeUiData, activeMadrasaId);
       payload.students = {
         id: currentFeeStudent.id,
-        name: currentFeeStudent.name,
+        name: studentEngName,
+        name_english: studentEngName,
         roll_number: regNo,
-        father_name: currentFeeStudent.admFatherName || currentFeeStudent.fatherName || ''
+        father_name: fatherEngName,
+        father_name_english: fatherEngName
       };
 
       const insertedRow = await addFeeToSupabase(payload, activeMadrasaId);
       const studentLookup = {
         [currentFeeStudent.id]: {
           id: currentFeeStudent.id,
-          name: currentFeeStudent.name,
+          name: studentEngName,
+          name_english: studentEngName,
           roll_number: regNo,
-          father_name: currentFeeStudent.admFatherName || currentFeeStudent.fatherName || ''
+          father_name: fatherEngName,
+          father_name_english: fatherEngName
         }
       };
       const newUiFee = mapSupabaseToUi(insertedRow, studentLookup);
@@ -280,7 +287,7 @@ export default function Fees() {
       setFeeSearchId('');
       setCurrentFeeStudent(null);
 
-      triggerReceiptPrint(newFeeRecord);
+      triggerReceiptPrint(newUiFee);
     } catch (err) {
       console.error('Save fee error:', err);
       alert(`فیس ریکارڈ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
@@ -288,7 +295,14 @@ export default function Fees() {
   };
 
   const triggerReceiptPrint = (feeObj) => {
-    setPrintData(feeObj);
+    if (!feeObj) return;
+    const matchedStd = students.find(s => s.id === feeObj.studentUuid || s.admRegNo === feeObj.studentId);
+    const enrichedFee = {
+      ...feeObj,
+      studentName: (matchedStd?.nameEnglish || matchedStd?.admNameEnglish || matchedStd?.name_english || feeObj.studentName || '').toUpperCase(),
+      studentFather: (matchedStd?.fatherNameEnglish || matchedStd?.admFatherNameEnglish || matchedStd?.father_name_english || feeObj.studentFather || '').toUpperCase()
+    };
+    setPrintData(enrichedFee);
     if (typeof document !== 'undefined') {
       document.body.classList.add('printing-fee-receipt');
       const cleanup = () => {
@@ -780,8 +794,17 @@ export default function Fees() {
           <div className="fee-student-badge">
             <div className="fee-student-avatar"></div>
             <div>
-              <div className="fee-student-name">{receiptStudent.name || '—'}</div>
-              <div className="fee-student-father">والد: <span>{receiptStudent.admFatherName || receiptStudent.fatherName || '—'}</span></div>
+              <div className="fee-student-name">
+                {receiptStudent.name || '—'}
+                {(receiptStudent.nameEnglish || receiptStudent.admNameEnglish) && (
+                  <span style={{ fontSize: '0.85em', opacity: 0.85, marginRight: '8px' }}>
+                    ({receiptStudent.nameEnglish || receiptStudent.admNameEnglish})
+                  </span>
+                )}
+              </div>
+              <div className="fee-student-father">
+                والد: <span>{receiptStudent.admFatherName || receiptStudent.fatherName || '—'}{(receiptStudent.fatherNameEnglish || receiptStudent.admFatherNameEnglish) ? ` (${receiptStudent.fatherNameEnglish || receiptStudent.admFatherNameEnglish})` : ''}</span>
+              </div>
             </div>
           </div>
 
