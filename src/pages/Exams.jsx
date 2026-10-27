@@ -729,7 +729,7 @@ export default function Exams() {
           {mqIndStudent && (
             <div id="miqdarIndArea" className="form-section-card" style={{ marginTop: "14px" }}>
               <div className="fee-student-badge" style={{ marginBottom: "16px" }}>
-                <div className="fee-student-avatar"></div>
+                <div className="fee-student-avatar">{(mqIndStudent.name?.trim()?.charAt(0) || 'ط')}</div>
                 <div>
                   <div className="fee-student-name" id="mqIndName">{mqIndStudent.name || '—'}</div>
                   <div className="fee-student-father">والد: <span id="mqIndFather">{mqIndStudent.admFatherName || '—'}</span></div>

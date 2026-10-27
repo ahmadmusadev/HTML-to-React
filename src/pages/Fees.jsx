@@ -649,28 +649,14 @@ export default function Fees() {
       </div>
 
       {fetchError && (
-        <div className="no-print" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="fee-alert-warning no-print">
           <span>{fetchError}</span>
-          <button onClick={() => setFetchError(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#856404' }}>✕</button>
+          <button onClick={() => setFetchError(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: 'inherit' }}>✕</button>
         </div>
       )}
 
       {feeStatusMessage && (
-        <div
-          className="no-print"
-          style={{
-            background: feeStatusMessage.type === 'error' ? '#fef2f2' : feeStatusMessage.type === 'warning' ? '#fffbeb' : '#f0fdf4',
-            color: feeStatusMessage.type === 'error' ? '#991b1b' : feeStatusMessage.type === 'warning' ? '#92400e' : '#166534',
-            border: `1px solid ${feeStatusMessage.type === 'error' ? '#fecaca' : feeStatusMessage.type === 'warning' ? '#fde68a' : '#bbf7d0'}`,
-            padding: '12px 16px',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            fontSize: '0.9rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}
-        >
+        <div className={`fee-status-banner ${feeStatusMessage.type === 'error' ? 'error' : 'success'} no-print`}>
           <span>{feeStatusMessage.text}</span>
           <button onClick={() => setFeeStatusMessage(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: 'inherit' }}>✕</button>
         </div>
@@ -698,7 +684,7 @@ export default function Fees() {
         {currentFeeStudent && (
         <div id="feePaymentDetailsArea">
           <div className="fee-student-badge">
-            <div className="fee-student-avatar"></div>
+            <div className="fee-student-avatar">{(currentFeeStudent.name?.trim()?.charAt(0) || 'ط')}</div>
             <div>
               <div className="fee-student-name">{currentFeeStudent.name || '—'}</div>
               <div className="fee-student-father">والد: <span>{currentFeeStudent.admFatherName || currentFeeStudent.fatherName || '—'}</span></div>
@@ -792,7 +778,7 @@ export default function Fees() {
         {receiptStudent && (
         <div id="receiptStudentArea">
           <div className="fee-student-badge">
-            <div className="fee-student-avatar"></div>
+            <div className="fee-student-avatar">{(receiptStudent.name?.trim()?.charAt(0) || 'ط')}</div>
             <div>
               <div className="fee-student-name">
                 {receiptStudent.name || '—'}
@@ -808,20 +794,20 @@ export default function Fees() {
             </div>
           </div>
 
-          <h3 style={{ color: "var(--accent)", margin: "16px 0 10px 0" }}>پچھلی رسیدیں</h3>
+          <h3 className="past-receipts-heading">پچھلی رسیدیں</h3>
           <div id="studentPastReceiptsArea">
             {!studentPastReceipts.length ? (
                 <div className="empty-dashboard-state">اس طالب علم کی کوئی فیس ریکارڈ موجود نہیں</div>
             ) : (
                 studentPastReceipts.map(f => (
-                    <div key={f.invoiceId} style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "10px", padding: "14px", marginBottom: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                        <div>
-                        <div style={{ fontWeight: 700, color: "var(--accent)" }}>{f.feeMonth}</div>
-                        <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>رسید: {f.invoiceId}</div>
+                    <div key={f.invoiceId} className="past-receipt-card">
+                        <div className="past-receipt-info">
+                            <div className="past-receipt-month">{f.feeMonth}</div>
+                            <div className="past-receipt-id">رسید: {f.invoiceId}</div>
                         </div>
-                        <div style={{ fontWeight: 700, color: "var(--accent-2)" }}>Rs. {(f.totalPaid||0).toLocaleString()}</div>
-                        <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>{f.feeMethod}</div>
-                        <button onClick={() => reprintReceipt(f.invoiceId)} style={{ background: "var(--accent)", color: "#fff", border: "none", padding: "6px 14px", borderRadius: "7px", cursor: "pointer", fontSize: "0.85rem" }}>پرنٹ</button>
+                        <div className="past-receipt-amount">Rs. {(f.totalPaid||0).toLocaleString()}</div>
+                        <div className="past-receipt-method">{f.feeMethod}</div>
+                        <button className="past-receipt-btn" onClick={() => reprintReceipt(f.invoiceId)}>پرنٹ</button>
                     </div>
                 ))
             )}
@@ -913,7 +899,7 @@ export default function Fees() {
                                             )}
                                         </td>
                                         <td>
-                                            <span style={{ background: mc.bg, color: mc.color, border: `1px solid ${mc.border}`, borderRadius: "999px", padding: "4px 12px", fontSize: "0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>{f.feeMethod || '—'}</span>
+                                            <span className="fee-method-badge" style={{ background: mc.bg, color: mc.color, border: `1px solid ${mc.border}` }}>{f.feeMethod || '—'}</span>
                                         </td>
                                     </tr>
                                 );
@@ -945,18 +931,18 @@ export default function Fees() {
                             <div className="empty-dashboard-state">{dailyStatDate} کو کوئی فیس وصول نہیں ہوئی</div>
                         ) : (
                             <>
-                                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px", padding: "14px", marginBottom: "14px", textAlign: "center" }}>
-                                    <div style={{ fontSize: "0.9rem", color: "#15803d" }}>مجموعی وصولی — {dailyStatDate}</div>
-                                    <div style={{ fontSize: "2rem", fontWeight: 800, color: "#15803d" }}>Rs. {total.toLocaleString()}</div>
+                                <div className="fee-stat-highlight green">
+                                    <div className="fee-stat-highlight-label">مجموعی وصولی — {dailyStatDate}</div>
+                                    <div className="fee-stat-highlight-amount">Rs. {total.toLocaleString()}</div>
                                 </div>
                                 {fees.map(f => (
-                                    <div key={f.invoiceId} style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                                        <div>
-                                            <div style={{ fontWeight: 700 }}>{f.studentName||'—'}</div>
-                                            <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{f.studentId} | {f.feeMonth}</div>
+                                    <div key={f.invoiceId} className="past-receipt-card">
+                                        <div className="past-receipt-info">
+                                            <div className="past-receipt-month">{f.studentName||'—'}</div>
+                                            <div className="past-receipt-id">{f.studentId} | {f.feeMonth}</div>
                                         </div>
-                                        <div style={{ fontWeight: 700, color: "var(--accent-2)" }}>Rs. {(f.totalPaid||0).toLocaleString()}</div>
-                                        <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{f.feeMethod}</div>
+                                        <div className="past-receipt-amount">Rs. {(f.totalPaid||0).toLocaleString()}</div>
+                                        <div className="past-receipt-method">{f.feeMethod}</div>
                                     </div>
                                 ))}
                             </>
@@ -984,15 +970,15 @@ export default function Fees() {
                             <div className="empty-dashboard-state">{paidReportMonth} میں کوئی ادائیگی نہیں</div>
                         ) : (
                             <>
-                                <div style={{ fontWeight: 700, color: "var(--accent-2)", marginBottom: "10px" }}>مہینہ {paidReportMonth} — {fees.length} دہندگان</div>
+                                <div className="fee-report-section-header">مہینہ {paidReportMonth} — {fees.length} دہندگان</div>
                                 {fees.map(f => (
-                                    <div key={f.invoiceId} style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                                        <div>
-                                            <div style={{ fontWeight: 700 }}>{f.studentName||'—'}</div>
-                                            <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{f.studentId}</div>
+                                    <div key={f.invoiceId} className="past-receipt-card fee-paid-card">
+                                        <div className="past-receipt-info">
+                                            <div className="past-receipt-month">{f.studentName||'—'}</div>
+                                            <div className="past-receipt-id">{f.studentId}</div>
                                         </div>
-                                        <div style={{ fontWeight: 700, color: "var(--accent-2)" }}>Rs. {(f.totalPaid||0).toLocaleString()}</div>
-                                        <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{f.feeMethod}</div>
+                                        <div className="past-receipt-amount">Rs. {(f.totalPaid||0).toLocaleString()}</div>
+                                        <div className="past-receipt-method">{f.feeMethod}</div>
                                     </div>
                                 ))}
                             </>
@@ -1023,14 +1009,14 @@ export default function Fees() {
                             <div className="empty-dashboard-state">ماشاءاللہ! {unpaidReportMonth} میں تمام طلباء کی فیس جمع ہے</div>
                         ) : (
                             <>
-                                <div style={{ fontWeight: 700, color: "var(--danger)", marginBottom: "10px" }}>مہینہ {unpaidReportMonth} — {unpaid.length} نادہندگان</div>
+                                <div className="fee-report-section-header danger">مہینہ {unpaidReportMonth} — {unpaid.length} نادہندگان</div>
                                 {unpaid.map(s => (
-                                    <div key={s.admRegNo || s.id} style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                                        <div>
-                                            <div style={{ fontWeight: 700 }}>{s.name||'—'}</div>
-                                            <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{s.admRegNo || s.id} | والد: {s.admFatherName || s.fatherName || '—'}</div>
+                                    <div key={s.admRegNo || s.id} className="past-receipt-card fee-unpaid-card">
+                                        <div className="past-receipt-info">
+                                            <div className="past-receipt-month">{s.name||'—'}</div>
+                                            <div className="past-receipt-id">{s.admRegNo || s.id} | والد: {s.admFatherName || s.fatherName || '—'}</div>
                                         </div>
-                                        <div style={{ fontSize: "0.82rem", color: "var(--danger)", fontWeight: 700 }}>فیس باقی</div>
+                                        <div className="fee-unpaid-badge">فیس باقی</div>
                                     </div>
                                 ))}
                             </>
@@ -1066,25 +1052,27 @@ export default function Fees() {
                 return (
                     <>
                         <div className="fee-student-badge" style={{ marginBottom: "16px" }}>
-                        <div className="fee-student-avatar"></div>
+                        <div className="fee-student-avatar">{(student.name?.trim()?.charAt(0) || 'ط')}</div>
                         <div>
                             <div className="fee-student-name">{student.name||'—'}</div>
                             <div className="fee-student-father">والد: {student.admFatherName || student.fatherName || '—'} | ID: {id}</div>
                         </div>
                         </div>
-                        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px", padding: "12px", marginBottom: "14px", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.85rem", color: "#15803d" }}>کل جمع شدہ فیس (داخلے سے اب تک)</div>
-                        <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#15803d" }}>Rs. {total.toLocaleString()}</div>
+                        <div className="fee-stat-highlight green">
+                        <div className="fee-stat-highlight-label">کل جمع شدہ فیس (داخلے سے اب تک)</div>
+                        <div className="fee-stat-highlight-amount">Rs. {total.toLocaleString()}</div>
                         </div>
                         {!fees.length ? (
                             <div className="empty-dashboard-state">ابھی تک کوئی فیس جمع نہیں ہوئی</div>
                         ) : (
                             fees.map(f => (
-                                <div key={f.invoiceId} style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                                    <div style={{ fontWeight: 700, color: "var(--accent)" }}>{f.feeMonth}</div>
-                                    <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>رسید: {f.invoiceId}</div>
-                                    <div style={{ fontWeight: 700, color: "var(--accent-2)" }}>Rs. {(f.totalPaid||0).toLocaleString()}</div>
-                                    <div style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{f.feeMethod}</div>
+                                <div key={f.invoiceId} className="past-receipt-card">
+                                    <div className="past-receipt-info">
+                                        <div className="past-receipt-month">{f.feeMonth}</div>
+                                        <div className="past-receipt-id">رسید: {f.invoiceId}</div>
+                                    </div>
+                                    <div className="past-receipt-amount">Rs. {(f.totalPaid||0).toLocaleString()}</div>
+                                    <div className="past-receipt-method">{f.feeMethod}</div>
                                 </div>
                             ))
                         )}

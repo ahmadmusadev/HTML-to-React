@@ -1446,7 +1446,7 @@ export default function Attendance() {
           </div>
           {indAttStudent && (
           <div id="indAttStudentInfo" className="fee-student-badge" style={{ display: 'flex', marginBottom: '14px' }}>
-            <div className="fee-student-avatar"></div>
+            <div className="fee-student-avatar">{(indAttStudent.name?.trim()?.charAt(0) || 'ط')}</div>
             <div>
               <div className="fee-student-name">{indAttStudent.name || '—'}</div>
               <div className="fee-student-father">والد: <span>{indAttStudent.admFatherName || indAttStudent.father_name || '—'}</span></div>
