@@ -531,6 +531,12 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   box-shadow: none !important;
 }
 
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #71717a !important;
+  opacity: 1 !important;
+}
+
 [data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator,
 [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
 [data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {

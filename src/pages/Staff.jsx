@@ -133,6 +133,7 @@ export default function Staff() {
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  const [isJoiningDateActive, setIsJoiningDateActive] = useState(false);
 
   // Load from Supabase on mount and madrasa change
   useEffect(() => {
@@ -239,6 +240,7 @@ export default function Staff() {
       }
 
       setFormData(initialFormState);
+      setIsJoiningDateActive(false);
       setIsFormOpen(false);
       alert('اسٹاف پروفائل کامیابی سے محفوظ ہو گیا۔');
     } catch (err) {
@@ -294,6 +296,7 @@ export default function Staff() {
 
   const clearStaffForm = () => {
     setFormData(initialFormState);
+    setIsJoiningDateActive(false);
   };
 
   const getAvatarColor = (name) => {
@@ -345,6 +348,7 @@ export default function Staff() {
             setIsFormOpen(!isFormOpen);
             if (isFormOpen) {
               setFormData(initialFormState);
+              setIsJoiningDateActive(false);
               setEditingCode(null);
               setEditingId(null);
             }
@@ -651,7 +655,27 @@ export default function Staff() {
               </div>
               <div>
                 <label>تقرری کی تاریخ</label>
-                <input type="date" id="staffJoiningDate" value={formData.joiningDate} onChange={e => handleInputChange('joiningDate', e.target.value)} />
+                <input
+                  type={formData.joiningDate || isJoiningDateActive ? 'date' : 'text'}
+                  id="staffJoiningDate"
+                  placeholder="مثلاً: 2024-08-01"
+                  value={formData.joiningDate}
+                  onChange={e => handleInputChange('joiningDate', e.target.value)}
+                  onFocus={() => setIsJoiningDateActive(true)}
+                  onBlur={() => {
+                    if (!formData.joiningDate) {
+                      setIsJoiningDateActive(false);
+                    }
+                  }}
+                  onClick={e => {
+                    setIsJoiningDateActive(true);
+                    try {
+                      if (typeof e.target.showPicker === 'function') {
+                        e.target.showPicker();
+                      }
+                    } catch (_) {}
+                  }}
+                />
               </div>
             </div>
             <div className="grid-row">
@@ -686,7 +710,7 @@ export default function Staff() {
             <div className="staff-form-btns">
               <button className="staff-save-btn" onClick={saveStaffProfile}>پروفائل محفوظ کریں</button>
               <button className="staff-reset-btn" onClick={clearStaffForm}>فارم صاف کریں</button>
-              <button className="staff-cancel-btn" onClick={() => { setIsFormOpen(false); setEditingCode(null); setEditingId(null); }}>بند کریں</button>
+              <button className="staff-cancel-btn" onClick={() => { setIsFormOpen(false); setIsJoiningDateActive(false); setEditingCode(null); setEditingId(null); }}>بند کریں</button>
             </div>
           </div>
         </div>

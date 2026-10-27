@@ -121,12 +121,36 @@
 
     label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.92rem; font-weight: bold; }
 
-    input[type="text"], input[type="password"], input[type="email"], input[type="date"], input[type="number"], input[type="tel"], select, textarea {
-      width: 100%; padding: 10px 14px; border-radius: var(--radius);
+    input[type="text"], input[type="password"], input[type="email"], input[type="date"], input[type="time"], input[type="number"], input[type="tel"], select, textarea {
+      width: 100%; min-height: 44px; box-sizing: border-box; padding: 10px 14px; border-radius: var(--radius);
       border: 1.5px solid var(--border); background: #fff;
       font-family: inherit; font-size: 1.05rem;
       transition: border-color 0.18s, box-shadow 0.18s;
       color: #111111;
+    }
+    input[type="date"], input[type="time"] {
+      min-height: 44px;
+      box-sizing: border-box;
+      line-height: 1.5;
+    }
+    input[type="date"]::-webkit-datetime-edit,
+    input[type="time"]::-webkit-datetime-edit {
+      font-family: inherit;
+      padding: 0;
+    }
+    [dir="rtl"] input[type="date"],
+    [dir="rtl"] input[type="time"] {
+      text-align: right;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.75;
+      transition: opacity 0.2s;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator:hover,
+    input[type="time"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
     }
     input:focus, select:focus {
       outline: none; border-color: var(--accent);
