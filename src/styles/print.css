@@ -73,24 +73,44 @@
     overflow: visible !important;
   }
 
-  /* Position and flow for printing fee receipt */
+  /* Position and flow for printing fee receipt: A5 landscape centered */
   body.printing-fee-receipt {
-    display: block !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #FFFFFF !important;
+    overflow: hidden !important;
   }
 
   body.printing-fee-receipt #print-portal-root {
-    display: block !important;
-    position: static !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
     width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
     margin: 0 auto !important;
-    padding: 4mm 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   body.printing-fee-receipt .receipt-wrap {
-    margin: 0 auto !important;
+    width: 540px !important;
+    max-width: 540px !important;
+    margin: auto !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
   }
 
   #print-portal-root * {

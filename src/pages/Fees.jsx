@@ -83,6 +83,7 @@ export default function Fees() {
     activeMadrasa,
     activeLogo,
     activeMadrasaId,
+    classesList,
     fetchStudentsFromSupabase,
     fetchFeesFromSupabase,
     addFeeToSupabase
@@ -417,42 +418,64 @@ export default function Fees() {
       (s.admRegNo && s.admRegNo === printData.studentId) ||
       (s.roll_number && s.roll_number === printData.studentId)
     );
-    const studentClass = matchedStudent?.admClass || matchedStudent?.className || matchedStudent?.class_id || '-';
+    const matchedClass = classesList?.find(c => c.id === matchedStudent?.class_id);
+    const rawClass = matchedStudent?.admClass || matchedStudent?.className || matchedClass?.name || matchedClass?.class_name || '';
+    const studentClass = rawClass || (matchedStudent?.class_id && !matchedStudent.class_id.includes('-') ? matchedStudent.class_id : '-');
 
     return (
       <PrintPortal>
         <div className="receipt-wrap" dir="ltr" style={{ color: '#000000', backgroundColor: '#ffffff' }}>
           <style>{`
             @page {
-              size: auto;
-              margin: 4mm;
+              size: A5 landscape;
+              margin: 0;
             }
             body.printing-fee-receipt {
-              display: block !important;
+              display: flex !important;
+              justify-content: center !important;
+              align-items: center !important;
+              min-height: 100vh !important;
+              height: 100% !important;
               margin: 0 !important;
               padding: 0 !important;
-              background: #FFFFFF !important;
+              background: #ffffff !important;
             }
             body.printing-fee-receipt #print-portal-root {
-              display: block !important;
-              position: static !important;
+              display: flex !important;
+              justify-content: center !important;
+              align-items: center !important;
               width: 100% !important;
+              height: 100% !important;
+              min-height: 100% !important;
               margin: 0 auto !important;
-              padding: 4mm 0 !important;
+              padding: 0 !important;
+              position: static !important;
+              box-sizing: border-box !important;
             }
             .receipt-wrap {
-              width: 100% !important;
+              width: 540px !important;
               max-width: 540px !important;
-              margin: 0 auto !important;
+              margin: auto !important;
               background-color: #ffffff !important;
               color: #000000 !important;
+              position: relative !important;
+              border-radius: 6px !important;
               border: 1.5px solid #0f172a !important;
+              box-shadow: none !important;
+              box-sizing: border-box !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+              line-height: 1.3 !important;
+              padding: 10px 14px !important;
+              display: flex !important;
+              flex-direction: column !important;
+              gap: 8px !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
               page-break-after: avoid !important;
               break-after: avoid !important;
               page-break-before: avoid !important;
               break-before: avoid !important;
+              overflow: hidden !important;
             }
             .receipt-info-table,
             .receipt-info-table tr,
@@ -507,7 +530,7 @@ export default function Fees() {
               background-color: #f1f5f9 !important;
               color: #000000 !important;
               -webkit-text-fill-color: #000000 !important;
-              border: 1px solid #0f172a !important;
+              border-bottom: 1px solid #0f172a !important;
             }
             .receipt-total-tr,
             .receipt-total-tr td,
@@ -518,7 +541,60 @@ export default function Fees() {
               background-color: #0f172a !important;
               color: #ffffff !important;
               -webkit-text-fill-color: #ffffff !important;
-              border: 1.5px solid #0f172a !important;
+            }
+            @media print {
+              @page {
+                size: A5 landscape;
+                margin: 0;
+              }
+              html, body {
+                width: 100% !important;
+                height: 100% !important;
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                overflow: hidden !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              body.printing-fee-receipt {
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                width: 100% !important;
+                height: 100% !important;
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+              }
+              body.printing-fee-receipt #print-portal-root {
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                width: 100% !important;
+                height: 100% !important;
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+              body.printing-fee-receipt .receipt-wrap {
+                width: 540px !important;
+                max-width: 540px !important;
+                margin: auto !important;
+                border: 1.5px solid #000000 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+                page-break-before: avoid !important;
+                break-before: avoid !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
             }
           `}</style>
 
@@ -541,8 +617,14 @@ export default function Fees() {
             </div>
           </div>
 
-          {/* Student & Payment Info Table (Compact 4-column key-value) */}
+          {/* Student & Payment Info Table (Compact 4-column key-value with fixed layout) */}
           <table className="receipt-info-table" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
+            <colgroup>
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '32%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '32%' }} />
+            </colgroup>
             <tbody>
               <tr>
                 <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Student:</td>
@@ -571,37 +653,44 @@ export default function Fees() {
             </tbody>
           </table>
 
-          {/* Fee Table with integrated Total Row */}
-          <table className="receipt-table" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f1f5f9' }}>
-                <th style={{ width: '65%', textAlign: 'left', backgroundColor: '#f1f5f9', color: '#000000' }}>Description</th>
-                <th style={{ width: '35%', textAlign: 'right', backgroundColor: '#f1f5f9', color: '#000000' }}>Amount (PKR)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ backgroundColor: '#ffffff', color: '#000000' }}>Monthly Tuition Fee ({readableFeeMonth.toUpperCase()})</td>
-                <td className="receipt-amount-cell" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
-                  Rs. {(printData.feeAmount || 0).toLocaleString()}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ backgroundColor: '#ffffff', color: '#000000' }}>Previous Arrears</td>
-                <td className="receipt-amount-cell" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
-                  Rs. {(printData.feeArrears || 0).toLocaleString()}
-                </td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr className="receipt-total-tr" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
-                <td style={{ textAlign: 'left', fontWeight: '800', backgroundColor: '#0f172a', color: '#ffffff' }}>TOTAL RECEIVED</td>
-                <td className="receipt-total-amount-cell" style={{ textAlign: 'right', fontWeight: '900', backgroundColor: '#0f172a', color: '#ffffff' }}>
-                  Rs. {(printData.totalPaid || 0).toLocaleString()}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+          {/* Fee Table with integrated Total Row and centered PAID watermark inside */}
+          <div className="receipt-table-wrapper">
+            <table className="receipt-table" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
+              <colgroup>
+                <col style={{ width: '65%' }} />
+                <col style={{ width: '35%' }} />
+              </colgroup>
+              <thead>
+                <tr style={{ backgroundColor: '#f1f5f9' }}>
+                  <th className="desc-col" style={{ width: '65%', textAlign: 'left', backgroundColor: '#f1f5f9', color: '#000000' }}>Description</th>
+                  <th className="amount-col" style={{ width: '35%', textAlign: 'right', backgroundColor: '#f1f5f9', color: '#000000' }}>Amount (PKR)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="desc-col" style={{ backgroundColor: '#ffffff', color: '#000000' }}>Monthly Tuition Fee ({readableFeeMonth.toUpperCase()})</td>
+                  <td className="receipt-amount-cell amount-col" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
+                    Rs. {(printData.feeAmount || 0).toLocaleString()}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="desc-col" style={{ backgroundColor: '#ffffff', color: '#000000' }}>Previous Arrears</td>
+                  <td className="receipt-amount-cell amount-col" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
+                    Rs. {(printData.feeArrears || 0).toLocaleString()}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr className="receipt-total-tr" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
+                  <td className="desc-col total-lbl" style={{ textAlign: 'left', fontWeight: '800', backgroundColor: '#0f172a', color: '#ffffff' }}>TOTAL RECEIVED</td>
+                  <td className="receipt-total-amount-cell amount-col" style={{ textAlign: 'right', fontWeight: '900', backgroundColor: '#0f172a', color: '#ffffff' }}>
+                    Rs. {(printData.totalPaid || 0).toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+            <div className="receipt-paid-stamp">PAID</div>
+          </div>
 
           {/* Footer & Signatures */}
           <div className="receipt-footer">
@@ -619,14 +708,6 @@ export default function Fees() {
               Computerized official proof of payment. Please retain for school records.
             </div>
           </div>
-
-          {/* Watermarks */}
-          {activeLogo && (
-            <div className="receipt-watermark-image">
-              <img src={activeLogo} alt="" />
-            </div>
-          )}
-          <div className="receipt-watermark">PAID</div>
         </div>
       </PrintPortal>
     );
