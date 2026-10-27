@@ -1,8 +1,284 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
+import { DEFAULT_CLASSES } from '../constants/defaults';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import PrintPortal from '../components/PrintPortal';
 import './Fees.css';
+
+export const resolveStudentClassName = (student, classesList = []) => {
+  if (!student) return 'General';
+
+  const isUUID = (val) =>
+    typeof val === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+
+  // 1. Direct readable className property on student (must not be a UUID)
+  if (student.className && typeof student.className === 'string' && !isUUID(student.className)) {
+    return student.className.trim();
+  }
+  if (student.class_name && typeof student.class_name === 'string' && !isUUID(student.class_name)) {
+    return student.class_name.trim();
+  }
+
+  // 2. Class identifier reference on student (admClass, class_id, classId)
+  const classRef = student.class_id || student.admClass || student.classId;
+
+  // 3. Search classesList
+  if (Array.isArray(classesList) && classesList.length > 0 && classRef) {
+    const foundById = classesList.find(c =>
+      c && c.id && String(c.id).toLowerCase() === String(classRef).toLowerCase()
+    );
+    if (foundById) {
+      const clsName = foundById.name || foundById.class_name || foundById.className;
+      if (clsName && typeof clsName === 'string' && !isUUID(clsName)) {
+        return clsName.trim();
+      }
+    }
+
+    const foundByName = classesList.find(c =>
+      c && (c.name === classRef || c.class_name === classRef || c.className === classRef)
+    );
+    if (foundByName) {
+      const clsName = foundByName.name || foundByName.class_name || foundByName.className;
+      if (clsName && typeof clsName === 'string' && !isUUID(clsName)) {
+        return clsName.trim();
+      }
+    }
+  }
+
+  // 4. Non-UUID readable string
+  if (classRef && typeof classRef === 'string' && !isUUID(classRef)) {
+    return classRef.trim();
+  }
+
+  // 5. Fallback: Default to 'General' (matches mockup, never prints UUID)
+  return 'General';
+};
+
+export const FeeReceiptDocument = ({
+  receiptData,
+  activeMadrasa,
+  students = [],
+  classesList = [],
+  isPrintMode = false
+}) => {
+  if (!receiptData) return null;
+
+  const now = new Date(receiptData.timestamp || receiptData.paid_at || new Date());
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  const formattedDate = !isNaN(now.getTime()) ? now.toLocaleDateString('en-US', options) : '-';
+
+  let readableFeeMonth = receiptData.feeMonth || '-';
+  if (receiptData.feeMonth && /^\d{4}-\d{2}$/.test(receiptData.feeMonth)) {
+    const monthDateObj = new Date(receiptData.feeMonth + "-01");
+    if (!isNaN(monthDateObj.getTime())) {
+      readableFeeMonth = monthDateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase();
+    }
+  }
+
+  const timestampStr = !isNaN(now.getTime())
+    ? now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : '-';
+
+  const matchedStudent = students.find(s =>
+    (s.id && (s.id === receiptData.studentUuid || s.id === receiptData.studentId)) ||
+    (s.admRegNo && String(s.admRegNo) === String(receiptData.studentId)) ||
+    (s.roll_number && String(s.roll_number) === String(receiptData.studentId))
+  );
+
+  const studentName = (
+    matchedStudent?.nameEnglish ||
+    matchedStudent?.admNameEnglish ||
+    matchedStudent?.name_english ||
+    receiptData.studentName ||
+    matchedStudent?.name ||
+    '-'
+  ).toUpperCase();
+
+  const fatherName = (
+    matchedStudent?.fatherNameEnglish ||
+    matchedStudent?.admFatherNameEnglish ||
+    matchedStudent?.father_name_english ||
+    receiptData.studentFather ||
+    matchedStudent?.admFatherName ||
+    matchedStudent?.fatherName ||
+    '-'
+  ).toUpperCase();
+
+  const studentClass = resolveStudentClassName(matchedStudent, classesList);
+  const studentId = receiptData.studentId || matchedStudent?.admRegNo || matchedStudent?.roll_number || '01';
+  const paymentMethod = receiptData.feeMethod || 'Cash';
+  const feeAmount = Number(receiptData.feeAmount ?? receiptData.amount) || 0;
+  const feeArrears = Number(receiptData.feeArrears ?? receiptData.arrears) || 0;
+  const totalPaid = Number(receiptData.totalPaid) || (feeAmount + feeArrears);
+
+  const madrasaName = activeMadrasa?.name || 'Jame Masjid Allah-o-Akbar';
+
+  return (
+    <div className={`receipt-paper ${isPrintMode ? 'is-print-mode' : ''}`} dir="ltr">
+      {isPrintMode && (
+        <style>{`
+          @page {
+            size: A5 landscape;
+            margin: 0;
+          }
+          body.printing-fee-receipt {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            min-height: 100vh !important;
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
+          body.printing-fee-receipt #print-portal-root {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 100% !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            position: static !important;
+            box-sizing: border-box !important;
+          }
+          @media print {
+            @page {
+              size: A5 landscape;
+              margin: 0;
+            }
+            html, body {
+              width: 100% !important;
+              height: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              overflow: hidden !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body.printing-fee-receipt {
+              display: flex !important;
+              justify-content: center !important;
+              align-items: center !important;
+            }
+            body.printing-fee-receipt .receipt-paper {
+              width: 580px !important;
+              max-width: 580px !important;
+              margin: auto !important;
+              border: 1px solid #cbd5e1 !important;
+              box-shadow: none !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          }
+        `}</style>
+      )}
+
+      {/* 1. Header Banner */}
+      <div className="receipt-header-banner">
+        <h1 className="receipt-org-title">{madrasaName}</h1>
+      </div>
+
+      {/* 2. Section 1 Banner */}
+      <div className="receipt-section-banner">
+        <h2>Student &amp; Payment Details</h2>
+      </div>
+
+      {/* 3. Section 1 Grid Table */}
+      <table className="receipt-details-table">
+        <colgroup>
+          <col style={{ width: '22%' }} />
+          <col style={{ width: '28%' }} />
+          <col style={{ width: '22%' }} />
+          <col style={{ width: '28%' }} />
+        </colgroup>
+        <tbody>
+          <tr>
+            <td className="receipt-cell-label">Student Name</td>
+            <td className="receipt-cell-value">{studentName}</td>
+            <td className="receipt-cell-label">Student ID</td>
+            <td className="receipt-cell-value">{studentId}</td>
+          </tr>
+          <tr>
+            <td className="receipt-cell-label">Father Name</td>
+            <td className="receipt-cell-value">{fatherName}</td>
+            <td className="receipt-cell-label">Class</td>
+            <td className="receipt-cell-value">{studentClass}</td>
+          </tr>
+          <tr>
+            <td className="receipt-cell-label">Fee Month</td>
+            <td className="receipt-cell-value">{readableFeeMonth}</td>
+            <td className="receipt-cell-label">Date</td>
+            <td className="receipt-cell-value">{formattedDate}</td>
+          </tr>
+          <tr>
+            <td className="receipt-cell-label">Payment Method</td>
+            <td className="receipt-cell-value">{paymentMethod}</td>
+            <td className="receipt-cell-label">Timestamp</td>
+            <td className="receipt-cell-value">{timestampStr}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* 4. Section 2 Banner */}
+      <div className="receipt-section-banner">
+        <h2>Financial Breakdown</h2>
+      </div>
+
+      {/* 5. Section 2 Financial Table */}
+      <table className="receipt-breakdown-table">
+        <colgroup>
+          <col style={{ width: '68%' }} />
+          <col style={{ width: '32%' }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th className="receipt-th-cell">Description</th>
+            <th className="receipt-th-cell">Amount (Rs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="receipt-td-desc">Monthly Tuition Fee ({readableFeeMonth})</td>
+            <td className="receipt-td-amount">{feeAmount.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td className="receipt-td-desc">Previous Arrears</td>
+            <td className="receipt-td-amount">{feeArrears.toLocaleString()}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr className="receipt-total-row">
+            <td className="receipt-total-desc">TOTAL RECEIVED</td>
+            <td className="receipt-total-val">{totalPaid.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      {/* 6. Signatures Area */}
+      <div className="receipt-signatures-container">
+        <div className="receipt-sig-box">
+          <div className="receipt-sig-space"></div>
+          <div className="receipt-sig-title">Authorized Cashier Signature</div>
+        </div>
+        <div className="receipt-sig-box">
+          <div className="receipt-sig-space"></div>
+          <div className="receipt-sig-title">Parent / Payer Signature</div>
+        </div>
+      </div>
+
+      {/* 7. Footer Note */}
+      <div className="receipt-footer-note">
+        <em>Note: This is a computerized official proof of payment. Please retain this document for your personal and school records.</em>
+      </div>
+    </div>
+  );
+};
 
 export const mapSupabaseToUi = (row, studentLookup = {}) => {
   if (!row) return null;
@@ -83,20 +359,24 @@ export default function Fees() {
     activeMadrasa,
     activeLogo,
     activeMadrasaId,
-    classesList,
     fetchStudentsFromSupabase,
     fetchFeesFromSupabase,
+    fetchClassesFromSupabase,
     addFeeToSupabase
   } = useMadrasa();
 
   const [students, setStudents] = useState([]);
   const [feeRecords, setFeeRecords] = useState([]);
+  const [classesList, setClassesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
 
   // Tab Views
   const [activeView, setActiveView] = useState('record'); // record, receipt, analytics
   const [reportType, setReportType] = useState('all'); // all, daily, paid, unpaid, track
+
+  // Receipt Preview Modal State
+  const [previewReceiptData, setPreviewReceiptData] = useState(null);
 
   // Load Data
   useEffect(() => {
@@ -106,7 +386,7 @@ export default function Fees() {
       setFetchError(null);
       try {
         let hasError = false;
-        const [stdData, feesData] = await Promise.all([
+        const [stdData, feesData, clsData] = await Promise.all([
           fetchStudentsFromSupabase(activeMadrasaId).catch(err => {
             console.error('Students fetch error in Fees:', err);
             hasError = true;
@@ -116,10 +396,20 @@ export default function Fees() {
             console.error('Fees fetch error in Fees:', err);
             hasError = true;
             return null;
-          })
+          }),
+          fetchClassesFromSupabase ? fetchClassesFromSupabase(activeMadrasaId).catch(err => {
+            console.error('Classes fetch error in Fees:', err);
+            return null;
+          }) : Promise.resolve([])
         ]);
 
         if (!isMounted) return;
+
+        if (clsData && Array.isArray(clsData) && clsData.length > 0) {
+          setClassesList(clsData);
+        } else {
+          setClassesList(DEFAULT_CLASSES);
+        }
 
         const studentMap = {};
         if (stdData) {
@@ -406,309 +696,15 @@ export default function Fees() {
   // Render Print Template
   const renderPrintReceipt = () => {
     if (!printData) return null;
-    const now = new Date(printData.timestamp);
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    const formattedDate = now.toLocaleDateString('en-US', options);
-    const monthDateObj = new Date(printData.feeMonth + "-01");
-    const readableFeeMonth = monthDateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    const timestampStr = now.toLocaleString('en-PK', { hour12: true });
-
-    const matchedStudent = students.find(s =>
-      (s.id && (s.id === printData.studentUuid || s.id === printData.studentId)) ||
-      (s.admRegNo && s.admRegNo === printData.studentId) ||
-      (s.roll_number && s.roll_number === printData.studentId)
-    );
-    const matchedClass = classesList?.find(c => c.id === matchedStudent?.class_id);
-    const rawClass = matchedStudent?.admClass || matchedStudent?.className || matchedClass?.name || matchedClass?.class_name || '';
-    const studentClass = rawClass || (matchedStudent?.class_id && !matchedStudent.class_id.includes('-') ? matchedStudent.class_id : '-');
-
     return (
       <PrintPortal>
-        <div className="receipt-wrap" dir="ltr" style={{ color: '#000000', backgroundColor: '#ffffff' }}>
-          <style>{`
-            @page {
-              size: A5 landscape;
-              margin: 0;
-            }
-            body.printing-fee-receipt {
-              display: flex !important;
-              justify-content: center !important;
-              align-items: center !important;
-              min-height: 100vh !important;
-              height: 100% !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              background: #ffffff !important;
-            }
-            body.printing-fee-receipt #print-portal-root {
-              display: flex !important;
-              justify-content: center !important;
-              align-items: center !important;
-              width: 100% !important;
-              height: 100% !important;
-              min-height: 100% !important;
-              margin: 0 auto !important;
-              padding: 0 !important;
-              position: static !important;
-              box-sizing: border-box !important;
-            }
-            .receipt-wrap {
-              width: 540px !important;
-              max-width: 540px !important;
-              margin: auto !important;
-              background-color: #ffffff !important;
-              color: #000000 !important;
-              position: relative !important;
-              border-radius: 6px !important;
-              border: 1.5px solid #0f172a !important;
-              box-shadow: none !important;
-              box-sizing: border-box !important;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-              line-height: 1.3 !important;
-              padding: 10px 14px !important;
-              display: flex !important;
-              flex-direction: column !important;
-              gap: 8px !important;
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-              page-break-after: avoid !important;
-              break-after: avoid !important;
-              page-break-before: avoid !important;
-              break-before: avoid !important;
-              overflow: hidden !important;
-            }
-            .receipt-info-table,
-            .receipt-info-table tr,
-            .receipt-info-table td,
-            .receipt-table,
-            .receipt-table tbody tr,
-            .receipt-table tbody td,
-            .receipt-footer,
-            [data-theme="dark"] .receipt-wrap,
-            [data-theme="dark"] .receipt-info-table,
-            [data-theme="dark"] .receipt-info-table tr,
-            [data-theme="dark"] .receipt-info-table td,
-            [data-theme="dark"] .receipt-table,
-            [data-theme="dark"] .receipt-table tbody tr,
-            [data-theme="dark"] .receipt-table tbody td,
-            [data-theme="dark"] .receipt-footer {
-              background-color: #ffffff !important;
-              color: #000000 !important;
-              -webkit-text-fill-color: #000000 !important;
-            }
-            .receipt-info-table td *,
-            .receipt-table tbody td *,
-            .receipt-footer *,
-            [data-theme="dark"] .receipt-info-table td *,
-            [data-theme="dark"] .receipt-table tbody td *,
-            [data-theme="dark"] .receipt-footer * {
-              color: #000000 !important;
-              -webkit-text-fill-color: #000000 !important;
-            }
-            .receipt-header,
-            .receipt-header *,
-            [data-theme="dark"] .receipt-header,
-            [data-theme="dark"] .receipt-header * {
-              background-color: #0f172a !important;
-              color: #ffffff !important;
-              -webkit-text-fill-color: #ffffff !important;
-            }
-            .receipt-logo-backing,
-            [data-theme="dark"] .receipt-logo-backing {
-              background-color: #ffffff !important;
-            }
-            .receipt-badge,
-            [data-theme="dark"] .receipt-badge {
-              background-color: #0f172a !important;
-              color: #ffffff !important;
-              -webkit-text-fill-color: #ffffff !important;
-            }
-            .receipt-table th,
-            .receipt-table th *,
-            [data-theme="dark"] .receipt-table th,
-            [data-theme="dark"] .receipt-table th * {
-              background-color: #f1f5f9 !important;
-              color: #000000 !important;
-              -webkit-text-fill-color: #000000 !important;
-              border-bottom: 1px solid #0f172a !important;
-            }
-            .receipt-total-tr,
-            .receipt-total-tr td,
-            .receipt-total-tr td *,
-            [data-theme="dark"] .receipt-total-tr,
-            [data-theme="dark"] .receipt-total-tr td,
-            [data-theme="dark"] .receipt-total-tr td * {
-              background-color: #0f172a !important;
-              color: #ffffff !important;
-              -webkit-text-fill-color: #ffffff !important;
-            }
-            @media print {
-              @page {
-                size: A5 landscape;
-                margin: 0;
-              }
-              html, body {
-                width: 100% !important;
-                height: 100% !important;
-                min-height: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #ffffff !important;
-                overflow: hidden !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              body.printing-fee-receipt {
-                display: flex !important;
-                justify-content: center !important;
-                align-items: center !important;
-                width: 100% !important;
-                height: 100% !important;
-                min-height: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #ffffff !important;
-              }
-              body.printing-fee-receipt #print-portal-root {
-                display: flex !important;
-                justify-content: center !important;
-                align-items: center !important;
-                width: 100% !important;
-                height: 100% !important;
-                min-height: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-              }
-              body.printing-fee-receipt .receipt-wrap {
-                width: 540px !important;
-                max-width: 540px !important;
-                margin: auto !important;
-                border: 1.5px solid #000000 !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-                page-break-after: avoid !important;
-                break-after: avoid !important;
-                page-break-before: avoid !important;
-                break-before: avoid !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-            }
-          `}</style>
-
-          {/* Header */}
-          <div className="receipt-header">
-            <div className="receipt-header-top">
-              {activeLogo ? (
-                <div className="receipt-logo-backing">
-                  <img src={activeLogo} alt={activeMadrasa.name} className="receipt-logo-img" />
-                </div>
-              ) : null}
-              <div className="receipt-header-text">
-                <h1 className="receipt-org">{activeMadrasa.name}</h1>
-                <p className="receipt-branch">ACADEMIC & FINANCIAL FEE RECEIPT</p>
-              </div>
-            </div>
-            <div className="receipt-header-badge-row">
-              <span className="receipt-badge">STUDENT COPY</span>
-              <span className="receipt-inv-badge">INVOICE: #{printData.invoiceId}</span>
-            </div>
-          </div>
-
-          {/* Student & Payment Info Table (Compact 4-column key-value with fixed layout) */}
-          <table className="receipt-info-table" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
-            <colgroup>
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '32%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '32%' }} />
-            </colgroup>
-            <tbody>
-              <tr>
-                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Student:</td>
-                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{(printData.studentName || '').toUpperCase()}</td>
-                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Student ID:</td>
-                <td className="info-val info-mono" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{printData.studentId || '-'}</td>
-              </tr>
-              <tr>
-                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Father:</td>
-                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{(printData.studentFather || '').toUpperCase()}</td>
-                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Class:</td>
-                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{studentClass || '-'}</td>
-              </tr>
-              <tr>
-                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Fee Month:</td>
-                <td className="info-val info-month" style={{ backgroundColor: '#ffffff', color: '#0369a1' }}>{readableFeeMonth.toUpperCase()}</td>
-                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Date:</td>
-                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{formattedDate}</td>
-              </tr>
-              <tr>
-                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Method:</td>
-                <td className="info-val" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{printData.feeMethod || 'Cash'}</td>
-                <td className="info-lbl" style={{ backgroundColor: '#ffffff' }}>Time:</td>
-                <td className="info-val info-mono" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{timestampStr}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* Fee Table with integrated Total Row and centered PAID watermark inside */}
-          <div className="receipt-table-wrapper">
-            <table className="receipt-table" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
-              <colgroup>
-                <col style={{ width: '65%' }} />
-                <col style={{ width: '35%' }} />
-              </colgroup>
-              <thead>
-                <tr style={{ backgroundColor: '#f1f5f9' }}>
-                  <th className="desc-col" style={{ width: '65%', textAlign: 'left', backgroundColor: '#f1f5f9', color: '#000000' }}>Description</th>
-                  <th className="amount-col" style={{ width: '35%', textAlign: 'right', backgroundColor: '#f1f5f9', color: '#000000' }}>Amount (PKR)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="desc-col" style={{ backgroundColor: '#ffffff', color: '#000000' }}>Monthly Tuition Fee ({readableFeeMonth.toUpperCase()})</td>
-                  <td className="receipt-amount-cell amount-col" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
-                    Rs. {(printData.feeAmount || 0).toLocaleString()}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="desc-col" style={{ backgroundColor: '#ffffff', color: '#000000' }}>Previous Arrears</td>
-                  <td className="receipt-amount-cell amount-col" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
-                    Rs. {(printData.feeArrears || 0).toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr className="receipt-total-tr" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
-                  <td className="desc-col total-lbl" style={{ textAlign: 'left', fontWeight: '800', backgroundColor: '#0f172a', color: '#ffffff' }}>TOTAL RECEIVED</td>
-                  <td className="receipt-total-amount-cell amount-col" style={{ textAlign: 'right', fontWeight: '900', backgroundColor: '#0f172a', color: '#ffffff' }}>
-                    Rs. {(printData.totalPaid || 0).toLocaleString()}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-            <div className="receipt-paid-stamp">PAID</div>
-          </div>
-
-          {/* Footer & Signatures */}
-          <div className="receipt-footer">
-            <div className="receipt-signatures-wrap">
-              <div className="receipt-sig">
-                <div className="receipt-sig-line"></div>
-                <div className="receipt-sig-name">Authorized Cashier</div>
-              </div>
-              <div className="receipt-sig">
-                <div className="receipt-sig-line"></div>
-                <div className="receipt-sig-name">Parent / Payer Signature</div>
-              </div>
-            </div>
-            <div className="receipt-note">
-              Computerized official proof of payment. Please retain for school records.
-            </div>
-          </div>
-        </div>
+        <FeeReceiptDocument
+          receiptData={printData}
+          activeMadrasa={activeMadrasa}
+          students={students}
+          classesList={classesList}
+          isPrintMode={true}
+        />
       </PrintPortal>
     );
   };
@@ -888,7 +884,10 @@ export default function Fees() {
                         </div>
                         <div className="past-receipt-amount">Rs. {(f.totalPaid||0).toLocaleString()}</div>
                         <div className="past-receipt-method">{f.feeMethod}</div>
-                        <button className="past-receipt-btn" onClick={() => reprintReceipt(f.invoiceId)}>پرنٹ</button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button className="past-receipt-preview-btn" onClick={() => setPreviewReceiptData(f)}>رسید دیکھیں</button>
+                          <button className="past-receipt-btn" onClick={() => reprintReceipt(f.invoiceId)}>پرنٹ</button>
+                        </div>
                     </div>
                 ))
             )}
@@ -1024,6 +1023,7 @@ export default function Fees() {
                                         </div>
                                         <div className="past-receipt-amount">Rs. {(f.totalPaid||0).toLocaleString()}</div>
                                         <div className="past-receipt-method">{f.feeMethod}</div>
+                                        <button className="past-receipt-preview-btn" onClick={() => setPreviewReceiptData(f)}>رسید دیکھیں</button>
                                     </div>
                                 ))}
                             </>
@@ -1060,6 +1060,7 @@ export default function Fees() {
                                         </div>
                                         <div className="past-receipt-amount">Rs. {(f.totalPaid||0).toLocaleString()}</div>
                                         <div className="past-receipt-method">{f.feeMethod}</div>
+                                        <button className="past-receipt-preview-btn" onClick={() => setPreviewReceiptData(f)}>رسید دیکھیں</button>
                                     </div>
                                 ))}
                             </>
@@ -1154,6 +1155,7 @@ export default function Fees() {
                                     </div>
                                     <div className="past-receipt-amount">Rs. {(f.totalPaid||0).toLocaleString()}</div>
                                     <div className="past-receipt-method">{f.feeMethod}</div>
+                                    <button className="past-receipt-preview-btn" onClick={() => setPreviewReceiptData(f)}>رسید دیکھیں</button>
                                 </div>
                             ))
                         )}
@@ -1165,6 +1167,62 @@ export default function Fees() {
         )}
 
       </div>
+      )}
+
+      {/* ===== فیس رسید پری ویو ماڈل ===== */}
+      {previewReceiptData && (
+        <div
+          className="fee-preview-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="fee-preview-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewReceiptData(null);
+          }}
+        >
+          <div className="fee-preview-modal-dialog">
+            <div className="fee-preview-modal-header">
+              <h3 id="fee-preview-modal-title" className="fee-preview-modal-title">
+                فیس رسید کا پری ویو
+              </h3>
+              <button
+                type="button"
+                className="fee-preview-modal-close"
+                onClick={() => setPreviewReceiptData(null)}
+                aria-label="بند کریں"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="fee-preview-modal-body">
+              <FeeReceiptDocument
+                receiptData={previewReceiptData}
+                activeMadrasa={activeMadrasa}
+                students={students}
+                classesList={classesList}
+                isPrintMode={false}
+              />
+            </div>
+
+            <div className="fee-preview-modal-footer">
+              <button
+                type="button"
+                className="fee-preview-btn-print"
+                onClick={() => triggerReceiptPrint(previewReceiptData)}
+              >
+                پرنٹ کریں
+              </button>
+              <button
+                type="button"
+                className="fee-preview-btn-close"
+                onClick={() => setPreviewReceiptData(null)}
+              >
+                بند کریں
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {renderPrintReceipt()}

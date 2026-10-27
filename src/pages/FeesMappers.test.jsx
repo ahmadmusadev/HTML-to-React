@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapSupabaseToUi, mapUiToSupabase } from './Fees';
+import { mapSupabaseToUi, mapUiToSupabase, resolveStudentClassName } from './Fees';
 
 describe('Fees Supabase Mappers', () => {
   it('mapSupabaseToUi correctly transforms a Supabase fee row with joined students data', () => {
@@ -99,5 +99,60 @@ describe('Fees Supabase Mappers', () => {
       status: 'paid',
       paid_at: '2026-09-01T08:30:00Z'
     });
+  });
+});
+
+describe('resolveStudentClassName', () => {
+  const classesList = [
+    { id: '3b70d810-7714-437d-94ee-447b12d67396', name: 'General' },
+    { id: 'e4f1a23c-9b8d-4f12-a721-38294cd0192e', name: 'حفظِ قرآن — سال اول' },
+    { id: 'f98214aa-21bb-4cd3-89ef-51239aa812f0', name: 'ناظرہ' }
+  ];
+
+  it('resolves actual class name when student.class_id is a UUID matching classesList', () => {
+    const student = {
+      id: 'std-1',
+      class_id: '3b70d810-7714-437d-94ee-447b12d67396'
+    };
+    expect(resolveStudentClassName(student, classesList)).toBe('General');
+  });
+
+  it('resolves actual class name when student.admClass is a UUID matching classesList', () => {
+    const student = {
+      id: 'std-2',
+      admClass: 'e4f1a23c-9b8d-4f12-a721-38294cd0192e'
+    };
+    expect(resolveStudentClassName(student, classesList)).toBe('حفظِ قرآن — سال اول');
+  });
+
+  it('returns readable className when student has human-readable className property', () => {
+    const student = {
+      id: 'std-3',
+      className: 'حفظِ قرآن — سال دوم'
+    };
+    expect(resolveStudentClassName(student, classesList)).toBe('حفظِ قرآن — سال دوم');
+  });
+
+  it('returns readable admClass when student has a non-UUID class string', () => {
+    const student = {
+      id: 'std-4',
+      admClass: 'General'
+    };
+    expect(resolveStudentClassName(student, classesList)).toBe('General');
+  });
+
+  it('never returns a raw UUID even if unmatched in classesList (falls back to General)', () => {
+    const student = {
+      id: 'std-5',
+      admClass: '11111111-2222-4333-8444-555555555555'
+    };
+    const result = resolveStudentClassName(student, classesList);
+    expect(result).toBe('General');
+    expect(result).not.toContain('-');
+  });
+
+  it('returns General when student is missing or has no class assigned', () => {
+    expect(resolveStudentClassName(null, classesList)).toBe('General');
+    expect(resolveStudentClassName({}, classesList)).toBe('General');
   });
 });
