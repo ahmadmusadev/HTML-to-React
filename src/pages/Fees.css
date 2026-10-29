@@ -221,6 +221,7 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   animation: feeModalSlideUp 0.2s ease-out;
+  box-sizing: border-box;
 }
 
 @keyframes feeModalSlideUp {
@@ -264,10 +265,14 @@
 .fee-preview-modal-body {
   padding: 20px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   background: #f1f5f9;
   -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .fee-preview-modal-footer {
@@ -335,8 +340,9 @@
 
 .receipt-paper,
 .receipt-wrap {
-  width: 580px !important;
-  max-width: 100% !important;
+  width: 100% !important;
+  max-width: 580px !important;
+  min-width: 0 !important;
   margin: 0 auto !important;
   background-color: #ffffff !important;
   color: #000000 !important;
@@ -351,6 +357,7 @@
   gap: 12px !important;
   line-height: 1.35 !important;
   overflow: hidden !important;
+  flex-shrink: 1 !important;
 }
 
 .receipt-paper *,
@@ -359,7 +366,7 @@
 .receipt-wrap *,
 .receipt-wrap *::before,
 .receipt-wrap *::after {
-  box-sizing: border-box;
+  box-sizing: border-box !important;
 }
 
 /* Top Header Banner */
@@ -401,16 +408,33 @@
 }
 
 /* Details Table (4 Columns: Label, Value, Label, Value) */
-.receipt-details-table {
+.receipt-paper table,
+.receipt-wrap table,
+.receipt-details-table,
+.receipt-breakdown-table {
   width: 100% !important;
-  border-collapse: collapse !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
   table-layout: fixed !important;
-  border: 1px solid #cbd5e1 !important;
+  border-collapse: collapse !important;
+  box-sizing: border-box !important;
   margin: 0 !important;
+}
+
+.receipt-details-table {
+  border: 1px solid #cbd5e1 !important;
+}
+
+.receipt-paper tr,
+.receipt-paper tr:hover,
+.receipt-wrap tr,
+.receipt-wrap tr:hover {
+  background: transparent !important;
 }
 
 .receipt-cell-label {
   background-color: #091b3e !important;
+  background: #091b3e !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   font-weight: 600 !important;
@@ -420,10 +444,12 @@
   text-align: left !important;
   white-space: nowrap !important;
   vertical-align: middle !important;
+  box-sizing: border-box !important;
 }
 
 .receipt-cell-value {
   background-color: #ffffff !important;
+  background: #ffffff !important;
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   font-weight: 500 !important;
@@ -433,19 +459,17 @@
   text-align: left !important;
   word-break: break-word !important;
   vertical-align: middle !important;
+  box-sizing: border-box !important;
 }
 
 /* Financial Breakdown Table */
 .receipt-breakdown-table {
-  width: 100% !important;
-  border-collapse: collapse !important;
-  table-layout: fixed !important;
   border: 1px solid #cbd5e1 !important;
-  margin: 0 !important;
 }
 
 .receipt-th-cell {
   background-color: #091b3e !important;
+  background: #091b3e !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   font-weight: 700 !important;
@@ -454,10 +478,12 @@
   border: 1px solid #cbd5e1 !important;
   text-align: left !important;
   vertical-align: middle !important;
+  box-sizing: border-box !important;
 }
 
 .receipt-td-desc {
   background-color: #ffffff !important;
+  background: #ffffff !important;
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   font-weight: 500 !important;
@@ -466,10 +492,12 @@
   border: 1px solid #cbd5e1 !important;
   text-align: left !important;
   vertical-align: middle !important;
+  box-sizing: border-box !important;
 }
 
 .receipt-td-amount {
   background-color: #ffffff !important;
+  background: #ffffff !important;
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   font-weight: 500 !important;
@@ -478,12 +506,14 @@
   border: 1px solid #cbd5e1 !important;
   text-align: left !important;
   vertical-align: middle !important;
+  box-sizing: border-box !important;
 }
 
 .receipt-total-row td,
 .receipt-total-desc,
 .receipt-total-val {
   background-color: #091b3e !important;
+  background: #091b3e !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   font-weight: 800 !important;
@@ -492,6 +522,7 @@
   border: 1px solid #091b3e !important;
   text-align: left !important;
   vertical-align: middle !important;
+  box-sizing: border-box !important;
 }
 
 /* Signatures Area */
@@ -567,23 +598,141 @@
 }
 
 [data-theme="dark"] .receipt-paper,
-[data-theme="dark"] .receipt-wrap,
-[data-theme="dark"] .receipt-cell-value,
-[data-theme="dark"] .receipt-td-desc,
-[data-theme="dark"] .receipt-td-amount {
+[data-theme="dark"] .receipt-wrap {
   background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Ensure receipt-cell-label is ALWAYS #091b3e with white text across all rows (odd and even) and on hover */
+.receipt-paper td.receipt-cell-label,
+.receipt-paper tr td.receipt-cell-label,
+.receipt-paper tr:nth-child(even) td.receipt-cell-label,
+.receipt-paper tr:nth-child(odd) td.receipt-cell-label,
+.receipt-paper tr:hover td.receipt-cell-label,
+.receipt-wrap td.receipt-cell-label,
+.receipt-wrap tr td.receipt-cell-label,
+.receipt-wrap tr:nth-child(even) td.receipt-cell-label,
+.receipt-wrap tr:nth-child(odd) td.receipt-cell-label,
+.receipt-wrap tr:hover td.receipt-cell-label,
+[data-theme="dark"] .receipt-header-banner,
+[data-theme="dark"] .receipt-header-banner *,
+[data-theme="dark"] .receipt-section-banner,
+[data-theme="dark"] .receipt-section-banner *,
+[data-theme="dark"] .receipt-cell-label,
+[data-theme="dark"] .receipt-paper td.receipt-cell-label,
+[data-theme="dark"] .receipt-paper tr td.receipt-cell-label,
+[data-theme="dark"] .receipt-paper tr:nth-child(even) td.receipt-cell-label,
+[data-theme="dark"] .receipt-paper tr:nth-child(odd) td.receipt-cell-label,
+[data-theme="dark"] .receipt-paper tr:hover td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap tr td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap tr:nth-child(even) td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap tr:nth-child(odd) td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap tr:hover td.receipt-cell-label {
+  background-color: #091b3e !important;
+  background: #091b3e !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Ensure receipt-cell-value, receipt-td-desc, receipt-td-amount are ALWAYS #ffffff background with black text */
+.receipt-paper td.receipt-cell-value,
+.receipt-paper tr td.receipt-cell-value,
+.receipt-paper tr:nth-child(even) td.receipt-cell-value,
+.receipt-paper tr:nth-child(odd) td.receipt-cell-value,
+.receipt-paper tr:hover td.receipt-cell-value,
+.receipt-paper td.receipt-td-desc,
+.receipt-paper tr td.receipt-td-desc,
+.receipt-paper tr:nth-child(even) td.receipt-td-desc,
+.receipt-paper tr:nth-child(odd) td.receipt-td-desc,
+.receipt-paper tr:hover td.receipt-td-desc,
+.receipt-paper td.receipt-td-amount,
+.receipt-paper tr td.receipt-td-amount,
+.receipt-paper tr:nth-child(even) td.receipt-td-amount,
+.receipt-paper tr:nth-child(odd) td.receipt-td-amount,
+.receipt-paper tr:hover td.receipt-td-amount,
+.receipt-wrap td.receipt-cell-value,
+.receipt-wrap tr td.receipt-cell-value,
+.receipt-wrap tr:nth-child(even) td.receipt-cell-value,
+.receipt-wrap tr:nth-child(odd) td.receipt-cell-value,
+.receipt-wrap tr:hover td.receipt-cell-value,
+.receipt-wrap td.receipt-td-desc,
+.receipt-wrap tr td.receipt-td-desc,
+.receipt-wrap tr:nth-child(even) td.receipt-td-desc,
+.receipt-wrap tr:nth-child(odd) td.receipt-td-desc,
+.receipt-wrap tr:hover td.receipt-td-desc,
+.receipt-wrap td.receipt-td-amount,
+.receipt-wrap tr td.receipt-td-amount,
+.receipt-wrap tr:nth-child(even) td.receipt-td-amount,
+.receipt-wrap tr:nth-child(odd) td.receipt-td-amount,
+.receipt-wrap tr:hover td.receipt-td-amount,
+[data-theme="dark"] .receipt-cell-value,
+[data-theme="dark"] .receipt-paper td.receipt-cell-value,
+[data-theme="dark"] .receipt-paper tr td.receipt-cell-value,
+[data-theme="dark"] .receipt-paper tr:nth-child(even) td.receipt-cell-value,
+[data-theme="dark"] .receipt-paper tr:nth-child(odd) td.receipt-cell-value,
+[data-theme="dark"] .receipt-paper tr:hover td.receipt-cell-value,
+[data-theme="dark"] .receipt-td-desc,
+[data-theme="dark"] .receipt-paper td.receipt-td-desc,
+[data-theme="dark"] .receipt-paper tr td.receipt-td-desc,
+[data-theme="dark"] .receipt-paper tr:nth-child(even) td.receipt-td-desc,
+[data-theme="dark"] .receipt-paper tr:nth-child(odd) td.receipt-td-desc,
+[data-theme="dark"] .receipt-paper tr:hover td.receipt-td-desc,
+[data-theme="dark"] .receipt-td-amount,
+[data-theme="dark"] .receipt-paper td.receipt-td-amount,
+[data-theme="dark"] .receipt-paper tr td.receipt-td-amount,
+[data-theme="dark"] .receipt-paper tr:nth-child(even) td.receipt-td-amount,
+[data-theme="dark"] .receipt-paper tr:nth-child(odd) td.receipt-td-amount,
+[data-theme="dark"] .receipt-paper tr:hover td.receipt-td-amount,
+[data-theme="dark"] .receipt-wrap td.receipt-cell-value,
+[data-theme="dark"] .receipt-wrap tr td.receipt-cell-value,
+[data-theme="dark"] .receipt-wrap tr:nth-child(even) td.receipt-cell-value,
+[data-theme="dark"] .receipt-wrap tr:nth-child(odd) td.receipt-cell-value,
+[data-theme="dark"] .receipt-wrap tr:hover td.receipt-cell-value,
+[data-theme="dark"] .receipt-wrap td.receipt-td-desc,
+[data-theme="dark"] .receipt-wrap tr td.receipt-td-desc,
+[data-theme="dark"] .receipt-wrap tr:nth-child(even) td.receipt-td-desc,
+[data-theme="dark"] .receipt-wrap tr:nth-child(odd) td.receipt-td-desc,
+[data-theme="dark"] .receipt-wrap tr:hover td.receipt-td-desc,
+[data-theme="dark"] .receipt-wrap td.receipt-td-amount,
+[data-theme="dark"] .receipt-wrap tr td.receipt-td-amount,
+[data-theme="dark"] .receipt-wrap tr:nth-child(even) td.receipt-td-amount,
+[data-theme="dark"] .receipt-wrap tr:nth-child(odd) td.receipt-td-amount,
+[data-theme="dark"] .receipt-wrap tr:hover td.receipt-td-amount {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
 }
 
-[data-theme="dark"] .receipt-header-banner,
-[data-theme="dark"] .receipt-section-banner,
-[data-theme="dark"] .receipt-cell-label,
+/* Ensure receipt-th-cell and receipt-total-row are ALWAYS #091b3e with white text */
+.receipt-paper th.receipt-th-cell,
+.receipt-paper tr th.receipt-th-cell,
+.receipt-paper tr:hover th.receipt-th-cell,
+.receipt-paper .receipt-total-row td,
+.receipt-paper tr.receipt-total-row:hover td,
+.receipt-wrap th.receipt-th-cell,
+.receipt-wrap tr th.receipt-th-cell,
+.receipt-wrap tr:hover th.receipt-th-cell,
+.receipt-wrap .receipt-total-row td,
+.receipt-wrap tr.receipt-total-row:hover td,
 [data-theme="dark"] .receipt-th-cell,
-[data-theme="dark"] .receipt-total-row,
+[data-theme="dark"] .receipt-paper th.receipt-th-cell,
+[data-theme="dark"] .receipt-paper tr th.receipt-th-cell,
+[data-theme="dark"] .receipt-paper tr:hover th.receipt-th-cell,
+[data-theme="dark"] .receipt-total-row td,
 [data-theme="dark"] .receipt-total-desc,
-[data-theme="dark"] .receipt-total-val {
+[data-theme="dark"] .receipt-total-val,
+[data-theme="dark"] .receipt-paper .receipt-total-row td,
+[data-theme="dark"] .receipt-paper tr.receipt-total-row:hover td,
+[data-theme="dark"] .receipt-wrap th.receipt-th-cell,
+[data-theme="dark"] .receipt-wrap tr th.receipt-th-cell,
+[data-theme="dark"] .receipt-wrap tr:hover th.receipt-th-cell,
+[data-theme="dark"] .receipt-wrap .receipt-total-row td,
+[data-theme="dark"] .receipt-wrap tr.receipt-total-row:hover td {
   background-color: #091b3e !important;
+  background: #091b3e !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
 }
@@ -849,3 +998,40 @@
 
 
 
+
+/* Responsive Fee Receipt Modal & Paper Fit */
+@media (max-width: 640px) {
+  .fee-preview-modal-dialog {
+    max-width: 96vw !important;
+    margin: 0 auto !important;
+  }
+  .fee-preview-modal-body {
+    padding: 10px 8px !important;
+  }
+  .receipt-paper,
+  .receipt-wrap {
+    padding: 14px 12px !important;
+    gap: 10px !important;
+  }
+  .receipt-cell-label,
+  .receipt-cell-value,
+  .receipt-th-cell,
+  .receipt-td-desc,
+  .receipt-td-amount,
+  .receipt-total-row td {
+    padding: 6px 6px !important;
+    font-size: 0.78rem !important;
+  }
+  .receipt-header-banner {
+    padding: 8px 12px !important;
+  }
+  .receipt-org-title {
+    font-size: 1.05rem !important;
+  }
+  .receipt-section-banner {
+    padding: 7px 10px !important;
+  }
+  .receipt-section-banner h2 {
+    font-size: 0.92rem !important;
+  }
+}

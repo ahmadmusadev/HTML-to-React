@@ -681,13 +681,13 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   color: #ffffff !important;
 }
 
-[data-theme="dark"] tr:nth-child(even) td,
+[data-theme="dark"] tr:not(.receipt-paper tr):not(.receipt-wrap tr):nth-child(even) td:not(.receipt-cell-label):not(.receipt-th-cell):not(.receipt-total-row td),
 [data-theme="dark"] .adm-table-row:nth-child(even) td,
 [data-theme="dark"] .data-table tbody tr:nth-child(even) td {
   background: rgba(255, 255, 255, 0.02) !important;
 }
 
-[data-theme="dark"] tr:hover td,
+[data-theme="dark"] tr:not(.receipt-paper tr):not(.receipt-wrap tr):hover td:not(.receipt-cell-label):not(.receipt-th-cell):not(.receipt-total-row td),
 [data-theme="dark"] .adm-table-row:hover td {
   background: #27272a !important;
   color: #ffffff !important;
@@ -1196,23 +1196,76 @@ body, .card, .tab-button, .sub-tab-btn, input, select, textarea, th, td,
   -webkit-text-fill-color: #000000 !important;
 }
 
+/* Official Receipt Dark Mode Bulletproof Rules */
+[data-theme="dark"] .receipt-paper tr,
+[data-theme="dark"] .receipt-paper tr:hover,
+[data-theme="dark"] .receipt-wrap tr,
+[data-theme="dark"] .receipt-wrap tr:hover {
+  background: transparent !important;
+}
+
 [data-theme="dark"] .receipt-header-banner,
 [data-theme="dark"] .receipt-header-banner *,
 [data-theme="dark"] .receipt-section-banner,
 [data-theme="dark"] .receipt-section-banner *,
 [data-theme="dark"] .receipt-cell-label,
+[data-theme="dark"] .receipt-paper td.receipt-cell-label,
+[data-theme="dark"] .receipt-paper tr td.receipt-cell-label,
+[data-theme="dark"] .receipt-paper tr:nth-child(even) td.receipt-cell-label,
+[data-theme="dark"] .receipt-paper tr:nth-child(odd) td.receipt-cell-label,
+[data-theme="dark"] .receipt-paper tr:hover td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap tr td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap tr:nth-child(even) td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap tr:nth-child(odd) td.receipt-cell-label,
+[data-theme="dark"] .receipt-wrap tr:hover td.receipt-cell-label,
 [data-theme="dark"] .receipt-th-cell,
+[data-theme="dark"] .receipt-paper th.receipt-th-cell,
+[data-theme="dark"] .receipt-paper tr th.receipt-th-cell,
+[data-theme="dark"] .receipt-paper tr:hover th.receipt-th-cell,
 [data-theme="dark"] .receipt-total-row td,
 [data-theme="dark"] .receipt-total-desc,
 [data-theme="dark"] .receipt-total-val,
+[data-theme="dark"] .receipt-paper .receipt-total-row td,
+[data-theme="dark"] .receipt-paper tr.receipt-total-row:hover td,
 [data-theme="dark"] .receipt-header,
 [data-theme="dark"] .receipt-header *,
 [data-theme="dark"] .receipt-total-tr,
 [data-theme="dark"] .receipt-total-tr td,
 [data-theme="dark"] .receipt-total-tr td * {
   background-color: #091b3e !important;
+  background: #091b3e !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
+}
+
+[data-theme="dark"] .receipt-cell-value,
+[data-theme="dark"] .receipt-paper td.receipt-cell-value,
+[data-theme="dark"] .receipt-paper tr td.receipt-cell-value,
+[data-theme="dark"] .receipt-paper tr:nth-child(even) td.receipt-cell-value,
+[data-theme="dark"] .receipt-paper tr:nth-child(odd) td.receipt-cell-value,
+[data-theme="dark"] .receipt-paper tr:hover td.receipt-cell-value,
+[data-theme="dark"] .receipt-td-desc,
+[data-theme="dark"] .receipt-paper td.receipt-td-desc,
+[data-theme="dark"] .receipt-paper tr td.receipt-td-desc,
+[data-theme="dark"] .receipt-paper tr:nth-child(even) td.receipt-td-desc,
+[data-theme="dark"] .receipt-paper tr:nth-child(odd) td.receipt-td-desc,
+[data-theme="dark"] .receipt-paper tr:hover td.receipt-td-desc,
+[data-theme="dark"] .receipt-td-amount,
+[data-theme="dark"] .receipt-paper td.receipt-td-amount,
+[data-theme="dark"] .receipt-paper tr td.receipt-td-amount,
+[data-theme="dark"] .receipt-paper tr:nth-child(even) td.receipt-td-amount,
+[data-theme="dark"] .receipt-paper tr:nth-child(odd) td.receipt-td-amount,
+[data-theme="dark"] .receipt-paper tr:hover td.receipt-td-amount,
+[data-theme="dark"] .receipt-wrap td.receipt-cell-value,
+[data-theme="dark"] .receipt-wrap tr td.receipt-cell-value,
+[data-theme="dark"] .receipt-wrap tr:nth-child(even) td.receipt-cell-value,
+[data-theme="dark"] .receipt-wrap tr:nth-child(odd) td.receipt-cell-value,
+[data-theme="dark"] .receipt-wrap tr:hover td.receipt-cell-value {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
 }
 
 [data-theme="dark"] .receipt-sig-title,

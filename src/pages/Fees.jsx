@@ -199,28 +199,28 @@ export const FeeReceiptDocument = ({
         </colgroup>
         <tbody>
           <tr>
-            <td className="receipt-cell-label">Student Name</td>
-            <td className="receipt-cell-value">{studentName}</td>
-            <td className="receipt-cell-label">Student ID</td>
-            <td className="receipt-cell-value">{studentId}</td>
+            <td className="receipt-cell-label" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Student Name</td>
+            <td className="receipt-cell-value" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{studentName}</td>
+            <td className="receipt-cell-label" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Student ID</td>
+            <td className="receipt-cell-value" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{studentId}</td>
           </tr>
           <tr>
-            <td className="receipt-cell-label">Father Name</td>
-            <td className="receipt-cell-value">{fatherName}</td>
-            <td className="receipt-cell-label">Class</td>
-            <td className="receipt-cell-value">{studentClass}</td>
+            <td className="receipt-cell-label" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Father Name</td>
+            <td className="receipt-cell-value" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{fatherName}</td>
+            <td className="receipt-cell-label" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Class</td>
+            <td className="receipt-cell-value" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{studentClass}</td>
           </tr>
           <tr>
-            <td className="receipt-cell-label">Fee Month</td>
-            <td className="receipt-cell-value">{readableFeeMonth}</td>
-            <td className="receipt-cell-label">Date</td>
-            <td className="receipt-cell-value">{formattedDate}</td>
+            <td className="receipt-cell-label" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Fee Month</td>
+            <td className="receipt-cell-value" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{readableFeeMonth}</td>
+            <td className="receipt-cell-label" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Date</td>
+            <td className="receipt-cell-value" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{formattedDate}</td>
           </tr>
           <tr>
-            <td className="receipt-cell-label">Payment Method</td>
-            <td className="receipt-cell-value">{paymentMethod}</td>
-            <td className="receipt-cell-label">Timestamp</td>
-            <td className="receipt-cell-value">{timestampStr}</td>
+            <td className="receipt-cell-label" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Payment Method</td>
+            <td className="receipt-cell-value" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{paymentMethod}</td>
+            <td className="receipt-cell-label" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Timestamp</td>
+            <td className="receipt-cell-value" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{timestampStr}</td>
           </tr>
         </tbody>
       </table>
@@ -238,24 +238,24 @@ export const FeeReceiptDocument = ({
         </colgroup>
         <thead>
           <tr>
-            <th className="receipt-th-cell">Description</th>
-            <th className="receipt-th-cell">Amount (Rs.)</th>
+            <th className="receipt-th-cell" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Description</th>
+            <th className="receipt-th-cell" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>Amount (Rs.)</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td className="receipt-td-desc">Monthly Tuition Fee ({readableFeeMonth})</td>
-            <td className="receipt-td-amount">{feeAmount.toLocaleString()}</td>
+            <td className="receipt-td-desc" style={{ backgroundColor: '#ffffff', color: '#000000' }}>Monthly Tuition Fee ({readableFeeMonth})</td>
+            <td className="receipt-td-amount" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{feeAmount.toLocaleString()}</td>
           </tr>
           <tr>
-            <td className="receipt-td-desc">Previous Arrears</td>
-            <td className="receipt-td-amount">{feeArrears.toLocaleString()}</td>
+            <td className="receipt-td-desc" style={{ backgroundColor: '#ffffff', color: '#000000' }}>Previous Arrears</td>
+            <td className="receipt-td-amount" style={{ backgroundColor: '#ffffff', color: '#000000' }}>{feeArrears.toLocaleString()}</td>
           </tr>
         </tbody>
         <tfoot>
           <tr className="receipt-total-row">
-            <td className="receipt-total-desc">TOTAL RECEIVED</td>
-            <td className="receipt-total-val">{totalPaid.toLocaleString()}</td>
+            <td className="receipt-total-desc" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>TOTAL RECEIVED</td>
+            <td className="receipt-total-val" style={{ backgroundColor: '#091b3e', color: '#ffffff' }}>{totalPaid.toLocaleString()}</td>
           </tr>
         </tfoot>
       </table>
