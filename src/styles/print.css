@@ -1,5 +1,6 @@
 @page {
-  margin: 6mm;
+  size: A5 landscape;
+  margin: 6mm 8mm;
 }
 
 /* Screen mode: print portal is strictly hidden from screen view */
@@ -102,8 +103,8 @@
   }
 
   body.printing-fee-receipt .receipt-wrap {
-    width: 540px !important;
-    max-width: 540px !important;
+    width: 100% !important;
+    max-width: 730px !important;
     margin: auto !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;

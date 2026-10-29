@@ -120,7 +120,7 @@ export const FeeReceiptDocument = ({
         <style>{`
           @page {
             size: A5 landscape;
-            margin: 0;
+            margin: 6mm 8mm;
           }
           body.printing-fee-receipt {
             display: flex !important;
@@ -146,9 +146,9 @@ export const FeeReceiptDocument = ({
           }
           @media print {
             @page {
-              size: A5 landscape;
-              margin: 0;
-            }
+            size: A5 landscape;
+            margin: 6mm 8mm;
+          }
             html, body {
               width: 100% !important;
               height: 100% !important;
@@ -165,8 +165,8 @@ export const FeeReceiptDocument = ({
             align-items: flex-start !important;
             }
             body.printing-fee-receipt .receipt-paper {
-              width: 580px !important;
-              max-width: 580px !important;
+              width: 100% !important;
+              max-width: 730px !important;
               margin: 0 auto !important;
               border: 1px solid #cbd5e1 !important;
               box-shadow: none !important;

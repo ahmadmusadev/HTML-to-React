@@ -124,7 +124,7 @@ describe('FeeReceiptDocument Component & CSS Polish', () => {
     const feesCss = fs.readFileSync(path.resolve(__dirname, 'Fees.css'), 'utf8');
 
     // Verify receipt-paper width: 100% and max-width: 580px
-    expect(feesCss).toContain('max-width: 580px !important');
+    expect(feesCss).toContain('max-width: 740px !important');
     // Verify tables have min-width: 0 to override any global 900px table min-width
     expect(feesCss).toContain('min-width: 0 !important');
     // Verify tightened vertical padding
