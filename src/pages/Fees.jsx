@@ -125,7 +125,7 @@ export const FeeReceiptDocument = ({
           body.printing-fee-receipt {
             display: flex !important;
             justify-content: center !important;
-            align-items: center !important;
+            align-items: flex-start !important;
             min-height: 100vh !important;
             height: 100% !important;
             margin: 0 !important;
@@ -135,7 +135,7 @@ export const FeeReceiptDocument = ({
           body.printing-fee-receipt #print-portal-root {
             display: flex !important;
             justify-content: center !important;
-            align-items: center !important;
+            align-items: flex-start !important;
             width: 100% !important;
             height: 100% !important;
             min-height: 100% !important;
@@ -160,14 +160,14 @@ export const FeeReceiptDocument = ({
               print-color-adjust: exact !important;
             }
             body.printing-fee-receipt {
-              display: flex !important;
-              justify-content: center !important;
-              align-items: center !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
             }
             body.printing-fee-receipt .receipt-paper {
               width: 580px !important;
               max-width: 580px !important;
-              margin: auto !important;
+              margin: 0 auto !important;
               border: 1px solid #cbd5e1 !important;
               box-shadow: none !important;
               page-break-inside: avoid !important;
@@ -263,11 +263,11 @@ export const FeeReceiptDocument = ({
       {/* 6. Signatures Area */}
       <div className="receipt-signatures-container">
         <div className="receipt-sig-box">
-          <div className="receipt-sig-space"></div>
+          <div className="receipt-sig-line"></div>
           <div className="receipt-sig-title">Authorized Cashier Signature</div>
         </div>
         <div className="receipt-sig-box">
-          <div className="receipt-sig-space"></div>
+          <div className="receipt-sig-line"></div>
           <div className="receipt-sig-title">Parent / Payer Signature</div>
         </div>
       </div>

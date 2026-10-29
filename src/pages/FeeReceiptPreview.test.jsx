@@ -86,6 +86,29 @@ describe('FeeReceiptDocument Component & CSS Polish', () => {
     expect(fatherCell.style.color).toBe('rgb(0, 0, 0)');
   });
 
+  it('renders dedicated signature lines and titles for Cashier and Parent', () => {
+    const { container } = render(
+      <FeeReceiptDocument
+        receiptData={dummyReceiptData}
+        activeMadrasa={dummyMadrasa}
+        students={[]}
+        classesList={[]}
+        isPrintMode={false}
+      />
+    );
+
+    const cashierTitle = screen.getByText('Authorized Cashier Signature');
+    const parentTitle = screen.getByText('Parent / Payer Signature');
+    expect(cashierTitle).toBeDefined();
+    expect(parentTitle).toBeDefined();
+
+    const sigLines = container.querySelectorAll('.receipt-sig-line');
+    expect(sigLines.length).toBe(2);
+
+    const footerNote = screen.getByText(/Note: This is a computerized official proof of payment/i);
+    expect(footerNote).toBeDefined();
+  });
+
   it('verifies dark-mode.css exempts receipt-paper from global table striping and hover rules', () => {
     const darkModeCss = fs.readFileSync(path.resolve(__dirname, '../dark-mode.css'), 'utf8');
 
@@ -97,16 +120,20 @@ describe('FeeReceiptDocument Component & CSS Polish', () => {
     expect(darkModeCss).toContain('[data-theme="dark"] .receipt-paper tr:nth-child(even) td.receipt-cell-label');
   });
 
-  it('verifies Fees.css constrains receipt paper and tables to prevent horizontal overflow', () => {
+  it('verifies Fees.css constrains receipt paper and tables to prevent horizontal overflow and excessive margins', () => {
     const feesCss = fs.readFileSync(path.resolve(__dirname, 'Fees.css'), 'utf8');
 
     // Verify receipt-paper width: 100% and max-width: 580px
     expect(feesCss).toContain('max-width: 580px !important');
     // Verify tables have min-width: 0 to override any global 900px table min-width
     expect(feesCss).toContain('min-width: 0 !important');
-    // Verify box-sizing is enforced on paper and children
-    expect(feesCss).toContain('box-sizing: border-box !important');
+    // Verify tightened vertical padding
+    expect(feesCss).toContain('padding: 12px 22px 14px 22px !important');
+    // Verify signature line styling exists
+    expect(feesCss).toContain('.receipt-sig-line');
     // Verify responsive media query exists
     expect(feesCss).toContain('@media (max-width: 640px)');
+    // Verify print alignment is flex-start with 0 auto margin
+    expect(feesCss).toContain('align-items: flex-start !important');
   });
 });

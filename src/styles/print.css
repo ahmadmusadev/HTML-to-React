@@ -77,7 +77,7 @@
   body.printing-fee-receipt {
     display: flex !important;
     justify-content: center !important;
-    align-items: center !important;
+    align-items: flex-start !important;
     width: 100% !important;
     height: 100% !important;
     min-height: 100% !important;
@@ -90,7 +90,7 @@
   body.printing-fee-receipt #print-portal-root {
     display: flex !important;
     justify-content: center !important;
-    align-items: center !important;
+    align-items: flex-start !important;
     width: 100% !important;
     height: 100% !important;
     min-height: 100% !important;
