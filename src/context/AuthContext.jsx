@@ -9,15 +9,18 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Clean up any legacy demo auth keys
-  const clearLegacyDemoStorage = () => {
+  // Clean up any legacy demo or fallback auth storage keys
+  const clearLegacyStorage = () => {
     try {
       localStorage.removeItem('hf_auth_user_v1');
       localStorage.removeItem('hf_auth_profile_v1');
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        sessionStorage.removeItem('hf_auth_session_fallback_v1');
+      }
     } catch {}
   };
 
-  // Fetch profile for a given user ID
+  // Fetch profile for a given user ID strictly from database
   const fetchUserProfile = async (userId) => {
     if (!userId) {
       setProfile(null);
@@ -32,6 +35,7 @@ export function AuthProvider({ children }) {
 
       if (error) {
         console.warn('Profile fetch error or missing profile:', error.message);
+        setProfile(null);
         return null;
       }
 
@@ -39,17 +43,19 @@ export function AuthProvider({ children }) {
         setProfile(data);
         return data;
       }
+      setProfile(null);
       return null;
     } catch (err) {
       console.error('Unexpected error fetching profile:', err);
+      setProfile(null);
       return null;
     }
   };
 
   useEffect(() => {
-    // 1. Get initial session strictly from Supabase SDK, with emergency session recovery
+    // 1. Get initial session strictly from Supabase SDK
     const initAuth = async () => {
-      clearLegacyDemoStorage();
+      clearLegacyStorage();
       try {
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         if (error) {
@@ -59,58 +65,17 @@ export function AuthProvider({ children }) {
         if (currentSession?.user) {
           setSession(currentSession);
           setUser(currentSession.user);
-          const p = await fetchUserProfile(currentSession.user.id);
-          if (!p && currentSession.user.email?.toLowerCase() === 'ahmadmusa.dev@gmail.com') {
-            setProfile({
-              id: currentSession.user.id,
-              madrasa_id: '11111111-1111-1111-1111-111111111111',
-              full_name: 'احمد موسیٰ (سپر ایڈمن)',
-              role: 'super_admin'
-            });
-          }
-        } else {
-          // Check emergency session fallback if active in sessionStorage
-          const storedFallback = typeof window !== 'undefined' ? sessionStorage.getItem('hf_auth_session_fallback_v1') : null;
-          if (storedFallback) {
-            try {
-              const parsed = JSON.parse(storedFallback);
-              if (parsed?.user && parsed?.session) {
-                setUser(parsed.user);
-                setSession(parsed.session);
-                setProfile(parsed.profile);
-              }
-            } catch {
-              setSession(null);
-              setUser(null);
-              setProfile(null);
-            }
-          } else {
-            setSession(null);
-            setUser(null);
-            setProfile(null);
-          }
-        }
-      } catch (err) {
-        console.warn('Auth initialization error:', err);
-        const storedFallback = typeof window !== 'undefined' ? sessionStorage.getItem('hf_auth_session_fallback_v1') : null;
-        if (storedFallback) {
-          try {
-            const parsed = JSON.parse(storedFallback);
-            if (parsed?.user && parsed?.session) {
-              setUser(parsed.user);
-              setSession(parsed.session);
-              setProfile(parsed.profile);
-            }
-          } catch {
-            setSession(null);
-            setUser(null);
-            setProfile(null);
-          }
+          await fetchUserProfile(currentSession.user.id);
         } else {
           setSession(null);
           setUser(null);
           setProfile(null);
         }
+      } catch (err) {
+        console.warn('Auth initialization error:', err);
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
@@ -125,12 +90,9 @@ export function AuthProvider({ children }) {
         setUser(newSession.user);
         await fetchUserProfile(newSession.user.id);
       } else {
-        const storedFallback = typeof window !== 'undefined' ? sessionStorage.getItem('hf_auth_session_fallback_v1') : null;
-        if (!storedFallback) {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-        }
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       }
       setLoading(false);
     });
@@ -140,10 +102,10 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Sign In helper — robust against Supabase 500 schema failures, autofill errors, and network issues
+  // Sign In helper — strictly contacts Supabase; never creates local fallback sessions
   const signIn = async (email, password) => {
     setLoading(true);
-    clearLegacyDemoStorage();
+    clearLegacyStorage();
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPassword = (password || '').trim();
 
@@ -153,29 +115,18 @@ export function AuthProvider({ children }) {
         password: cleanPassword,
       });
 
-      if (!error && data?.user) {
-        if (typeof window !== 'undefined') {
-          sessionStorage.removeItem('hf_auth_session_fallback_v1');
-        }
-        setUser(data.user);
-        setSession(data.session);
-        const p = await fetchUserProfile(data.user.id);
-        if (!p && cleanEmail === 'ahmadmusa.dev@gmail.com') {
-          setProfile({
-            id: data.user.id,
-            madrasa_id: '11111111-1111-1111-1111-111111111111',
-            full_name: 'احمد موسیٰ (سپر ایڈمن)',
-            role: 'super_admin'
-          });
-        }
-        return data;
-      }
-
       if (error) {
         throw error;
       }
 
-      throw new Error('INVALID_CREDENTIALS');
+      if (!data?.user) {
+        throw new Error('INVALID_CREDENTIALS');
+      }
+
+      setUser(data.user);
+      setSession(data.session);
+      await fetchUserProfile(data.user.id);
+      return data;
     } catch (err) {
       console.warn('Supabase auth attempt error:', err);
 
@@ -188,96 +139,24 @@ export function AuthProvider({ children }) {
         err?.message?.includes('Failed to fetch') ||
         (typeof navigator !== 'undefined' && !navigator.onLine);
 
-      // ONLY invoke emergency fallback if there is an ACTUAL server failure (500) or offline state
       if (isServerError) {
-        let fallbackUser = null;
-        let fallbackProfile = null;
-
-        if (cleanEmail === 'ahmadmusa.dev@gmail.com') {
-          fallbackUser = {
-            id: '376476f3-33fe-4631-b210-536354da2291',
-            email: 'ahmadmusa.dev@gmail.com',
-            aud: 'authenticated',
-            role: 'authenticated'
-          };
-          fallbackProfile = {
-            id: '376476f3-33fe-4631-b210-536354da2291',
-            madrasa_id: '11111111-1111-1111-1111-111111111111',
-            full_name: 'احمد موسیٰ (سپر ایڈمن)',
-            role: 'super_admin',
-            phone: '0300-1234567'
-          };
-        } else if (cleanEmail === 'admin@madrasa.com' || cleanEmail.includes('admin')) {
-          fallbackUser = {
-            id: '22222222-2222-2222-2222-222222222222',
-            email: cleanEmail,
-            aud: 'authenticated',
-            role: 'authenticated'
-          };
-          fallbackProfile = {
-            id: '22222222-2222-2222-2222-222222222222',
-            madrasa_id: '11111111-1111-1111-1111-111111111111',
-            full_name: 'مولانا احمد مدنی (مہتمم)',
-            role: 'admin',
-            phone: '0300-1112233'
-          };
-        } else if (cleanEmail === 'teacher@madrasa.com' || cleanEmail.includes('teacher')) {
-          fallbackUser = {
-            id: '33333333-3333-3333-3333-333333333333',
-            email: cleanEmail,
-            aud: 'authenticated',
-            role: 'authenticated'
-          };
-          fallbackProfile = {
-            id: '33333333-3333-3333-3333-333333333333',
-            madrasa_id: '11111111-1111-1111-1111-111111111111',
-            full_name: 'استاد محمد یوسف',
-            role: 'teacher',
-            phone: '0300-4445566'
-          };
-        }
-
-        if (fallbackUser && fallbackProfile) {
-          const fallbackSession = {
-            user: fallbackUser,
-            access_token: 'emergency-session-token'
-          };
-          setUser(fallbackUser);
-          setProfile(fallbackProfile);
-          setSession(fallbackSession);
-
-          if (typeof window !== 'undefined') {
-            try {
-              sessionStorage.setItem('hf_auth_session_fallback_v1', JSON.stringify({
-                user: fallbackUser,
-                profile: fallbackProfile,
-                session: fallbackSession
-              }));
-            } catch {}
-          }
-
-          return { user: fallbackUser, session: fallbackSession };
-        }
-
-        throw new Error('SERVER_CONNECTION_ERROR');
+        const serverErr = new Error('SERVER_CONNECTION_ERROR');
+        serverErr.status = err?.status || 500;
+        serverErr.name = err?.name || 'AuthRetryableFetchError';
+        throw serverErr;
       }
 
-      // STRICT AUTHENTICATION: For any wrong password (status 400), strictly reject so unauthorized users can never log in
-      throw err || new Error('Invalid login credentials');
+      // Strictly re-throw authentication credential errors
+      throw err || new Error('INVALID_CREDENTIALS');
     } finally {
       setLoading(false);
     }
   };
 
-  // Sign Out helper — clears Supabase session and emergency tokens
+  // Sign Out helper — clears Supabase session and local state
   const signOut = async () => {
     setLoading(true);
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.removeItem('hf_auth_session_fallback_v1');
-      } catch {}
-    }
-    clearLegacyDemoStorage();
+    clearLegacyStorage();
     try {
       await supabase.auth.signOut().catch(() => {});
       setUser(null);
@@ -289,9 +168,8 @@ export function AuthProvider({ children }) {
   };
 
   const isAuthenticated = !!user && !!session;
-  const calculatedRole =
-    profile?.role ||
-    (user?.email?.toLowerCase() === 'ahmadmusa.dev@gmail.com' ? 'super_admin' : (user?.user_metadata?.role || 'guest'));
+  // Role comes strictly from Supabase profile row. If no profile exists, defaults to 'guest'
+  const calculatedRole = profile?.role || 'guest';
 
   const value = {
     user,

@@ -268,7 +268,7 @@ export default function SuperAdmin() {
       try {
         const { data } = await supabase.auth.getSession();
         const session = data?.session;
-        if (!session || !session.access_token || session.access_token === 'emergency-session-token') {
+        if (!session || !session.access_token) {
           setErrorMsg('آپ کا لاگ ان سیشن ختم ہو چکا ہے۔ برائے مہربانی صفحہ ریفریش کریں یا دوبارہ لاگ ان کریں۔');
           return;
         }
