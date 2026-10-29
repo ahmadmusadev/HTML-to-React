@@ -8,7 +8,10 @@ import {
   mapStaffAttendanceRowToUi,
   mapStaffAttendanceRowsToDict,
   mapUiToStaffAttendancePayload,
-  derivePendingDate
+  derivePendingDate,
+  getStaffAttendanceStatusLabelUrdu,
+  getStaffStatusBadgeStyle,
+  calculateStaffAttendanceCounts
 } from '../utils/StaffAttendanceMappers';
 
 describe('Staff Attendance Mappers & Utilities', () => {
@@ -39,10 +42,72 @@ describe('Staff Attendance Mappers & Utilities', () => {
       expect(normalizeStaffAttendanceStatus('معذور')).toBe('leave');
     });
 
+    it('normalizes various half_leave statuses to "half_leave"', () => {
+      expect(normalizeStaffAttendanceStatus('half_leave')).toBe('half_leave');
+      expect(normalizeStaffAttendanceStatus('HALF_LEAVE')).toBe('half_leave');
+      expect(normalizeStaffAttendanceStatus('half-leave')).toBe('half_leave');
+      expect(normalizeStaffAttendanceStatus('half')).toBe('half_leave');
+      expect(normalizeStaffAttendanceStatus('hl')).toBe('half_leave');
+      expect(normalizeStaffAttendanceStatus('HL')).toBe('half_leave');
+      expect(normalizeStaffAttendanceStatus('آدھی چھٹی')).toBe('half_leave');
+      expect(normalizeStaffAttendanceStatus('آدھی رخصت')).toBe('half_leave');
+      expect(normalizeStaffAttendanceStatus('نصف رخصت')).toBe('half_leave');
+    });
+
     it('falls back to "present" for null, empty or unknown values', () => {
       expect(normalizeStaffAttendanceStatus(null)).toBe('present');
       expect(normalizeStaffAttendanceStatus('')).toBe('present');
       expect(normalizeStaffAttendanceStatus('unknown')).toBe('present');
+    });
+  });
+
+  describe('getStaffAttendanceStatusLabelUrdu & getStaffStatusBadgeStyle', () => {
+    it('returns correct Urdu-only labels', () => {
+      expect(getStaffAttendanceStatusLabelUrdu('present')).toBe('حاضر');
+      expect(getStaffAttendanceStatusLabelUrdu('absent')).toBe('غیر حاضر');
+      expect(getStaffAttendanceStatusLabelUrdu('leave')).toBe('رخصت');
+      expect(getStaffAttendanceStatusLabelUrdu('half_leave')).toBe('آدھی چھٹی');
+    });
+
+    it('returns distinct color styles for half_leave', () => {
+      const hlStyle = getStaffStatusBadgeStyle('half_leave');
+      expect(hlStyle).toEqual({ bg: '#f5f3ff', border: '#ddd6fe', color: '#7c3aed' });
+
+      const presentStyle = getStaffStatusBadgeStyle('present');
+      expect(presentStyle.color).toBe('#15803d');
+    });
+  });
+
+  describe('calculateStaffAttendanceCounts', () => {
+    it('correctly counts 2 leave + 1 half_leave as 2.5 leave and 0.5 present-equivalent', () => {
+      const records = [
+        { status: 'leave' },
+        { status: 'leave' },
+        { status: 'half_leave', lateMinutes: 10, earlyLeaveMinutes: 90 }
+      ];
+
+      const counts = calculateStaffAttendanceCounts(records);
+      expect(counts.leave).toBe(2.5);
+      expect(counts.present).toBe(0.5);
+      expect(counts.absent).toBe(0);
+      expect(counts.halfLeave).toBe(1);
+      expect(counts.totalLateMinutes).toBe(10);
+      expect(counts.totalEarlyLeaveMinutes).toBe(90);
+    });
+
+    it('handles mixed staff attendance records with fractional values', () => {
+      const records = [
+        { status: 'present' },
+        { status: 'present' },
+        { status: 'half_leave' },
+        { status: 'absent' }
+      ];
+
+      const counts = calculateStaffAttendanceCounts(records);
+      expect(counts.present).toBe(2.5);
+      expect(counts.leave).toBe(0.5);
+      expect(counts.absent).toBe(1);
+      expect(counts.halfLeave).toBe(1);
     });
   });
 
@@ -87,6 +152,12 @@ describe('Staff Attendance Mappers & Utilities', () => {
       expect(calculateLateMinutes('06:50', '06:50', 'present')).toBe(0);
     });
 
+    it('calculates late minutes accurately for half_leave staff just like present staff', () => {
+      expect(calculateLateMinutes('07:10', '06:50', 'half_leave')).toBe(20);
+      expect(calculateLateMinutes('06:45', '06:50', 'half_leave')).toBe(0);
+      expect(calculateLateMinutes('06:50', '06:50', 'half_leave')).toBe(0);
+    });
+
     it('returns 0 late minutes if staff is absent or on leave', () => {
       expect(calculateLateMinutes('07:30', '06:50', 'absent')).toBe(0);
       expect(calculateLateMinutes('07:30', '06:50', 'leave')).toBe(0);
@@ -98,6 +169,11 @@ describe('Staff Attendance Mappers & Utilities', () => {
       // Staff stayed until 15:00 -> 0 early minutes
       expect(calculateEarlyLeaveMinutes('15:00', '14:45', 'present')).toBe(0);
       expect(calculateEarlyLeaveMinutes('14:45', '14:45', 'present')).toBe(0);
+    });
+
+    it('calculates early departure minutes accurately for half_leave staff', () => {
+      expect(calculateEarlyLeaveMinutes('13:15', '14:45', 'half_leave')).toBe(90);
+      expect(calculateEarlyLeaveMinutes('14:45', '14:45', 'half_leave')).toBe(0);
     });
 
     it('returns 0 early minutes if staff is absent or on leave', () => {
@@ -299,6 +375,97 @@ describe('Staff Attendance Mappers & Utilities', () => {
       expect(payload.status).toBe('absent');
       expect(payload.check_in).toBeNull();
       expect(payload.check_out).toBeNull();
+      expect(payload.late_minutes).toBe(0);
+      expect(payload.early_leave_minutes).toBe(0);
+    });
+
+    it('creates correct Supabase payload for half_leave and preserves late and early minutes', () => {
+      const record = {
+        staffId: 'staff-uuid-303',
+        date: '2026-09-04',
+        status: 'half_leave',
+        checkIn: '07:05',
+        checkOut: '13:15',
+        lateMinutes: 15,
+        earlyLeaveMinutes: 90,
+        remarks: 'آدھی چھٹی'
+      };
+
+      const payload = mapUiToStaffAttendancePayload(record, 'madrasa-uuid-1', '2026-09-04');
+      expect(payload).toEqual(expect.objectContaining({
+        madrasa_id: 'madrasa-uuid-1',
+        staff_id: 'staff-uuid-303',
+        date: '2026-09-04',
+        status: 'half_leave',
+        check_in: '07:05',
+        check_out: '13:15',
+        late_minutes: 15,
+        early_leave_minutes: 90,
+        remarks: 'آدھی چھٹی'
+      }));
+    });
+
+    it('preserves late and early minutes for half_leave even if check_in/check_out are omitted', () => {
+      const record = {
+        staffId: 'staff-uuid-304',
+        date: '2026-09-04',
+        status: 'half_leave',
+        lateMinutes: 0,
+        earlyLeaveMinutes: 90
+      };
+
+      const payload = mapUiToStaffAttendancePayload(record, 'madrasa-uuid-1', '2026-09-04');
+      expect(payload.status).toBe('half_leave');
+      expect(payload.check_in).toBeNull();
+      expect(payload.check_out).toBeNull();
+      expect(payload.late_minutes).toBe(0);
+      expect(payload.early_leave_minutes).toBe(90);
+    });
+  });
+
+  describe('Staff Attendance Mapper Round-Trip for half_leave', () => {
+    it('preserves status, early_leave_minutes = 90, and late_minutes = 15 through UI -> Payload -> Supabase Row -> UI', () => {
+      const initialUiRecord = {
+        staffId: 'staff-uuid-501',
+        date: '2026-09-04',
+        status: 'half_leave',
+        checkIn: '07:05',
+        checkOut: '13:15',
+        lateMinutes: 15,
+        earlyLeaveMinutes: 90,
+        remarks: 'آدھی رخصت'
+      };
+
+      // 1. UI -> Payload
+      const payload = mapUiToStaffAttendancePayload(initialUiRecord, 'madrasa-uuid-101', '2026-09-04');
+      expect(payload.status).toBe('half_leave');
+      expect(payload.late_minutes).toBe(15);
+      expect(payload.early_leave_minutes).toBe(90);
+
+      // 2. Simulated Supabase Row as returned from DB
+      const dbRow = {
+        id: 'att-half-leave-1',
+        ...payload,
+        created_at: '2026-09-04T07:05:00Z',
+        updated_at: '2026-09-04T13:15:00Z',
+        staff: {
+          id: 'staff-uuid-501',
+          name: 'استاد زید',
+          staff_code: 1005,
+          shift_start: '06:50:00',
+          shift_end: '14:45:00'
+        }
+      };
+
+      // 3. DB Row -> UI Record
+      const loadedUi = mapStaffAttendanceRowToUi(dbRow);
+      expect(loadedUi.status).toBe('half_leave');
+      expect(loadedUi.lateMinutes).toBe(15);
+      expect(loadedUi.earlyLeaveMinutes).toBe(90);
+      expect(loadedUi.checkIn).toBe('07:05');
+      expect(loadedUi.checkOut).toBe('13:15');
+      expect(loadedUi.teacherId).toBe('1005');
+      expect(loadedUi.teacherName).toBe('استاد زید');
     });
   });
 

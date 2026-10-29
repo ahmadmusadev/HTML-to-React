@@ -176,6 +176,13 @@ describe('Dashboard Mappers & Calculation Utilities', () => {
       ];
       // 3 present out of 5 = 60.0%
       expect(calculateTodayAttendanceRate(attendance)).toBe('60.0%');
+
+      // 1 present + 1 half_leave out of 2 = (1 + 0.5) / 2 = 75.0%
+      const attendanceWithHalf = [
+        { status: 'present' },
+        { status: 'half_leave' }
+      ];
+      expect(calculateTodayAttendanceRate(attendanceWithHalf)).toBe('75.0%');
     });
 
     it('calculateMonthFeesRate computes paid percentage or returns "—" if empty', () => {

@@ -1,16 +1,89 @@
 import { isValidUUID } from '../lib/supabaseClient';
 
 /**
- * Normalizes staff attendance status to one of: 'present', 'absent', 'leave'
- * Matching the database CHECK constraint: CHECK (status IN ('present', 'absent', 'leave'))
+ * Normalizes staff attendance status to one of: 'present', 'absent', 'leave', 'half_leave'
+ * Matching the database CHECK constraint: CHECK (status IN ('present', 'absent', 'leave', 'half_leave'))
  */
 export const normalizeStaffAttendanceStatus = (status) => {
   if (!status) return 'present';
   const s = String(status).trim().toLowerCase();
   if (s === 'present' || s === 'p' || s === 'حاضر') return 'present';
   if (s === 'absent' || s === 'a' || s === 'غیر حاضر') return 'absent';
+  if (s === 'half_leave' || s === 'half-leave' || s === 'half' || s === 'hl' || s === 'آدھی چھٹی' || s === 'آدھی رخصت' || s === 'نصف رخصت') return 'half_leave';
   if (s === 'leave' || s === 'l' || s === 'e' || s === 'رخصت' || s === 'معذور') return 'leave';
   return 'present';
+};
+
+/**
+ * Returns Urdu label for staff attendance status (Urdu-only, no emojis/icons)
+ */
+export const getStaffAttendanceStatusLabelUrdu = (status) => {
+  const norm = normalizeStaffAttendanceStatus(status);
+  switch (norm) {
+    case 'present': return 'حاضر';
+    case 'absent': return 'غیر حاضر';
+    case 'leave': return 'رخصت';
+    case 'half_leave': return 'آدھی چھٹی';
+    default: return 'حاضر';
+  }
+};
+
+/**
+ * Returns color tokens for staff status badges across light and dark themes
+ */
+export const getStaffStatusBadgeStyle = (status) => {
+  const norm = normalizeStaffAttendanceStatus(status);
+  switch (norm) {
+    case 'present': return { bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' };
+    case 'absent': return { bg: '#fff5f5', border: '#fecaca', color: '#dc2626' };
+    case 'leave': return { bg: '#f0f9ff', border: '#bae6fd', color: '#0284c7' };
+    case 'half_leave': return { bg: '#f5f3ff', border: '#ddd6fe', color: '#7c3aed' };
+    default: return { bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' };
+  }
+};
+
+/**
+ * Computes attendance counts for staff:
+ * present-equivalent = count(present) + 0.5 * count(half_leave)
+ * leave-equivalent = count(leave) + 0.5 * count(half_leave)
+ * absent = count(absent)
+ * half_leave = count(half_leave)
+ */
+export const calculateStaffAttendanceCounts = (records = []) => {
+  const safeRecords = Array.isArray(records) ? records : [];
+  let presentDays = 0;
+  let absentDays = 0;
+  let leaveDays = 0;
+  let halfLeaveCount = 0;
+  let totalLateMinutes = 0;
+  let totalEarlyLeaveMinutes = 0;
+
+  safeRecords.forEach(r => {
+    if (!r) return;
+    const st = normalizeStaffAttendanceStatus(r.status);
+    if (st === 'present') {
+      presentDays += 1;
+    } else if (st === 'absent') {
+      absentDays += 1;
+    } else if (st === 'leave') {
+      leaveDays += 1;
+    } else if (st === 'half_leave') {
+      halfLeaveCount += 1;
+      presentDays += 0.5;
+      leaveDays += 0.5;
+    }
+    totalLateMinutes += Number(r.lateMinutes || r.late_minutes || 0);
+    totalEarlyLeaveMinutes += Number(r.earlyLeaveMinutes || r.early_leave_minutes || 0);
+  });
+
+  return {
+    present: presentDays,
+    absent: absentDays,
+    leave: leaveDays,
+    halfLeave: halfLeaveCount,
+    totalLateMinutes,
+    totalEarlyLeaveMinutes
+  };
 };
 
 /**
@@ -40,18 +113,22 @@ export const getMinutesDifference = (actualTime, expectedTime) => {
 };
 
 /**
- * Calculates late minutes based on arrival checkIn vs shiftStart
+ * Calculates late minutes based on arrival checkIn vs shiftStart.
+ * Supports both present and half_leave statuses.
  */
 export const calculateLateMinutes = (checkIn, shiftStart, status = 'present') => {
-  if (status !== 'present' || !checkIn || !shiftStart) return 0;
+  const norm = normalizeStaffAttendanceStatus(status);
+  if ((norm !== 'present' && norm !== 'half_leave') || !checkIn || !shiftStart) return 0;
   return Math.max(getMinutesDifference(checkIn, shiftStart), 0);
 };
 
 /**
- * Calculates early departure minutes based on checkOut vs shiftEnd
+ * Calculates early departure minutes based on checkOut vs shiftEnd.
+ * Supports both present and half_leave statuses.
  */
 export const calculateEarlyLeaveMinutes = (checkOut, shiftEnd, status = 'present') => {
-  if (status !== 'present' || !checkOut || !shiftEnd) return 0;
+  const norm = normalizeStaffAttendanceStatus(status);
+  if ((norm !== 'present' && norm !== 'half_leave') || !checkOut || !shiftEnd) return 0;
   return Math.max(getMinutesDifference(shiftEnd, checkOut), 0);
 };
 
@@ -153,12 +230,20 @@ export const mapUiToStaffAttendancePayload = (record, madrasaId, date) => {
   if (!record) return null;
 
   const status = normalizeStaffAttendanceStatus(record.status);
-  const checkIn = (status === 'present' && (record.checkIn || record.check_in))
+  const isPresentOrHalf = status === 'present' || status === 'half_leave';
+  const checkIn = (isPresentOrHalf && (record.checkIn || record.check_in))
     ? formatTimeForUi(record.checkIn || record.check_in)
     : null;
-  const checkOut = (status === 'present' && (record.checkOut || record.check_out))
+  const checkOut = (isPresentOrHalf && (record.checkOut || record.check_out))
     ? formatTimeForUi(record.checkOut || record.check_out)
     : null;
+
+  const lateMinutes = isPresentOrHalf
+    ? Number(record.lateMinutes ?? record.late_minutes ?? 0)
+    : 0;
+  const earlyLeaveMinutes = isPresentOrHalf
+    ? Number(record.earlyLeaveMinutes ?? record.early_leave_minutes ?? 0)
+    : 0;
 
   const payload = {
     madrasa_id: madrasaId,
@@ -167,8 +252,8 @@ export const mapUiToStaffAttendancePayload = (record, madrasaId, date) => {
     status,
     check_in: checkIn || null,
     check_out: checkOut || null,
-    late_minutes: Number(record.lateMinutes ?? record.late_minutes ?? 0),
-    early_leave_minutes: Number(record.earlyLeaveMinutes ?? record.early_leave_minutes ?? 0),
+    late_minutes: lateMinutes,
+    early_leave_minutes: earlyLeaveMinutes,
     remarks: record.remarks ? String(record.remarks).trim() : null,
     updated_at: new Date().toISOString()
   };

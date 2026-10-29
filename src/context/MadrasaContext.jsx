@@ -1673,18 +1673,22 @@ export function MadrasaProvider({ children }) {
     const recordsArray = Array.isArray(recs) ? recs : (recs ? [recs] : []);
     if (!recordsArray.length) return [];
 
-    const payload = recordsArray.map(r => ({
-      madrasa_id: mId,
-      staff_id: r.staff_id || r.staffId || r.id,
-      date: r.date || d,
-      status: r.status || 'present',
-      check_in: (r.status === 'present' && (r.check_in || r.checkIn)) ? (r.check_in || r.checkIn) : null,
-      check_out: (r.status === 'present' && (r.check_out || r.checkOut)) ? (r.check_out || r.checkOut) : null,
-      late_minutes: Number(r.late_minutes ?? r.lateMinutes ?? 0),
-      early_leave_minutes: Number(r.early_leave_minutes ?? r.earlyLeaveMinutes ?? 0),
-      remarks: r.remarks || null,
-      updated_at: new Date().toISOString()
-    }));
+    const payload = recordsArray.map(r => {
+      const status = r.status || 'present';
+      const isPresentOrHalf = status === 'present' || status === 'half_leave';
+      return {
+        madrasa_id: mId,
+        staff_id: r.staff_id || r.staffId || r.id,
+        date: r.date || d,
+        status: status,
+        check_in: (isPresentOrHalf && (r.check_in || r.checkIn)) ? (r.check_in || r.checkIn) : null,
+        check_out: (isPresentOrHalf && (r.check_out || r.checkOut)) ? (r.check_out || r.checkOut) : null,
+        late_minutes: isPresentOrHalf ? Number(r.late_minutes ?? r.lateMinutes ?? 0) : 0,
+        early_leave_minutes: isPresentOrHalf ? Number(r.early_leave_minutes ?? r.earlyLeaveMinutes ?? 0) : 0,
+        remarks: r.remarks || null,
+        updated_at: new Date().toISOString()
+      };
+    });
 
     if (isRemote) {
       try {
@@ -1745,18 +1749,22 @@ export function MadrasaProvider({ children }) {
     const recordsArray = Array.isArray(recs) ? recs : (recs ? [recs] : []);
     if (!recordsArray.length) return [];
 
-    const payload = recordsArray.map(r => ({
-      madrasa_id: mId,
-      staff_id: r.staff_id || r.staffId || r.id,
-      date: r.date || d,
-      status: r.status || 'present',
-      check_in: (r.status === 'present' && (r.check_in || r.checkIn)) ? (r.check_in || r.checkIn) : null,
-      check_out: (r.status === 'present' && (r.check_out || r.checkOut)) ? (r.check_out || r.checkOut) : null,
-      late_minutes: Number(r.late_minutes ?? r.lateMinutes ?? 0),
-      early_leave_minutes: Number(r.early_leave_minutes ?? r.earlyLeaveMinutes ?? 0),
-      remarks: r.remarks || null,
-      updated_at: new Date().toISOString()
-    }));
+    const payload = recordsArray.map(r => {
+      const status = r.status || 'present';
+      const isPresentOrHalf = status === 'present' || status === 'half_leave';
+      return {
+        madrasa_id: mId,
+        staff_id: r.staff_id || r.staffId || r.id,
+        date: r.date || d,
+        status: status,
+        check_in: (isPresentOrHalf && (r.check_in || r.checkIn)) ? (r.check_in || r.checkIn) : null,
+        check_out: (isPresentOrHalf && (r.check_out || r.checkOut)) ? (r.check_out || r.checkOut) : null,
+        late_minutes: isPresentOrHalf ? Number(r.late_minutes ?? r.lateMinutes ?? 0) : 0,
+        early_leave_minutes: isPresentOrHalf ? Number(r.early_leave_minutes ?? r.earlyLeaveMinutes ?? 0) : 0,
+        remarks: r.remarks || null,
+        updated_at: new Date().toISOString()
+      };
+    });
 
     if (isRemote) {
       try {

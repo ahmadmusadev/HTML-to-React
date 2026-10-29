@@ -12,7 +12,10 @@ import {
   mapStaffAttendanceRowToUi,
   mapStaffAttendanceRowsToDict,
   mapUiToStaffAttendancePayload,
-  derivePendingDate
+  derivePendingDate,
+  getStaffAttendanceStatusLabelUrdu,
+  getStaffStatusBadgeStyle,
+  calculateStaffAttendanceCounts
 } from '../utils/StaffAttendanceMappers';
 import './Entry.css';
 
@@ -104,7 +107,10 @@ export {
   mapStaffAttendanceRowToUi,
   mapStaffAttendanceRowsToDict,
   mapUiToStaffAttendancePayload,
-  derivePendingDate
+  derivePendingDate,
+  getStaffAttendanceStatusLabelUrdu,
+  getStaffStatusBadgeStyle,
+  calculateStaffAttendanceCounts
 };
 
 export default function Attendance() {
@@ -966,10 +972,13 @@ export default function Attendance() {
       
       staffMembers.forEach((staff) => {
         const rec = savedData[staff.teacherId] || savedData[staff.name] || savedData[staff.id] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
+        const initialStatus = rec.status || 'present';
         initialForm[staff.teacherId] = {
-          status: rec.status || 'present',
-          checkIn: rec.checkIn || staff.shiftStart,
-          checkOut: rec.checkOut || staff.shiftEnd,
+          status: initialStatus,
+          checkIn: rec.checkIn || (initialStatus === 'present' ? staff.shiftStart : ''),
+          checkOut: rec.checkOut || (initialStatus === 'present' ? staff.shiftEnd : ''),
+          lateMinutes: rec.lateMinutes !== undefined ? rec.lateMinutes : 0,
+          earlyLeaveMinutes: rec.earlyLeaveMinutes !== undefined ? rec.earlyLeaveMinutes : 0,
           remarks: rec.remarks || ''
         };
       });
@@ -981,13 +990,42 @@ export default function Attendance() {
     setStaffAttFormData(prev => {
       const st = prev[teacherId] || {};
       const newSt = { ...st, [field]: value };
-      if (field === 'status' && value !== 'present') {
-        newSt.checkIn = '';
-        newSt.checkOut = '';
-      } else if (field === 'status' && value === 'present') {
-        const profile = staffMembers.find(s => s.teacherId === teacherId);
-        newSt.checkIn = newSt.checkIn || profile?.shiftStart || '06:50';
-        newSt.checkOut = newSt.checkOut || profile?.shiftEnd || '14:45';
+      const profile = staffMembers.find(s => s.teacherId === teacherId);
+
+      if (field === 'status') {
+        if (value === 'absent' || value === 'leave') {
+          newSt.checkIn = '';
+          newSt.checkOut = '';
+          newSt.lateMinutes = 0;
+          newSt.earlyLeaveMinutes = 0;
+        } else if (value === 'present') {
+          newSt.checkIn = newSt.checkIn || profile?.shiftStart || '06:50';
+          newSt.checkOut = newSt.checkOut || profile?.shiftEnd || '14:45';
+          newSt.lateMinutes = calculateLateMinutes(newSt.checkIn, profile?.shiftStart || '06:50', 'present');
+          newSt.earlyLeaveMinutes = calculateEarlyLeaveMinutes(newSt.checkOut, profile?.shiftEnd || '14:45', 'present');
+        } else if (value === 'half_leave') {
+          // check_in and check_out are optional; keep existing values, do NOT force minutes to 0
+          if (newSt.checkIn) {
+            newSt.lateMinutes = calculateLateMinutes(newSt.checkIn, profile?.shiftStart || '06:50', 'half_leave');
+          }
+          if (newSt.checkOut) {
+            newSt.earlyLeaveMinutes = calculateEarlyLeaveMinutes(newSt.checkOut, profile?.shiftEnd || '14:45', 'half_leave');
+          }
+        }
+      } else if (field === 'checkIn') {
+        const curStatus = newSt.status || 'present';
+        if (value && (curStatus === 'present' || curStatus === 'half_leave')) {
+          newSt.lateMinutes = calculateLateMinutes(value, profile?.shiftStart || '06:50', curStatus);
+        }
+      } else if (field === 'checkOut') {
+        const curStatus = newSt.status || 'present';
+        if (value && (curStatus === 'present' || curStatus === 'half_leave')) {
+          newSt.earlyLeaveMinutes = calculateEarlyLeaveMinutes(value, profile?.shiftEnd || '14:45', curStatus);
+        }
+      } else if (field === 'lateMinutes') {
+        newSt.lateMinutes = value === '' ? '' : Number(value);
+      } else if (field === 'earlyLeaveMinutes') {
+        newSt.earlyLeaveMinutes = value === '' ? '' : Number(value);
       }
       return { ...prev, [teacherId]: newSt };
     });
@@ -1000,10 +1038,23 @@ export default function Attendance() {
     const attRecord = { ...(staffAttendance[staffAttDate] || {}) };
 
     staffMembers.forEach(staff => {
-      const form = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '' };
+      const form = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
       const prev = attRecord[staff.teacherId] || attRecord[staff.name] || attRecord[staff.id] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
-      const checkIn = (form.status !== 'present') ? '' : form.checkIn;
-      const lateMinutes = (form.status === 'present' && checkIn) ? Math.max(getMinutesDifference(checkIn, staff.shiftStart), 0) : 0;
+      
+      const isPresentOrHalf = form.status === 'present' || form.status === 'half_leave';
+      const checkIn = isPresentOrHalf ? (form.checkIn || '') : '';
+      
+      let lateMinutes = 0;
+      if (isPresentOrHalf) {
+        if (form.lateMinutes !== undefined && form.lateMinutes !== null && form.lateMinutes !== '') {
+          lateMinutes = Number(form.lateMinutes);
+        } else if (checkIn) {
+          lateMinutes = calculateLateMinutes(checkIn, staff.shiftStart, form.status);
+        } else if (prev.lateMinutes !== undefined) {
+          lateMinutes = Number(prev.lateMinutes);
+        }
+      }
+      const earlyLeaveMinutes = isPresentOrHalf ? Number(form.earlyLeaveMinutes ?? prev.earlyLeaveMinutes ?? 0) : 0;
       
       attRecord[staff.teacherId] = {
         teacherId: staff.teacherId,
@@ -1012,7 +1063,7 @@ export default function Attendance() {
         checkIn,
         checkOut: prev.checkOut || '',
         lateMinutes,
-        earlyLeaveMinutes: Number(prev.earlyLeaveMinutes || 0),
+        earlyLeaveMinutes,
         remarks: form.remarks || ''
       };
 
@@ -1024,7 +1075,7 @@ export default function Attendance() {
         check_in: checkIn || null,
         check_out: prev.checkOut || null,
         late_minutes: lateMinutes,
-        early_leave_minutes: Number(prev.earlyLeaveMinutes || 0),
+        early_leave_minutes: earlyLeaveMinutes,
         remarks: form.remarks || null
       });
     });
@@ -1057,18 +1108,39 @@ export default function Attendance() {
     const attRecord = { ...(staffAttendance[staffAttDate] || {}) };
 
     staffMembers.forEach(staff => {
-      const form = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '' };
+      const form = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
       const prev = attRecord[staff.teacherId] || attRecord[staff.name] || attRecord[staff.id] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
-      const checkOut = (form.status !== 'present') ? '' : form.checkOut;
       
-      const lateMinutes = (form.status === 'present' && prev.checkIn) ? Math.max(getMinutesDifference(prev.checkIn, staff.shiftStart), 0) : 0;
-      const earlyLeaveMinutes = (form.status === 'present' && checkOut) ? Math.max(getMinutesDifference(staff.shiftEnd, checkOut), 0) : 0;
+      const isPresentOrHalf = form.status === 'present' || form.status === 'half_leave';
+      const checkIn = isPresentOrHalf ? (form.checkIn || prev.checkIn || '') : '';
+      const checkOut = isPresentOrHalf ? (form.checkOut || '') : '';
+      
+      let lateMinutes = 0;
+      if (isPresentOrHalf) {
+        if (form.lateMinutes !== undefined && form.lateMinutes !== null && form.lateMinutes !== '') {
+          lateMinutes = Number(form.lateMinutes);
+        } else if (checkIn) {
+          lateMinutes = calculateLateMinutes(checkIn, staff.shiftStart, form.status);
+        } else if (prev.lateMinutes !== undefined) {
+          lateMinutes = Number(prev.lateMinutes);
+        }
+      }
+      let earlyLeaveMinutes = 0;
+      if (isPresentOrHalf) {
+        if (form.earlyLeaveMinutes !== undefined && form.earlyLeaveMinutes !== null && form.earlyLeaveMinutes !== '') {
+          earlyLeaveMinutes = Number(form.earlyLeaveMinutes);
+        } else if (checkOut) {
+          earlyLeaveMinutes = calculateEarlyLeaveMinutes(checkOut, staff.shiftEnd, form.status);
+        } else if (prev.earlyLeaveMinutes !== undefined) {
+          earlyLeaveMinutes = Number(prev.earlyLeaveMinutes);
+        }
+      }
       
       attRecord[staff.teacherId] = {
         teacherId: staff.teacherId,
         teacherName: staff.name,
         status: form.status,
-        checkIn: prev.checkIn || '',
+        checkIn,
         checkOut,
         lateMinutes,
         earlyLeaveMinutes,
@@ -1080,7 +1152,7 @@ export default function Attendance() {
         staffId: staff.id,
         date: staffAttDate,
         status: form.status,
-        check_in: prev.checkIn || null,
+        check_in: checkIn || null,
         check_out: checkOut || null,
         late_minutes: lateMinutes,
         early_leave_minutes: earlyLeaveMinutes,
@@ -1208,11 +1280,16 @@ export default function Attendance() {
         const month = r.date.slice(0, 7);
         const key = `${month}|${r.teacherId}`;
         if (!monthlyMap[key]) {
-          monthlyMap[key] = { month, teacherId: r.teacherId, teacherName: r.teacherName, present: 0, absent: 0, leave: 0, totalLateMinutes: 0, totalEarlyLeaveMinutes: 0 };
+          monthlyMap[key] = { month, teacherId: r.teacherId, teacherName: r.teacherName, present: 0, absent: 0, leave: 0, halfLeave: 0, totalLateMinutes: 0, totalEarlyLeaveMinutes: 0 };
         }
         if (r.status === 'present') monthlyMap[key].present++;
         else if (r.status === 'absent') monthlyMap[key].absent++;
         else if (r.status === 'leave') monthlyMap[key].leave++;
+        else if (r.status === 'half_leave') {
+          monthlyMap[key].halfLeave = (monthlyMap[key].halfLeave || 0) + 1;
+          monthlyMap[key].present += 0.5;
+          monthlyMap[key].leave += 0.5;
+        }
         monthlyMap[key].totalLateMinutes += r.lateMinutes;
         monthlyMap[key].totalEarlyLeaveMinutes += r.earlyLeaveMinutes;
       });
@@ -1240,7 +1317,14 @@ export default function Attendance() {
                     <td>{r.date}</td>
                     <td>{r.teacherId}</td>
                     <td>{r.teacherName}</td>
-                    <td>{r.status}</td>
+                    <td>
+                      <span
+                        className={`staff-status-badge status-${r.status}`}
+                        style={getStaffStatusBadgeStyle(r.status)}
+                      >
+                        {getStaffAttendanceStatusLabelUrdu(r.status)}
+                      </span>
+                    </td>
                     <td>{r.checkIn}</td>
                     <td>{r.checkOut}</td>
                     <td style={{ color: r.lateMinutes > 0 ? '#c62828' : '#2e7d32', fontWeight: "bold" }}>{r.lateMinutes}</td>
@@ -1261,6 +1345,7 @@ export default function Attendance() {
                   <th>حاضر دن</th>
                   <th>غیر حاضر</th>
                   <th>رخصت</th>
+                  <th>آدھی چھٹی</th>
                   <th>کل دیر (منٹ)</th>
                   <th>کل جلد روانگی (منٹ)</th>
                 </tr>
@@ -1274,6 +1359,7 @@ export default function Attendance() {
                     <td>{r.present}</td>
                     <td>{r.absent}</td>
                     <td>{r.leave}</td>
+                    <td>{r.halfLeave || 0}</td>
                     <td>{r.totalLateMinutes}</td>
                     <td>{r.totalEarlyLeaveMinutes}</td>
                   </tr>
@@ -1623,6 +1709,35 @@ export default function Attendance() {
           <div id="staffAttendanceLockInfo" className="att-lock-banner" style={{ display: 'block' }}>{staffFlowMsg}</div>
         )}
 
+        {/* روزانہ عملہ حاضری خلاصہ */}
+        {staffMembers.length > 0 && (() => {
+          const dailyStaffCounts = calculateStaffAttendanceCounts(Object.values(staffAttFormData));
+          return (
+            <div className="mini-stat-grid" style={{ marginTop: "14px", marginBottom: "14px" }}>
+              <div className="mini-stat">
+                <div className="mini-stat-label">کل عملہ</div>
+                <div className="mini-stat-value">{staffMembers.length}</div>
+              </div>
+              <div className="mini-stat">
+                <div className="mini-stat-label">حاضر (معادل)</div>
+                <div className="mini-stat-value" style={{ color: "#15803d" }}>{dailyStaffCounts.present}</div>
+              </div>
+              <div className="mini-stat">
+                <div className="mini-stat-label">غیر حاضر</div>
+                <div className="mini-stat-value" style={{ color: "#dc2626" }}>{dailyStaffCounts.absent}</div>
+              </div>
+              <div className="mini-stat">
+                <div className="mini-stat-label">رخصت (معادل)</div>
+                <div className="mini-stat-value" style={{ color: "#0284c7" }}>{dailyStaffCounts.leave}</div>
+              </div>
+              <div className="mini-stat">
+                <div className="mini-stat-label">آدھی چھٹی</div>
+                <div className="mini-stat-value" style={{ color: "#7c3aed" }}>{dailyStaffCounts.halfLeave}</div>
+              </div>
+            </div>
+          );
+        })()}
+
         <div id="staffAttendanceListArea">
           {!staffAttDate ? (
             <p style={{ textAlign: "center", color: "var(--muted)" }}>پہلے تاریخ منتخب کریں۔</p>
@@ -1637,35 +1752,91 @@ export default function Attendance() {
                     <th>نام استاد</th>
                     <th>معیاری وقت</th>
                     <th>حیثیت</th>
-                    <th>آمد کا وقت (Check-in)</th>
-                    <th>روانگی کا وقت (Check-out)</th>
+                    <th>آمد کا وقت</th>
+                    <th>دیر (منٹ)</th>
+                    <th>روانگی کا وقت</th>
+                    <th>جلد روانگی (منٹ)</th>
                     <th>ریمارکس</th>
                   </tr>
                 </thead>
                 <tbody>
                   {staffMembers.map(staff => {
-                    const formData = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '' };
-                    const disable = formData.status !== 'present';
+                    const formData = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
+                    const isPresentOrHalf = formData.status === 'present' || formData.status === 'half_leave';
+                    const disable = !isPresentOrHalf;
                     return (
                       <tr key={staff.teacherId}>
                         <td><strong>{staff.teacherId}</strong></td>
                         <td><strong>{staff.name}</strong></td>
                         <td><span style={{ fontSize: "0.85rem", color: "#555" }}>{staff.shiftStart} تا {staff.shiftEnd}</span></td>
                         <td>
-                          <select style={{ width: "auto", minWidth: "120px", padding: "5px" }} value={formData.status} onChange={e => handleStaffAttChange(staff.teacherId, 'status', e.target.value)}>
-                            <option value="present">حاضر (Present)</option>
-                            <option value="absent">غیر حاضر (Absent)</option>
-                            <option value="leave">رخصت (Leave)</option>
+                          <select
+                            style={{ width: "auto", minWidth: "120px", padding: "5px" }}
+                            value={formData.status}
+                            onChange={e => handleStaffAttChange(staff.teacherId, 'status', e.target.value)}
+                          >
+                            <option value="present">حاضر</option>
+                            <option value="absent">غیر حاضر</option>
+                            <option value="leave">رخصت</option>
+                            <option value="half_leave">آدھی چھٹی</option>
                           </select>
                         </td>
                         <td>
-                          <input type="time" value={formData.checkIn} onChange={e => handleStaffAttChange(staff.teacherId, 'checkIn', e.target.value)} disabled={disable || staffSession === 'checkout'} />
+                          <input
+                            type="time"
+                            value={formData.checkIn || ''}
+                            onChange={e => handleStaffAttChange(staff.teacherId, 'checkIn', e.target.value)}
+                            disabled={disable || staffSession === 'checkout'}
+                          />
                         </td>
                         <td>
-                          <input type="time" value={formData.checkOut} onChange={e => handleStaffAttChange(staff.teacherId, 'checkOut', e.target.value)} disabled={disable || staffSession === 'checkin'} />
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            style={{ width: "70px", padding: "5px" }}
+                            value={formData.lateMinutes !== undefined && formData.lateMinutes !== null ? formData.lateMinutes : ''}
+                            onChange={e => handleStaffAttChange(staff.teacherId, 'lateMinutes', e.target.value)}
+                            disabled={disable || staffSession === 'checkout'}
+                          />
+                          {formData.status === 'half_leave' && (
+                            <div className="half-leave-helper">
+                              آدھی چھٹی والے دن صرف وہ منٹ لکھیں جو آدھی چھٹی کے علاوہ ہوں۔
+                            </div>
+                          )}
                         </td>
                         <td>
-                          <input type="text" placeholder="ریمارکس..." style={{ width: "100%", padding: "5px" }} value={formData.remarks} onChange={e => handleStaffAttChange(staff.teacherId, 'remarks', e.target.value)} />
+                          <input
+                            type="time"
+                            value={formData.checkOut || ''}
+                            onChange={e => handleStaffAttChange(staff.teacherId, 'checkOut', e.target.value)}
+                            disabled={disable || staffSession === 'checkin'}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            style={{ width: "70px", padding: "5px" }}
+                            value={formData.earlyLeaveMinutes !== undefined && formData.earlyLeaveMinutes !== null ? formData.earlyLeaveMinutes : ''}
+                            onChange={e => handleStaffAttChange(staff.teacherId, 'earlyLeaveMinutes', e.target.value)}
+                            disabled={disable || staffSession === 'checkin'}
+                          />
+                          {formData.status === 'half_leave' && (
+                            <div className="half-leave-helper">
+                              آدھی چھٹی والے دن صرف وہ منٹ لکھیں جو آدھی چھٹی کے علاوہ ہوں۔
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            placeholder="ریمارکس..."
+                            style={{ width: "100%", padding: "5px" }}
+                            value={formData.remarks || ''}
+                            onChange={e => handleStaffAttChange(staff.teacherId, 'remarks', e.target.value)}
+                          />
                         </td>
                       </tr>
                     );

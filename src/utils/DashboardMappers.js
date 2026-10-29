@@ -146,12 +146,17 @@ export const calculateTodayAttendanceRate = (attendanceRows = []) => {
     return '—';
   }
   const total = attendanceRows.length;
-  const presentCount = attendanceRows.filter(r => {
+  let presentEquivalent = 0;
+  attendanceRows.forEach(r => {
     const s = String(r?.status || '').trim().toLowerCase();
-    return s === 'present' || s === 'حاضر' || s === 'p';
-  }).length;
+    if (s === 'present' || s === 'حاضر' || s === 'p') {
+      presentEquivalent += 1;
+    } else if (s === 'half_leave' || s === 'half-leave' || s === 'half' || s === 'hl' || s === 'آدھی چھٹی' || s === 'آدھی رخصت') {
+      presentEquivalent += 0.5;
+    }
+  });
 
-  return `${((presentCount / total) * 100).toFixed(1)}%`;
+  return `${((presentEquivalent / total) * 100).toFixed(1)}%`;
 };
 
 /**
