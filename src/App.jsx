@@ -17,6 +17,7 @@ import Exams from './pages/Exams';
 import AiListen from './pages/AiListen';
 import Fees from './pages/Fees';
 import Attendance from './pages/Attendance';
+import Payroll from './pages/Payroll';
 import Login from './pages/Login';
 import SuperAdmin from './pages/SuperAdmin';
 import ForgotPassword from './pages/ForgotPassword';
@@ -368,7 +369,7 @@ export function MainHeader({ theme, toggleTheme }) {
   );
 }
 
-function MainLayout({ theme, toggleTheme }) {
+export function MainLayout({ theme, toggleTheme }) {
   const location = useLocation();
   const isAuthPage = ['/login', '/forgot-password', '/reset-password'].includes(location.pathname);
   const { pendingSyncCount, madrasaError } = useMadrasa();
@@ -404,6 +405,9 @@ function MainLayout({ theme, toggleTheme }) {
           <NavLink to="/exams" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>امتحانات</NavLink>
           <NavLink to="/records" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تعلیمی ریکارڈز</NavLink>
           <NavLink to="/staff" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اسٹاف</NavLink>
+          {(role === 'admin' || role === 'super_admin') && (
+            <NavLink to="/payroll" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تنخواہ</NavLink>
+          )}
           <NavLink to="/ai-listen" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
         </nav>
 
@@ -453,6 +457,7 @@ function MainLayout({ theme, toggleTheme }) {
             <Route path="/entry" element={<ProtectedRoute><Entry /></ProtectedRoute>} />
             <Route path="/records" element={<ProtectedRoute><Records /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
+            <Route path="/payroll" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']}><Payroll /></ProtectedRoute>} />
             <Route path="/exams" element={<ProtectedRoute><Exams /></ProtectedRoute>} />
             <Route path="/ai-listen" element={<ProtectedRoute><AiListen /></ProtectedRoute>} />
             <Route path="/fees" element={<ProtectedRoute><Fees /></ProtectedRoute>} />

@@ -1,0 +1,687 @@
+/* ==========================================================================
+   PAYROLL MANAGEMENT STYLES (Light & Dark Mode, RTL, Responsive)
+   No emojis or decorative icons. Clean, text-focused, professional.
+   ========================================================================== */
+
+.payroll-container {
+  padding: 24px;
+  direction: rtl;
+  color: var(--text, #1e293b);
+  box-sizing: border-box;
+}
+
+.payroll-header-area {
+  margin-bottom: 24px;
+}
+
+.payroll-page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 6px 0;
+  color: var(--text, #1e293b);
+}
+
+.payroll-page-desc {
+  font-size: 0.92rem;
+  color: var(--muted, #64748b);
+  margin: 0;
+}
+
+/* --- Sub-Tabs Navigation --- */
+.payroll-subtabs-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border, #e2e8f0);
+  padding-bottom: 12px;
+}
+
+.payroll-subtab-btn {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  color: var(--muted, #64748b);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.payroll-subtab-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.payroll-subtab-btn.active {
+  background: #1e293b;
+  color: #ffffff;
+  border-color: #1e293b;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Alert Messages (Error, Success, Info) --- */
+.payroll-alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.payroll-alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.payroll-alert-success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #15803d;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.payroll-alert-info {
+  background: rgba(2, 132, 199, 0.08);
+  color: #0369a1;
+  border: 1px solid rgba(2, 132, 199, 0.25);
+}
+
+/* --- Summary Cards Grid --- */
+.payroll-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.payroll-summary-card {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.payroll-summary-card-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  margin-bottom: 8px;
+}
+
+.payroll-summary-card-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text, #1e293b);
+}
+
+/* --- Table Styles --- */
+.payroll-table-wrapper {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+}
+
+.payroll-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.92rem;
+  min-width: 640px;
+}
+
+.payroll-table-holidays {
+  min-width: 480px;
+}
+
+.payroll-table th {
+  background: #f8fafc;
+  color: var(--text, #1e293b);
+  font-weight: 700;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  white-space: nowrap;
+}
+
+.payroll-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  vertical-align: middle;
+  color: var(--text, #1e293b);
+}
+
+.payroll-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.payroll-table tbody tr:hover {
+  background: #f1f5f9;
+}
+
+/* --- Status Badges --- */
+.payroll-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.payroll-badge-unset {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.payroll-badge-set {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+/* --- Theme-Safe Typography & Indicator Classes --- */
+.payroll-unassigned-alert {
+  color: #dc2626;
+}
+
+.payroll-preview-badge {
+  color: #b45309;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.payroll-staff-father {
+  font-size: 0.8rem;
+  color: var(--muted, #64748b);
+}
+
+.payroll-muted-dash {
+  color: var(--muted, #64748b);
+  font-weight: 700;
+}
+
+.payroll-unit-label {
+  font-size: 0.85rem;
+  color: var(--muted, #64748b);
+}
+
+.payroll-leave-info-desc {
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+
+.payroll-loading-box-sm {
+  padding: 24px;
+}
+
+/* --- Form & Input Elements --- */
+.payroll-input,
+.payroll-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 6px;
+  font-size: 0.92rem;
+  background: var(--card, #ffffff);
+  color: var(--text, #1e293b);
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.payroll-input:focus,
+.payroll-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.payroll-input-table {
+  width: 160px;
+  padding: 6px 10px;
+}
+
+.payroll-settings-card {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+}
+
+.payroll-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.payroll-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payroll-form-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text, #1e293b);
+}
+
+.payroll-form-hint {
+  font-size: 0.78rem;
+  color: var(--muted, #64748b);
+}
+
+/* --- Weekday Checkbox Grid --- */
+.weekly-off-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.weekday-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--card, #ffffff);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.weekday-checkbox-label:hover {
+  border-color: #2563eb;
+}
+
+.weekday-checkbox-label.selected {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.weekday-checkbox-input {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+}
+
+/* --- Buttons --- */
+.payroll-actions-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: 20px;
+}
+
+.payroll-btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 24px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.payroll-btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.payroll-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.payroll-btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.payroll-btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.payroll-btn-secondary {
+  background: var(--card, #ffffff);
+  color: var(--text, #1e293b);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payroll-btn-secondary:hover {
+  background: #f1f5f9;
+}
+
+/* --- Holidays Sub-tab --- */
+.holiday-form-card {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.holiday-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.holiday-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* --- Confirmation Modal --- */
+.payroll-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.payroll-modal-card {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+.payroll-modal-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0 0 12px 0;
+  color: var(--text, #1e293b);
+}
+
+.payroll-modal-text {
+  font-size: 0.95rem;
+  color: var(--muted, #64748b);
+  margin: 0 0 20px 0;
+  line-height: 1.6;
+}
+
+.payroll-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* --- Empty / Loading States --- */
+.payroll-empty-state {
+  text-align: center;
+  padding: 36px 20px;
+  color: var(--muted, #64748b);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.payroll-loading-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 12px;
+  color: var(--muted, #64748b);
+}
+
+/* ==========================================================================
+   DARK MODE OVERRIDES ([data-theme="dark"])
+   Preserves high contrast, black/dark gray surfaces, and crisp white text.
+   ========================================================================== */
+
+[data-theme="dark"] .payroll-container {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .payroll-page-title {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .payroll-page-desc {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .payroll-subtabs-nav {
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme="dark"] .payroll-subtab-btn {
+  background: #141417 !important;
+  border-color: #27272a !important;
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .payroll-subtab-btn:hover {
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  background: #1c1c20 !important;
+}
+
+[data-theme="dark"] .payroll-subtab-btn.active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+}
+
+[data-theme="dark"] .payroll-summary-card,
+[data-theme="dark"] .payroll-settings-card,
+[data-theme="dark"] .holiday-form-card,
+[data-theme="dark"] .payroll-table-wrapper,
+[data-theme="dark"] .payroll-modal-card {
+  background: #141417 !important;
+  border-color: #27272a !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] .payroll-summary-card-title {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .payroll-summary-card-value {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .payroll-table th {
+  background: #1c1c20 !important;
+  color: #ffffff !important;
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme="dark"] .payroll-table td {
+  color: #ffffff !important;
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme="dark"] .payroll-table tbody tr:hover {
+  background: #1c1c20 !important;
+}
+
+[data-theme="dark"] .payroll-badge-unset {
+  background: #450a0a !important;
+  color: #f87171 !important;
+  border-color: #991b1b !important;
+}
+
+[data-theme="dark"] .payroll-badge-set {
+  background: #052e16 !important;
+  color: #4ade80 !important;
+  border-color: #166534 !important;
+}
+
+[data-theme="dark"] .payroll-unassigned-alert {
+  color: #f87171 !important;
+}
+
+[data-theme="dark"] .payroll-preview-badge {
+  color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .payroll-staff-father {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .payroll-muted-dash {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .payroll-unit-label {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .payroll-table th {
+  white-space: nowrap !important;
+}
+
+[data-theme="dark"] .payroll-input,
+[data-theme="dark"] .payroll-select {
+  background: #18181b !important;
+  border-color: #3f3f46 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .payroll-input:focus,
+[data-theme="dark"] .payroll-select:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+}
+
+[data-theme="dark"] .payroll-form-label {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .payroll-form-hint {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .weekday-checkbox-label {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .weekday-checkbox-label.selected {
+  background: #1e3a5f !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
+
+[data-theme="dark"] .payroll-alert-error {
+  background: #450a0a !important;
+  color: #f87171 !important;
+  border-color: #991b1b !important;
+}
+
+[data-theme="dark"] .payroll-alert-success {
+  background: #052e16 !important;
+  color: #4ade80 !important;
+  border-color: #166534 !important;
+}
+
+[data-theme="dark"] .payroll-alert-info {
+  background: #082f49 !important;
+  color: #38bdf8 !important;
+  border-color: #0369a1 !important;
+}
+
+[data-theme="dark"] .payroll-btn-secondary {
+  background: #18181b !important;
+  border-color: #3f3f46 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .payroll-btn-secondary:hover {
+  background: #27272a !important;
+}
+
+[data-theme="dark"] .payroll-modal-title {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .payroll-modal-text {
+  color: #a1a1aa !important;
+}
+
+/* ==========================================================================
+   MOBILE & TABLET RESPONSIVENESS
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .payroll-container {
+    padding: 16px;
+  }
+
+  .payroll-subtabs-nav {
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .payroll-subtab-btn {
+    padding: 8px 14px;
+    font-size: 0.88rem;
+  }
+
+  .payroll-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .holiday-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .holiday-form-row button {
+    width: 100%;
+  }
+
+  .payroll-input-table {
+    width: 130px;
+  }
+}
+
