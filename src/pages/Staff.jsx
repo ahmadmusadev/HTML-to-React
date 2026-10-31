@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, isValidUUID } from '../lib/supabaseClient';
 import { mapSupabaseToUi, mapUiToSupabase } from '../utils/StaffMappers';
 import { validateInvitePayload, extractEdgeFunctionError } from '../utils/accountInviteValidation';
+import { fetchStaffSalaries, upsertStaffSalaries, fetchPayrollSettings, fetchLeaveOpening, upsertLeaveOpening } from '../lib/payrollApi';
+import { validateBaseSalary, validateLeaveOpeningUsedDays, getFiscalYearStart, toUrduPayrollError } from '../utils/PayrollMappers';
 
 export { mapSupabaseToUi, mapUiToSupabase };
 
@@ -19,8 +21,12 @@ export default function Staff() {
     setClassesList: setContextClassesList
   } = useMadrasa();
 
-  const { role } = useAuth();
+  const { role, profile } = useAuth();
+  const authMadrasaId = profile?.madrasa_id;
   const isAuthorizedToInvite = role === 'admin' || role === 'super_admin';
+  const isAuthorizedToSalary = (role === 'admin' || role === 'super_admin') && (!authMadrasaId || !activeMadrasaId || authMadrasaId === activeMadrasaId);
+
+  const [savedFiscalStartMonth, setSavedFiscalStartMonth] = useState(4);
 
   const [staffProfiles, setStaffProfiles] = useState([]);
   const [classes, setClasses] = useState(() => (
@@ -129,7 +135,9 @@ export default function Staff() {
     shiftEnd: '14:45',
     experience: '',
     reference: '',
-    notes: ''
+    notes: '',
+    baseSalary: '',
+    openingLeave: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -168,12 +176,65 @@ export default function Staff() {
           if (hasError) {
             setFetchError(errorMessage);
             setStaffProfiles([]);
-          } else if (staffData && staffData.length > 0) {
-            const mapped = staffData.map(s => mapSupabaseToUi(s, loadedClasses));
-            setStaffProfiles(mapped);
-          } else {
-            setStaffProfiles([]);
+            return;
           }
+
+          if (!staffData || staffData.length === 0) {
+            setStaffProfiles([]);
+            return;
+          }
+
+          const canFetchSalary = isAuthorizedToSalary && isValidUUID(activeMadrasaId);
+          const salariesMap = {};
+          const leaveMap = {};
+
+          if (canFetchSalary) {
+            try {
+              const [salariesData, settingsData] = await Promise.all([
+                fetchStaffSalaries(supabase, activeMadrasaId).catch(err => {
+                  console.warn('[Staff] Could not fetch staff salaries:', err);
+                  return [];
+                }),
+                fetchPayrollSettings(supabase, activeMadrasaId).catch(err => {
+                  console.warn('[Staff] Could not fetch payroll settings:', err);
+                  return null;
+                })
+              ]);
+
+              const startMonth = settingsData?.fiscal_year_start_month || 4;
+              setSavedFiscalStartMonth(startMonth);
+
+              if (Array.isArray(salariesData)) {
+                salariesData.forEach(row => {
+                  if (row?.staff_id) {
+                    salariesMap[row.staff_id] = row.base_salary;
+                  }
+                });
+              }
+
+              const currentFiscalStart = getFiscalYearStart(new Date(), startMonth);
+              const leaveOpenings = await fetchLeaveOpening(supabase, activeMadrasaId, currentFiscalStart).catch(() => []);
+              if (Array.isArray(leaveOpenings)) {
+                leaveOpenings.forEach(row => {
+                  if (row?.staff_id) {
+                    leaveMap[row.staff_id] = row.used_days;
+                  }
+                });
+              }
+            } catch (salErr) {
+              console.warn('[Staff] Error loading salary data:', salErr);
+            }
+          }
+
+          const mapped = staffData.map(s => {
+            const ui = mapSupabaseToUi(s, loadedClasses);
+            return {
+              ...ui,
+              baseSalary: (salariesMap[s.id] !== undefined && salariesMap[s.id] !== null) ? Number(salariesMap[s.id]) : '',
+              openingLeave: (leaveMap[s.id] !== undefined && leaveMap[s.id] !== null) ? Number(leaveMap[s.id]) : ''
+            };
+          });
+          setStaffProfiles(mapped);
         }
       } catch (err) {
         console.error('Error loading staff data:', err);
@@ -186,7 +247,7 @@ export default function Staff() {
 
     loadData();
     return () => { isMounted = false; };
-  }, [activeMadrasaId]);
+  }, [activeMadrasaId, isAuthorizedToSalary]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -208,6 +269,28 @@ export default function Staff() {
       return;
     }
 
+    let validatedSalary = null;
+    const rawSalary = formData.baseSalary !== undefined && formData.baseSalary !== null ? String(formData.baseSalary).trim() : '';
+    if (isAuthorizedToSalary && rawSalary !== '') {
+      const valRes = validateBaseSalary(rawSalary);
+      if (!valRes.isValid) {
+        alert(valRes.error);
+        return;
+      }
+      validatedSalary = valRes.value;
+    }
+
+    let validatedOpeningLeave = null;
+    const rawLeave = formData.openingLeave !== undefined && formData.openingLeave !== null ? String(formData.openingLeave).trim() : '';
+    if (isAuthorizedToSalary && rawLeave !== '') {
+      const leaveRes = validateLeaveOpeningUsedDays(rawLeave);
+      if (!leaveRes.isValid) {
+        alert(leaveRes.error);
+        return;
+      }
+      validatedOpeningLeave = leaveRes.value;
+    }
+
     try {
       if (editingId || editingCode) {
         const target = staffProfiles.find(s =>
@@ -225,9 +308,42 @@ export default function Staff() {
         const updatedRow = await updateStaffInSupabase(targetId, payload, activeMadrasaId);
         const updatedUi = mapSupabaseToUi(updatedRow, classes);
 
+        if (isAuthorizedToSalary && isValidUUID(targetId)) {
+          if (validatedSalary !== null) {
+            try {
+              await upsertStaffSalaries(supabase, activeMadrasaId, [{
+                staff_id: targetId,
+                base_salary: validatedSalary
+              }]);
+            } catch (salErr) {
+              console.error('Error saving salary:', salErr);
+              throw new Error(`اسٹاف محفوظ ہو گیا لیکن تنخواہ کے اندراج میں مسئلہ پیش آیا: ${toUrduPayrollError(salErr)}`);
+            }
+          }
+          if (validatedOpeningLeave !== null) {
+            try {
+              const currentFiscalStart = getFiscalYearStart(formData.joiningDate || new Date(), savedFiscalStartMonth);
+              await upsertLeaveOpening(supabase, activeMadrasaId, [{
+                staff_id: targetId,
+                fiscal_year_start: currentFiscalStart,
+                used_days: validatedOpeningLeave
+              }]);
+            } catch (leaveErr) {
+              console.error('Error saving opening leave:', leaveErr);
+              throw new Error(`اسٹاف محفوظ ہو گیا لیکن سابقہ رخصت کے اندراج میں مسئلہ پیش آیا: ${toUrduPayrollError(leaveErr)}`);
+            }
+          }
+        }
+
         setStaffProfiles(prev => prev.map(s =>
           (s.id === targetId || String(s.staffCode) === String(editingCode))
-            ? { ...s, ...updatedUi, assignedClassName: getAssignedClassName(formData.assignedClass) }
+            ? {
+                ...s,
+                ...updatedUi,
+                assignedClassName: getAssignedClassName(formData.assignedClass),
+                baseSalary: validatedSalary !== null ? validatedSalary : s.baseSalary,
+                openingLeave: validatedOpeningLeave !== null ? validatedOpeningLeave : s.openingLeave
+              }
             : s
         ));
         setEditingCode(null);
@@ -236,7 +352,44 @@ export default function Staff() {
         const payload = mapUiToSupabase(formData, activeMadrasaId);
         const newRow = await addStaffToSupabase(payload, activeMadrasaId);
         const newUi = mapSupabaseToUi(newRow, classes);
-        setStaffProfiles(prev => [...prev, { ...newUi, assignedClassName: getAssignedClassName(formData.assignedClass) }]);
+        const newId = newRow?.id;
+
+        if (isAuthorizedToSalary && isValidUUID(newId)) {
+          if (validatedSalary !== null) {
+            try {
+              await upsertStaffSalaries(supabase, activeMadrasaId, [{
+                staff_id: newId,
+                base_salary: validatedSalary
+              }]);
+            } catch (salErr) {
+              console.error('Error saving salary:', salErr);
+              throw new Error(`اسٹاف محفوظ ہو گیا لیکن تنخواہ کے اندراج میں مسئلہ پیش آیا: ${toUrduPayrollError(salErr)}`);
+            }
+          }
+          if (validatedOpeningLeave !== null) {
+            try {
+              const currentFiscalStart = getFiscalYearStart(formData.joiningDate || new Date(), savedFiscalStartMonth);
+              await upsertLeaveOpening(supabase, activeMadrasaId, [{
+                staff_id: newId,
+                fiscal_year_start: currentFiscalStart,
+                used_days: validatedOpeningLeave
+              }]);
+            } catch (leaveErr) {
+              console.error('Error saving opening leave:', leaveErr);
+              throw new Error(`اسٹاف محفوظ ہو گیا لیکن سابقہ رخصت کے اندراج میں مسئلہ پیش آیا: ${toUrduPayrollError(leaveErr)}`);
+            }
+          }
+        }
+
+        setStaffProfiles(prev => [
+          ...prev,
+          {
+            ...newUi,
+            assignedClassName: getAssignedClassName(formData.assignedClass),
+            baseSalary: validatedSalary !== null ? validatedSalary : '',
+            openingLeave: validatedOpeningLeave !== null ? validatedOpeningLeave : ''
+          }
+        ]);
       }
 
       setFormData(initialFormState);
@@ -274,7 +427,9 @@ export default function Staff() {
       shiftEnd: profile.shiftEnd || '14:45',
       experience: profile.experience || '',
       reference: profile.reference || '',
-      notes: profile.notes || ''
+      notes: profile.notes || '',
+      baseSalary: (profile.baseSalary !== undefined && profile.baseSalary !== null && profile.baseSalary !== '') ? String(profile.baseSalary) : '',
+      openingLeave: (profile.openingLeave !== undefined && profile.openingLeave !== null && profile.openingLeave !== '') ? String(profile.openingLeave) : ''
     });
     
     alert('ترمیم کریں اور "پروفائل محفوظ کریں" دبائیں۔');
@@ -601,21 +756,21 @@ export default function Staff() {
 
             <div className="grid-row">
               <div>
-                <label>نام</label>
+                <label htmlFor="staffName">نام</label>
                 <input type="text" id="staffName" value={formData.name} onChange={e => handleInputChange('name', e.target.value)} />
               </div>
               <div>
-                <label>والد کا نام</label>
+                <label htmlFor="staffFatherName">والد کا نام</label>
                 <input type="text" id="staffFatherName" value={formData.fatherName} onChange={e => handleInputChange('fatherName', e.target.value)} />
               </div>
             </div>
             <div className="grid-row">
               <div>
-                <label>شناختی کارڈ نمبر</label>
+                <label htmlFor="staffCnic">شناختی کارڈ نمبر</label>
                 <input type="text" id="staffCnic" placeholder="00000-0000000-0" maxLength="15" value={formData.cnic} onChange={e => handleInputChange('cnic', e.target.value)} />
               </div>
               <div>
-                <label>تفویض کردہ کلاس</label>
+                <label htmlFor="staffClass">تفویض کردہ کلاس</label>
                 <select id="staffClass" value={formData.assignedClass} onChange={e => handleInputChange('assignedClass', e.target.value)}>
                   <option value="">کلاس منتخب کریں...</option>
                   {classes.map(c => (
@@ -626,17 +781,17 @@ export default function Staff() {
             </div>
             <div className="grid-row">
               <div>
-                <label>فون نمبر</label>
+                <label htmlFor="staffPhone">فون نمبر</label>
                 <input type="text" id="staffPhone" placeholder="0300-1234567" maxLength="12" value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} />
               </div>
               <div>
-                <label>واٹس ایپ نمبر</label>
+                <label htmlFor="staffWhatsapp">واٹس ایپ نمبر</label>
                 <input type="text" id="staffWhatsapp" placeholder="0300-1234567" maxLength="12" value={formData.whatsapp} onChange={e => handleInputChange('whatsapp', e.target.value)} />
               </div>
             </div>
             <div className="grid-row">
               <div>
-                <label>رہائشی حیثیت</label>
+                <label htmlFor="staffResidenceStatus">رہائشی حیثیت</label>
                 <select id="staffResidenceStatus" value={formData.residenceStatus} onChange={e => handleInputChange('residenceStatus', e.target.value)}>
                   <option value="ذاتی مکان">ذاتی مکان</option>
                   <option value="کرایہ">کرایہ</option>
@@ -644,17 +799,17 @@ export default function Staff() {
                 </select>
               </div>
               <div>
-                <label>رہائشی پتہ</label>
+                <label htmlFor="staffAddress">رہائشی پتہ</label>
                 <input type="text" id="staffAddress" value={formData.address} onChange={e => handleInputChange('address', e.target.value)} />
               </div>
             </div>
             <div className="grid-row">
               <div>
-                <label>تعلیمی قابلیت</label>
+                <label htmlFor="staffQualification">تعلیمی قابلیت</label>
                 <input type="text" id="staffQualification" placeholder="مثلاً: حفظ + درس نظامی" value={formData.qualification} onChange={e => handleInputChange('qualification', e.target.value)} />
               </div>
               <div>
-                <label>تقرری کی تاریخ</label>
+                <label htmlFor="staffJoiningDate">تقرری کی تاریخ</label>
                 <input
                   type={formData.joiningDate || isJoiningDateActive ? 'date' : 'text'}
                   id="staffJoiningDate"
@@ -673,31 +828,71 @@ export default function Staff() {
                       if (typeof e.target.showPicker === 'function') {
                         e.target.showPicker();
                       }
-                    } catch (_) {}
+                    } catch {}
                   }}
                 />
               </div>
             </div>
             <div className="grid-row">
               <div>
-                <label>متوقع آمد</label>
+                <label htmlFor="staffShiftStart">متوقع آمد</label>
                 <input type="time" id="staffShiftStart" value={formData.shiftStart} onChange={e => handleInputChange('shiftStart', e.target.value)} />
               </div>
               <div>
-                <label>متوقع روانگی</label>
+                <label htmlFor="staffShiftEnd">متوقع روانگی</label>
                 <input type="time" id="staffShiftEnd" value={formData.shiftEnd} onChange={e => handleInputChange('shiftEnd', e.target.value)} />
               </div>
             </div>
             <div className="grid-row">
               <div>
-                <label>سابقہ تجربہ</label>
+                <label htmlFor="staffExperience">سابقہ تجربہ</label>
                 <input type="text" id="staffExperience" placeholder="مثلاً: جامعہ نور، 3 سال" value={formData.experience} onChange={e => handleInputChange('experience', e.target.value)} />
               </div>
               <div>
-                <label>پچھلا ادارہ / ریفرنس</label>
+                <label htmlFor="staffReference">پچھلا ادارہ / ریفرنس</label>
                 <input type="text" id="staffReference" placeholder="مثلاً: قاری محمد عامر" value={formData.reference} onChange={e => handleInputChange('reference', e.target.value)} />
               </div>
             </div>
+
+            {isAuthorizedToSalary && (
+              <>
+                <div style={{ margin: '18px 0 10px 0', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: 'var(--accent)', fontWeight: 700 }}>
+                    تنخواہ اور رخصت کی تفصیلات (صرف ایڈمن)
+                  </h4>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+                    ماہانہ بنیادی تنخواہ اور رواں سال کی سابقہ استعمال شدہ رخصتیں درج کریں۔
+                  </div>
+                </div>
+                <div className="grid-row">
+                  <div>
+                    <label htmlFor="staffBaseSalary">ماہانہ بنیادی تنخواہ (روپے)</label>
+                    <input
+                      type="number"
+                      id="staffBaseSalary"
+                      placeholder="مثلاً: 35000"
+                      min="0"
+                      step="any"
+                      value={formData.baseSalary}
+                      onChange={e => handleInputChange('baseSalary', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="staffOpeningLeave">رواں سال کی سابقہ رخصتیں (دن)</label>
+                    <input
+                      type="number"
+                      id="staffOpeningLeave"
+                      placeholder="مثلاً: 0 یا 1.5"
+                      min="0"
+                      max="99.5"
+                      step="0.5"
+                      value={formData.openingLeave}
+                      onChange={e => handleInputChange('openingLeave', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
             <div className="grid-row">
               <div>
                 <div style={{ gridColumn: '1/-1' }}>
@@ -784,6 +979,19 @@ export default function Staff() {
                         <span className="staff-detail-val">{s.qualification || '-'}</span>
                       </div>
                     </div>
+                    {isAuthorizedToSalary && (
+                      <div className="staff-detail-item">
+                        <span className="staff-detail-icon"></span>
+                        <div>
+                          <span className="staff-detail-label">ماہانہ بنیادی تنخواہ</span>
+                          <span className="staff-detail-val">
+                            {s.baseSalary !== undefined && s.baseSalary !== null && s.baseSalary !== ''
+                              ? `${Number(s.baseSalary).toLocaleString('ur-PK')} روپے`
+                              : 'تعین نہیں'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

@@ -1,111 +1,204 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { SURAHS, PARAS } from '../constants/quranMetadata';
+import { alignRecitation, calculateRecitationStats } from '../utils/quranAlignment';
+import './AiListen.css';
 
 export default function AiListen() {
+  // Mode selection: 'surah' or 'para'
+  const [selectMode, setSelectMode] = useState('surah');
+
+  // Surah & Ayah state
   const [currentSurah, setCurrentSurah] = useState(1);
   const [currentAyah, setCurrentAyah] = useState(1);
+  const [currentPara, setCurrentPara] = useState(1);
+
+  // Quran Ayah text & loading state
   const [targetAyahText, setTargetAyahText] = useState('');
   const [ayahLoadStatus, setAyahLoadStatus] = useState('');
-  
-  const [aiListening, setAiListening] = useState(false);
-  const aiListeningRef = useRef(false);
-  
+  const [isLoadingAyah, setIsLoadingAyah] = useState(false);
+
+  // Speech Recognition & Recording state
+  const [isListening, setIsListening] = useState(false);
+  const isListeningRef = useRef(false);
   const [finalRecitedText, setFinalRecitedText] = useState('');
   const [interimText, setInterimText] = useState('');
-  const [micStatusText, setMicStatusText] = useState('تلاوت شروع کرنے کے لیے مائیک دبائیں');
-  const [micStatusColor, setMicStatusColor] = useState('#666');
-  
-  const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
-  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
-  
-  const [score, setScore] = useState(0);
-  const [compareRes, setCompareRes] = useState([]);
-  const [aiFeedback, setAiFeedback] = useState('');
-  
-  const recognitionRef = useRef(null);
-  const referenceAudioRef = useRef(null);
-  const qariAudioRef = useRef(null);
-  const analysisPanelRef = useRef(null);
+  const [micStatusText, setMicStatusText] = useState('تلاوت سنانے کے لیے مائیک دبائیں');
+  const [micStatusColor, setMicStatusColor] = useState('#2e7d32');
 
+  // MediaRecorder for student audio playback
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const [studentAudioUrl, setStudentAudioUrl] = useState(null);
+
+  // Reference Qari Audio
+  const referenceAudioRef = useRef(null);
+  const [isPlayingRefAudio, setIsPlayingRefAudio] = useState(false);
+
+  // Results & Analysis state
+  const [showReport, setShowReport] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [alignedWords, setAlignedWords] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [teacherComment, setTeacherComment] = useState('');
+  const [selectedWordDetail, setSelectedWordDetail] = useState(null);
+
+  // Refs
+  const recognitionRef = useRef(null);
+  const reportPanelRef = useRef(null);
   const debounceRef = useRef(null);
 
+  // Current Surah details
+  const currentSurahMeta = useMemo(() => {
+    return SURAHS.find((s) => s.id === currentSurah) || SURAHS[0];
+  }, [currentSurah]);
+
+  // Load Ayah on initial render
   useEffect(() => {
-    loadTargetAyah(currentSurah, currentAyah);
-    return () => clearTimeout(debounceRef.current);
+    loadAyah(currentSurah, currentAyah);
+    return () => {
+      clearTimeout(debounceRef.current);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+      }
+      if (studentAudioUrl) {
+        URL.revokeObjectURL(studentAudioUrl);
+      }
+    };
   }, []);
 
-  // Debounced load on Ayah input change
-  const handleAyahInputChange = (val) => {
-    const num = parseInt(val) || 1;
-    setCurrentAyah(num);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      loadTargetAyah(currentSurah, num);
-    }, 600);
+  // Update Reference Qari audio url
+  const updateReferenceAudio = (surahNum, ayahNum) => {
+    const s = String(surahNum).padStart(3, '0');
+    const a = String(ayahNum).padStart(3, '0');
+    const url = `https://verses.quran.com/Alafasy/mp3/${s}${a}.mp3`;
+    if (referenceAudioRef.current) {
+      referenceAudioRef.current.src = url;
+    }
+    return url;
   };
 
-  const handleSurahChange = (val) => {
-    const surahNum = parseInt(val) || 1;
-    setCurrentSurah(surahNum);
-    loadTargetAyah(surahNum, currentAyah);
-  };
-
-  const loadTargetAyah = async (surah, ayah) => {
+  // Fetch Ayah text from AlQuran Cloud
+  const loadAyah = async (surahNum, ayahNum) => {
+    setIsLoadingAyah(true);
     setAyahLoadStatus('لوڈ ہو رہا ہے...');
-    setTargetAyahText('');
-    
+    resetSession();
+
     try {
-      const res = await fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/ar.uthmani`);
+      const res = await fetch(`https://api.alquran.cloud/v1/ayah/${surahNum}:${ayahNum}/ar.uthmani`);
       const data = await res.json();
       if (data.code === 200) {
         setTargetAyahText(data.data.text);
         setAyahLoadStatus('آیت تیار ہے');
-        updateReferenceAudio(surah, ayah);
+        updateReferenceAudio(surahNum, ayahNum);
       } else {
         setAyahLoadStatus('آیت نہیں ملی — نمبر چیک کریں');
         setTargetAyahText('');
       }
-    } catch (e) {
+    } catch {
       setAyahLoadStatus('انٹرنیٹ کنکشن چیک کریں');
       setTargetAyahText('');
+    } finally {
+      setIsLoadingAyah(false);
     }
   };
 
-  const updateReferenceAudio = (surah, ayah) => {
-    const s = String(surah).padStart(3, '0');
-    const a = String(ayah).padStart(3, '0');
-    const url = `https://verses.quran.com/Alafasy/mp3/${s}${a}.mp3`;
-    if (referenceAudioRef.current) referenceAudioRef.current.src = url;
-    if (qariAudioRef.current) qariAudioRef.current.src = url;
+  // Surah Change Handler
+  const handleSurahChange = (val) => {
+    const num = parseInt(val, 10) || 1;
+    setCurrentSurah(num);
+    setCurrentAyah(1);
+    loadAyah(num, 1);
   };
 
-  const playReferenceAudio = () => {
-    if (referenceAudioRef.current) {
-      if (!referenceAudioRef.current.src || referenceAudioRef.current.src === window.location.href) {
-        updateReferenceAudio(currentSurah, currentAyah);
-      }
-      referenceAudioRef.current.play().catch(() => {});
+  // Para (Juz) Change Handler
+  const handleParaChange = (val) => {
+    const paraId = parseInt(val, 10) || 1;
+    setCurrentPara(paraId);
+    const paraMeta = PARAS.find((p) => p.id === paraId);
+    if (paraMeta) {
+      setCurrentSurah(paraMeta.surah);
+      setCurrentAyah(paraMeta.ayah);
+      loadAyah(paraMeta.surah, paraMeta.ayah);
     }
   };
 
+  // Ayah Input Change Handler with debounce
+  const handleAyahChange = (val) => {
+    const maxAyahs = currentSurahMeta.ayahs;
+    let num = parseInt(val, 10) || 1;
+    if (num < 1) num = 1;
+    if (num > maxAyahs) num = maxAyahs;
+
+    setCurrentAyah(num);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      loadAyah(currentSurah, num);
+    }, 500);
+  };
+
+  // Next / Previous Ayah navigation
+  const goToNextAyah = () => {
+    if (currentAyah < currentSurahMeta.ayahs) {
+      const nextAyah = currentAyah + 1;
+      setCurrentAyah(nextAyah);
+      loadAyah(currentSurah, nextAyah);
+    } else if (currentSurah < 114) {
+      const nextSurah = currentSurah + 1;
+      setCurrentSurah(nextSurah);
+      setCurrentAyah(1);
+      loadAyah(nextSurah, 1);
+    }
+  };
+
+  const goToPrevAyah = () => {
+    if (currentAyah > 1) {
+      const prevAyah = currentAyah - 1;
+      setCurrentAyah(prevAyah);
+      loadAyah(currentSurah, prevAyah);
+    } else if (currentSurah > 1) {
+      const prevSurah = currentSurah - 1;
+      const prevSurahMeta = SURAHS.find((s) => s.id === prevSurah);
+      const prevAyah = prevSurahMeta ? prevSurahMeta.ayahs : 1;
+      setCurrentSurah(prevSurah);
+      setCurrentAyah(prevAyah);
+      loadAyah(prevSurah, prevAyah);
+    }
+  };
+
+  // Play Reference Qari Audio
+  const togglePlayRefAudio = () => {
+    if (!referenceAudioRef.current) return;
+    if (isPlayingRefAudio) {
+      referenceAudioRef.current.pause();
+      setIsPlayingRefAudio(false);
+    } else {
+      referenceAudioRef.current
+        .play()
+        .then(() => setIsPlayingRefAudio(true))
+        .catch(() => setIsPlayingRefAudio(false));
+    }
+  };
+
+  // Speech Recognition Initialization
   const initSpeechRecognition = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('آپ کا براؤزر مائیک سپورٹ نہیں کرتا۔ براہ کرم Chrome استعمال کریں۔');
+      alert('آپ کے براؤزر میں مائیکروفون اسپیچ انجن دستیاب نہیں ہے۔ براہ کرم Google Chrome یا Microsoft Edge استعمال کریں۔');
       return null;
     }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SR();
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRec();
     recognition.lang = 'ar-SA';
     recognition.continuous = true;
     recognition.interimResults = true;
 
     recognition.onstart = () => {
-      aiListeningRef.current = true;
-      setAiListening(true);
+      isListeningRef.current = true;
+      setIsListening(true);
       setFinalRecitedText('');
       setInterimText('');
-      setMicStatusText('تلاوت سنی جا رہی ہے... (رکنے کے لیے دوبارہ دبائیں)');
+      setMicStatusText('تلاوت سنی جا رہی ہے... (مکمل کرنے کے لیے دوبارہ مائیک دبائیں)');
       setMicStatusColor('#d32f2f');
-      setShowAnalysisPanel(false);
+      setShowReport(false);
     };
 
     recognition.onresult = (event) => {
@@ -118,108 +211,105 @@ export default function AiListen() {
           interim += event.results[i][0].transcript;
         }
       }
-      setFinalRecitedText(prev => prev ? prev + ' ' + finalStr : finalStr);
+      if (finalStr) {
+        setFinalRecitedText((prev) => (prev ? prev + ' ' + finalStr : finalStr));
+      }
       setInterimText(interim);
     };
 
     recognition.onerror = (ev) => {
       if (ev.error === 'no-speech') return;
-      stopAiListeningState();
-      setMicStatusText('مائیک میں مسئلہ: ' + ev.error + ' — دوبارہ کوشش کریں');
+      stopListeningState();
+      setMicStatusText('مائیک مسئلہ: ' + ev.error + ' — دوبارہ کوشش کریں');
       setMicStatusColor('#c62828');
     };
 
     recognition.onend = () => {
-      if (aiListeningRef.current) {
-        try { recognition.start(); } catch(e) {}
+      if (isListeningRef.current) {
+        try {
+          recognition.start();
+        } catch {}
       } else {
-        stopAiListeningState();
+        stopListeningState();
       }
     };
 
     return recognition;
   };
 
-  const stopAiListeningState = () => {
-    aiListeningRef.current = false;
-    setAiListening(false);
-    setMicStatusText('تلاوت مکمل — اب "غلطیاں چیک کریں" دبائیں');
-    setMicStatusColor('#2e7d32');
+  // Start MediaRecorder for Student Audio
+  const startAudioRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (studentAudioUrl) URL.revokeObjectURL(studentAudioUrl);
+        const url = URL.createObjectURL(audioBlob);
+        setStudentAudioUrl(url);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+    } catch (err) {
+      console.warn('Audio recording error:', err);
+    }
   };
 
-  const toggleAiListening = () => {
+  const stopAudioRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  const stopListeningState = () => {
+    isListeningRef.current = false;
+    setIsListening(false);
+    setMicStatusText('تلاوت مکمل! اب نیچے "غلطیاں چیک کریں" پر کلک کریں');
+    setMicStatusColor('#2e7d32');
+    stopAudioRecording();
+  };
+
+  // Toggle Microphone
+  const toggleListening = () => {
     if (!recognitionRef.current) {
       recognitionRef.current = initSpeechRecognition();
     }
     if (!recognitionRef.current) return;
 
-    if (aiListeningRef.current) {
-      aiListeningRef.current = false;
-      setAiListening(false);
+    if (isListeningRef.current) {
+      isListeningRef.current = false;
+      setIsListening(false);
       recognitionRef.current.stop();
+      stopAudioRecording();
     } else {
       if (!targetAyahText) {
-        loadTargetAyah(currentSurah, currentAyah).then(() => {
-          try { recognitionRef.current.start(); } catch(e) {}
+        loadAyah(currentSurah, currentAyah).then(() => {
+          try {
+            recognitionRef.current.start();
+            startAudioRecording();
+          } catch {}
         });
       } else {
-        try { recognitionRef.current.start(); } catch(e) {}
+        try {
+          recognitionRef.current.start();
+          startAudioRecording();
+        } catch {}
       }
     }
   };
 
-  const normalizeArabic = (text) => {
-    return text
-      .replace(/[\u064B-\u065F\u0670]/g, '')  // harakat
-      .replace(/أ|إ|آ/g, 'ا')
-      .replace(/ة/g, 'ه')
-      .replace(/ى/g, 'ي')
-      .replace(/\s+/g, ' ')
-      .trim();
-  };
-
-  const levenshtein = (a, b) => {
-    const m = a.length, n = b.length;
-    const dp = Array.from({length: m+1}, (_,i) => Array.from({length: n+1}, (_,j) => i===0?j:j===0?i:0));
-    for (let i=1; i<=m; i++) {
-      for(let j=1; j<=n; j++) {
-        dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
-      }
-    }
-    return dp[m][n];
-  };
-
-  const compareWords = (targetWords, recitedWords) => {
-    const results = [];
-    const maxLen = Math.max(targetWords.length, recitedWords.length);
-    for (let i = 0; i < maxLen; i++) {
-      const tw = targetWords[i] || null;
-      const rw = recitedWords[i] || null;
-      if (!tw) {
-        results.push({ target: null, recited: rw, status: 'extra' });
-        continue;
-      }
-      if (!rw) {
-        results.push({ target: tw, recited: null, status: 'missing' });
-        continue;
-      }
-      const nt = normalizeArabic(tw);
-      const nr = normalizeArabic(rw);
-      if (nt === nr) {
-        results.push({ target: tw, recited: rw, status: 'correct' });
-      } else {
-        const dist = levenshtein(nt, nr);
-        const ratio = dist / Math.max(nt.length, nr.length);
-        results.push({ target: tw, recited: rw, status: ratio < 0.4 ? 'close' : 'wrong' });
-      }
-    }
-    return results;
-  };
-
-  const analyseRecitation = async () => {
+  // Analyze Recitation using Sequence Alignment Engine
+  const runAnalysis = () => {
     const recited = finalRecitedText.trim();
     if (!recited) {
-      alert('پہلے تلاوت کریں اور پھر چیک کریں۔');
+      alert('پہلے مائیک آن کر کے تلاوت کریں، پھر جائزہ لیں۔');
       return;
     }
     if (!targetAyahText) {
@@ -227,229 +317,520 @@ export default function AiListen() {
       return;
     }
 
-    setShowAnalysisPanel(true);
-    setIsLoadingAnalysis(true);
-    
-    setTimeout(() => {
-      if (analysisPanelRef.current) {
-        analysisPanelRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
+    setIsAnalyzing(true);
+    setShowReport(true);
+    setSelectedWordDetail(null);
 
+    setTimeout(() => {
+      if (reportPanelRef.current) {
+        reportPanelRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 150);
+
+    // Split words
     const targetWords = targetAyahText.trim().split(/\s+/);
     const recitedWords = recited.trim().split(/\s+/);
-    const results = compareWords(targetWords, recitedWords);
-    
-    const correctCount = results.filter(r => r.status === 'correct').length;
-    const totalTarget = results.filter(r => r.target).length;
-    const calcScore = totalTarget > 0 ? Math.round((correctCount / totalTarget) * 100) : 0;
-    
-    setCompareRes(results);
-    setScore(calcScore);
-    setAiFeedback('');
 
-    try {
-      const wrongWords = results.filter(r => r.status === 'wrong').map(r => `"${r.recited || '?'}" بجائے "${r.target || '?'}"`);
-      const missingWords = results.filter(r => r.status === 'missing').map(r => `"${r.target}"`);
-      
-      const prompt = `آپ ایک قرآن کے ماہر استاد ہیں جو بچوں کو تجوید سکھاتے ہیں۔ آپ نے ایک طالب علم کی تلاوت سنی۔
+    // Run Needleman-Wunsch Alignment
+    const aligned = alignRecitation(targetWords, recitedWords);
+    const computedStats = calculateRecitationStats(aligned);
 
-آیت: "${targetAyahText}"
-طالب علم نے پڑھا: "${recited}"
-درست الفاظ: ${correctCount} / ${totalTarget}
-${wrongWords.length > 0 ? `غلط الفاظ: ${wrongWords.join(' ، ')}` : ''}
-${missingWords.length > 0 ? `بھولے ہوئے الفاظ: ${missingWords.join(' ، ')}` : ''}
+    setAlignedWords(aligned);
+    setStats(computedStats);
 
-براہ کرم اردو میں ایک مختصر مگر پرجوش تبصرہ دیں جیسے ایک اصل استاد دیتا ہے۔ پہلے حوصلہ افزائی کریں، پھر غلطیاں بتائیں، آخر میں مشورہ دیں۔ تجوید کے اصول بھی ذکر کریں اگر متعلقہ ہوں۔ جواب 100-150 الفاظ میں رکھیں۔`;
+    // Generate pedagogical teacher feedback
+    generateTeacherComment(computedStats, aligned);
+    setIsAnalyzing(false);
+  };
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-      const data = await res.json();
-      
-      if (data.content && data.content[0]) {
-        setAiFeedback(data.content[0].text);
-      } else {
-        setAiFeedback(calcScore >= 80 
-          ? 'ماشاءاللہ! آپ کی تلاوت بہت اچھی ہے۔ اللہ تعالیٰ آپ کو مزید برکت دے۔' 
-          : 'کچھ الفاظ درست نہیں ہوئے۔ پہلے آیت ذہن میں پکی کریں، پھر دوبارہ سنائیں۔');
-      }
-    } catch (e) {
-      setAiFeedback(calcScore >= 80 
-        ? 'ماشاءاللہ! آپ کی تلاوت بہت اچھی ہے۔ اللہ تعالیٰ آپ کو مزید برکت دے۔' 
-        : 'کچھ الفاظ درست نہیں ہوئے۔ پہلے آیت ذہن میں پکی کریں، پھر دوبارہ سنائیں۔');
+  // Intelligent Madrassa Feedback Generator
+  const generateTeacherComment = (statsData, alignedList) => {
+    const { score, missing, wrong } = statsData;
+
+    let comment = '';
+    if (score >= 90) {
+      comment = `ماشاءاللہ تبارک اللہ! آپ کی تلاوت انتہائی عمدہ اور رواں ہے۔ تمام بنیادی الفاظ بالکل درست پڑھے گئے۔ تلاوت کا حسن برقرار رکھنے کے لیے تجوید کے احکام (مدات اور غنہ) کا خاص خیال رکھیں۔`;
+    } else if (score >= 75) {
+      comment = `بہت خوب! تلاوت مجموعی طور پر اچھی ہے۔ کچھ الفاظ پر ہلکی سی جھجک یا اعراب میں معمولی فرق آیا۔ نیچے دیے گئے سرخ نشان والے الفاظ پر دوبارہ نظر ڈالیں اور قاری صاحب کی آڈیو سن کر مشق کریں۔`;
+    } else if (score >= 60) {
+      comment = `مناسب کوشش ہے، مگر آیت کو مزید پکا کرنے کی ضرورت ہے۔ آپ نے ${missing > 0 ? `${missing} لفظ چھوڑے` : ''} ${wrong > 0 ? `اور ${wrong} الفاظ میں غلطی کی` : ''}۔ پہلے 3 بار قاری کی آڈیو سنیں، پھر دوبارہ سنائیں۔`;
+    } else {
+      comment = `توجہ درکار ہے! اس آیت کا حفظ ابھی کچا ہے۔ الفاظ کی ترتیب اور یاداشت پر دوبارہ محنت کریں۔ استاد سے ایک بار سن کر پھر سنائیں تاکہ غلطیاں درست ہو سکیں۔`;
     }
 
-    updateReferenceAudio(currentSurah, currentAyah);
-    setIsLoadingAnalysis(false);
+    // Append specific words to review if any
+    const wrongWords = alignedList
+      .filter((w) => w.status === 'wrong' && w.target)
+      .map((w) => `"${w.target}" (آپ نے پڑھا: "${w.recited || '?'}")`);
+
+    const missingWords = alignedList
+      .filter((w) => w.status === 'missing' && w.target)
+      .map((w) => `"${w.target}"`);
+
+    let specificNotes = [];
+    if (missingWords.length > 0) {
+      specificNotes.push(`• بھولے ہوئے الفاظ: ${missingWords.slice(0, 4).join(' ، ')}`);
+    }
+    if (wrongWords.length > 0) {
+      specificNotes.push(`• غلط پڑھے گئے الفاظ: ${wrongWords.slice(0, 3).join(' ، ')}`);
+    }
+
+    if (specificNotes.length > 0) {
+      comment += '\n\n' + specificNotes.join('\n');
+    }
+
+    setTeacherComment(comment);
   };
 
-  const resetAiSession = () => {
+  // Reset Session
+  const resetSession = () => {
     setFinalRecitedText('');
     setInterimText('');
-    setShowAnalysisPanel(false);
-    setMicStatusText('تلاوت شروع کرنے کے لیے مائیک دبائیں');
-    setMicStatusColor('#666');
+    setShowReport(false);
+    setAlignedWords([]);
+    setStats(null);
+    setStudentAudioUrl(null);
+    setSelectedWordDetail(null);
+    setMicStatusText('تلاوت سنانے کے لیے مائیک دبائیں');
+    setMicStatusColor('#2e7d32');
   };
 
-  const scoreColor = score >= 80 ? '#2e7d32' : score >= 50 ? '#f57f17' : '#c62828';
-  const scoreEmoji = score >= 80 ? 'ماشاءاللہ!' : score >= 50 ? 'کوشش جاری رکھیں' : 'مزید مشق کریں';
-
   return (
-    <div className="tab-content" id="tab-ai-listen">
-      
-      {/* ===== ہیڈر ===== */}
-      <div style={{ background: "linear-gradient(135deg, #2e7d32, #1b5e20)", boxShadow: "0 4px 15px rgba(27,94,32,0.3)", borderRadius: "12px", padding: "25px", color: "white", marginBottom: "20px", textAlign: "center" }}>
-        <h2 style={{ margin: "0 0 8px 0", color: "white", fontSize: "1.8rem" }}>اے آئی استاد</h2>
-        <p style={{ margin: "0", fontSize: "1rem", opacity: "0.9" }}>اپنی تلاوت سنائیں — آئی استاد غلطیاں پکڑ کر اردو میں بتائے گا</p>
+    <div className="tab-content ai-ustad-container" id="tab-ai-listen">
+      {/* Header Banner */}
+      <div className="ai-ustad-header">
+        <h2 className="ai-ustad-title">اے آئی استاد — قرآنی تلاوت اور غلطی پکڑنے کا نظام</h2>
+        <p className="ai-ustad-subtitle">
+          طالب علم اپنی تلاوت سنائیں — اے آئی استاد لفظ بہ لفظ نگرانی کر کے چھوٹے ہوئے اور غلط الفاظ کی نشاندہی کرے گا۔
+        </p>
       </div>
 
-      {/* ===== سورت / آیت انتخاب ===== */}
-      <div style={{ background: "white", borderRadius: "12px", padding: "18px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", marginBottom: "16px" }}>
-        <div className="grid-row" style={{ marginBottom: "12px" }}>
-          <div>
-            <label style={{ fontWeight: "700", color: "var(--accent)" }}>سورت منتخب کریں</label>
-            <select id="aiSurahSelect" value={currentSurah} onChange={(e) => handleSurahChange(e.target.value)} style={{ marginTop: "6px" }}>
-              <option value="1">۱ — سورۃ الفاتحہ</option>
-              <option value="2">۲ — سورۃ البقرۃ</option>
-              <option value="3">۳ — سورۃ آل عمران</option>
-              <option value="4">۴ — سورۃ النساء</option>
-              <option value="5">۵ — سورۃ المائدۃ</option>
-              <option value="6">۶ — سورۃ الانعام</option>
-              <option value="18">۱۸ — سورۃ الکہف</option>
-              <option value="19">۱۹ — سورۃ مریم</option>
-              <option value="36">۳۶ — سورۃ یس</option>
-              <option value="55">۵۵ — سورۃ الرحمن</option>
-              <option value="56">۵۶ — سورۃ الواقعہ</option>
-              <option value="67">۶۷ — سورۃ الملک</option>
-              <option value="78">۷۸ — سورۃ النبأ</option>
-              <option value="112">۱۱۲ — سورۃ الاخلاص</option>
-              <option value="113">۱۱۳ — سورۃ الفلق</option>
-              <option value="114">۱۱۴ — سورۃ الناس</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ fontWeight: "700", color: "var(--accent)" }}>آیت نمبر</label>
-            <input type="number" id="aiAyahInput" value={currentAyah} onChange={(e) => handleAyahInputChange(e.target.value)} min="1" max="286" style={{ marginTop: "6px" }} />
+      {/* Selector Card (Surah & Para) */}
+      <div className="ai-selector-card">
+        {/* Mode Toggle */}
+        <div className="ai-mode-toggle">
+          <button
+            type="button"
+            className={`ai-mode-btn ${selectMode === 'surah' ? 'active' : ''}`}
+            onClick={() => setSelectMode('surah')}
+          >
+            سورت کے مطابق
+          </button>
+          <button
+            type="button"
+            className={`ai-mode-btn ${selectMode === 'para' ? 'active' : ''}`}
+            onClick={() => setSelectMode('para')}
+          >
+            پارے کے مطابق
+          </button>
+        </div>
+
+        {/* Controls Grid */}
+        <div className="ai-nav-controls">
+          {selectMode === 'surah' ? (
+            <div className="ai-input-group">
+              <label>سورت منتخب کریں (114 سورتیں)</label>
+              <select
+                className="ai-select"
+                value={currentSurah}
+                onChange={(e) => handleSurahChange(e.target.value)}
+              >
+                {SURAHS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.id}. سورۃ {s.name} ({s.english}) — {s.ayahs} آیات
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="ai-input-group">
+              <label>پارہ منتخب کریں (30 پارے)</label>
+              <select
+                className="ai-select"
+                value={currentPara}
+                onChange={(e) => handleParaChange(e.target.value)}
+              >
+                {PARAS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    پارہ {p.id}: {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="ai-input-group">
+            <label>
+              آیت نمبر (کل آیات: {currentSurahMeta.ayahs})
+            </label>
+            <input
+              type="number"
+              className="ai-input"
+              value={currentAyah}
+              min={1}
+              max={currentSurahMeta.ayahs}
+              onChange={(e) => handleAyahChange(e.target.value)}
+            />
           </div>
         </div>
-        
-        {/* آیت display */}
-        <div id="targetAyahBox" style={{ background: "#f8fff8", border: "2px solid #c8e6c9", borderRadius: "10px", padding: "16px", minHeight: "60px", textAlign: "right", fontSize: "1.7rem", lineHeight: "2.5", color: "#1b5e20", fontFamily: "'Noto Naskh Arabic','Arial',sans-serif", direction: "rtl", marginBottom: "10px" }}>
-          {targetAyahText ? (
+
+        {/* Quranic Ayah Box */}
+        <div className="ai-ayah-display">
+          {isLoadingAyah ? (
+            <span style={{ color: '#888', fontSize: '1.2rem' }}>آیت مبارکہ لوڈ ہو رہی ہے...</span>
+          ) : targetAyahText ? (
             <span>{targetAyahText}</span>
           ) : (
-            <span style={{ color: "#aaa", fontSize: "1rem" }}>آیت لوڈ ہو رہی ہے...</span>
+            <span style={{ color: '#d32f2f', fontSize: '1.2rem' }}>{ayahLoadStatus}</span>
           )}
         </div>
-        
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <button onClick={() => loadTargetAyah(currentSurah, currentAyah)} style={{ background: "var(--accent)", color: "white", border: "none", padding: "8px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem" }}>آیت لائیں</button>
-          <button id="playRefBtn" onClick={playReferenceAudio} style={{ background: "#1565c0", color: "white", border: "none", padding: "8px 18px", borderRadius: "8px", cursor: "pointer", fontSize: "0.9rem" }} title="صحیح تلاوت سنیں">صحیح تلاوت سنیں</button>
-          <audio ref={referenceAudioRef} id="referenceAudio" style={{ display: "none" }}></audio>
-          <span id="ayahLoadStatus" style={{ fontSize: "0.85rem", color: "#666" }}>{ayahLoadStatus}</span>
+
+        {/* Navigation & Audio Tools */}
+        <div className="ai-ayah-tools">
+          <button
+            type="button"
+            className="ai-btn-secondary"
+            onClick={togglePlayRefAudio}
+            title="قاری مشاری راشد کی صحیح تلاوت سنیں"
+          >
+            {isPlayingRefAudio ? 'تلاوت روکیں' : 'صحیح تلاوت سنیں (مشاری راشد)'}
+          </button>
+          <audio
+            ref={referenceAudioRef}
+            onEnded={() => setIsPlayingRefAudio(false)}
+            style={{ display: 'none' }}
+          />
+
+          <button type="button" className="ai-btn-outline" onClick={goToPrevAyah} title="پچھلی آیت">
+            پچھلی آیت
+          </button>
+          <button type="button" className="ai-btn-outline" onClick={goToNextAyah} title="اگلی آیت">
+            اگلی آیت
+          </button>
+
+          <span style={{ fontSize: '0.9rem', color: '#555', marginRight: 'auto' }}>
+            {ayahLoadStatus}
+          </span>
         </div>
       </div>
 
-      {/* ===== مائیک سیکشن ===== */}
-      <div style={{ background: "white", borderRadius: "12px", padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", marginBottom: "16px", textAlign: "center" }}>
-        <p style={{ color: "#555", margin: "0 0 12px 0", fontSize: "1rem" }}>آیت یاد کر لیں، پھر نیچے مائیک دبائیں اور تلاوت شروع کریں</p>
-        <button id="micBtn" className={`mic-btn ${aiListening ? 'listening' : ''}`} onClick={toggleAiListening} title="پڑھنا شروع کرنے کے لیے دبائیں">مائیک</button>
-        <div id="micStatusText" style={{ color: micStatusColor, marginTop: "8px", fontSize: "1rem" }}>{micStatusText}</div>
-        
-        {/* لائیو ٹرانسکرپٹ */}
-        <div style={{ marginTop: "16px", textAlign: "right" }}>
-          <div style={{ fontSize: "0.85rem", color: "#888", marginBottom: "6px", textAlign: "right" }}>آپ کی آواز (Live):</div>
-          <div className="transcript-box" id="transcriptOutput" style={{ minHeight: "80px", fontSize: "1.5rem" }}>
+      {/* Mic & Live Recitation Section */}
+      <div className="ai-mic-card">
+        <p className="ai-mic-hint">
+          آیت کو ذہن میں دہرائیں، پھر نیچے مائیک دبائیں اور اپنی تلاوت سنائیں:
+        </p>
+
+        {/* Pulsing Mic Button */}
+        <button
+          type="button"
+          className={`ai-mic-button ${isListening ? 'listening' : ''}`}
+          onClick={toggleListening}
+          title={isListening ? 'تلاوت روکیں' : 'تلاوت شروع کریں'}
+        >
+          {isListening ? 'روکیں' : 'مائیک'}
+        </button>
+
+        {/* Sound Waves Animation */}
+        {isListening && (
+          <div className="ai-sound-waves">
+            <div className="ai-sound-bar"></div>
+            <div className="ai-sound-bar"></div>
+            <div className="ai-sound-bar"></div>
+            <div className="ai-sound-bar"></div>
+            <div className="ai-sound-bar"></div>
+            <div className="ai-sound-bar"></div>
+            <div className="ai-sound-bar"></div>
+          </div>
+        )}
+
+        <div className="ai-mic-status" style={{ color: micStatusColor }}>
+          {micStatusText}
+        </div>
+
+        {/* Live Audio Transcript Box */}
+        <div style={{ marginTop: '20px', textAlign: 'right' }}>
+          <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px' }}>
+            طالب علم کی لائیو تلاوت:
+          </div>
+          <div className="ai-live-transcript-box">
             {!finalRecitedText && !interimText ? (
-              <span style={{ color: "#bbb", fontSize: "1rem" }}>یہاں آپ کی تلاوت ظاہر ہوگی...</span>
+              <div className="ai-live-transcript-empty">
+                یہاں بچے کی تلاوت کے الفاظ لائیو ظاہر ہوں گے...
+              </div>
             ) : (
               <>
-                <span style={{ color: "#1b5e20", fontWeight: "600" }}>{finalRecitedText} </span>
-                {interimText && <span style={{ color: "#888", fontStyle: "italic" }}>{interimText}</span>}
+                <span style={{ fontWeight: '700' }}>{finalRecitedText} </span>
+                {interimText && <span style={{ color: '#888', fontStyle: 'italic' }}>{interimText}</span>}
               </>
             )}
           </div>
         </div>
 
-        {/* تجزیہ بٹن */}
-        {!aiListening && finalRecitedText.trim().length > 0 && (
-          <button id="analyseBtn" onClick={analyseRecitation} style={{ background: "linear-gradient(135deg,#2e7d32,#1b5e20)", color: "white", border: "none", padding: "12px 30px", borderRadius: "10px", cursor: "pointer", fontSize: "1rem", fontWeight: "700", marginTop: "14px", width: "100%", maxWidth: "300px" }}>
-            غلطیاں چیک کریں
+        {/* Check Mistakes Button */}
+        {!isListening && finalRecitedText.trim().length > 0 && (
+          <button
+            type="button"
+            className="ai-btn-primary"
+            onClick={runAnalysis}
+            style={{
+              fontSize: '1.15rem',
+              padding: '14px 40px',
+              margin: '22px auto 0 auto',
+              borderRadius: '12px',
+              boxShadow: '0 4px 15px rgba(46, 125, 50, 0.35)',
+            }}
+          >
+            غلطیاں چیک کریں اور نتیجہ دیکھیں
           </button>
         )}
       </div>
 
-      {/* ===== نتیجہ پینل ===== */}
-      {showAnalysisPanel && (
-        <div id="aiAnalysisPanel" ref={analysisPanelRef} className={`ai-analysis-panel ${score < 80 && !isLoadingAnalysis ? 'error-mode' : ''}`} style={{ display: 'block' }}>
-          
-          {/* لوڈنگ */}
-          {isLoadingAnalysis ? (
-            <div id="aiLoadingState" style={{ textAlign: "center", padding: "30px", display: "block" }}>
-              <p style={{ color: "#555", fontSize: "1.1rem" }}>اے آئی استاد آپ کی تلاوت جانچ رہا ہے...</p>
+      {/* Result & Analysis Report Card */}
+      {showReport && (
+        <div className="ai-report-card" ref={reportPanelRef}>
+          {isAnalyzing ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <p style={{ fontSize: '1.2rem', color: '#2e7d32' }}>
+                اے آئی استاد تلاوت کا لفظ بہ لفظ تجزیہ کر رہا ہے...
+              </p>
             </div>
-          ) : (
-            <div id="aiResultState" style={{ display: "block" }}>
-              {/* سکور بار */}
-              <div id="scoreArea" style={{ marginBottom: "20px" }}>
-                <div style={{ textAlign: "center", padding: "12px", background: `${scoreColor}15`, borderRadius: "10px", border: `2px solid ${scoreColor}40` }}>
-                  <div style={{ fontSize: "1.8rem", fontWeight: "800", color: scoreColor }}>{score}%</div>
-                  <div style={{ color: scoreColor, fontSize: "1.1rem", fontWeight: "600" }}>{scoreEmoji}</div>
-                  <div style={{ background: "#e0e0e0", borderRadius: "20px", height: "10px", marginTop: "10px", overflow: "hidden" }}>
-                    <div style={{ background: scoreColor, height: "100%", width: `${score}%`, borderRadius: "20px", transition: "width 1s" }}></div>
+          ) : stats ? (
+            <div>
+              {/* Score Banner */}
+              <div
+                className="ai-score-banner"
+                style={{
+                  background: `${stats.color}15`,
+                  borderRightColor: stats.color,
+                }}
+              >
+                <div>
+                  <div className="ai-score-big" style={{ color: stats.color }}>
+                    {stats.score}%
+                  </div>
+                  <div className="ai-grade-tag" style={{ color: stats.color }}>
+                    {stats.emoji} {stats.grade}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'left', minWidth: '200px' }}>
+                  <div style={{ fontSize: '0.95rem', color: '#555', marginBottom: '6px' }}>
+                    درستگی کی شرح (Accuracy):
+                  </div>
+                  <div
+                    style={{
+                      background: '#e0e0e0',
+                      borderRadius: '12px',
+                      height: '14px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: stats.color,
+                        height: '100%',
+                        width: `${stats.score}%`,
+                        transition: 'width 0.8s ease',
+                      }}
+                    ></div>
                   </div>
                 </div>
               </div>
-              
-              {/* الفاظ کا موازنہ */}
-              <div style={{ marginBottom: "20px" }}>
-                <h4 style={{ color: "var(--accent)", margin: "0 0 10px 0", borderBottom: "1px solid #eee", paddingBottom: "8px" }}>لفظ بہ لفظ جائزہ</h4>
-                <div id="wordCompareArea" style={{ background: "#f8f9fa", borderRadius: "8px", padding: "16px", fontSize: "1.4rem", lineHeight: "3", textAlign: "right", direction: "rtl", fontFamily: "'Noto Naskh Arabic','Arial',sans-serif" }}>
-                  {compareRes.map((r, i) => {
-                    if (r.status === 'correct') return <span key={i} style={{ color: "#2e7d32", background: "#e8f5e9", padding: "3px 6px", borderRadius: "5px", margin: "3px", display: "inline-block" }}>{r.target}</span>;
-                    if (r.status === 'missing') return <span key={i} title="بھول گئے" style={{ color: "#c62828", background: "#ffebee", padding: "3px 6px", borderRadius: "5px", margin: "3px", display: "inline-block", textDecoration: "line-through", opacity: "0.7" }}>{r.target}</span>;
-                    if (r.status === 'close') return <span key={i} title={`آپ نے پڑھا: ${r.recited}`} style={{ color: "#f57f17", background: "#fff8e1", padding: "3px 6px", borderRadius: "5px", margin: "3px", display: "inline-block", borderBottom: "2px solid #f57f17" }}>{r.target}</span>;
-                    return <span key={i} title={`آپ نے پڑھا: ${r.recited}`} style={{ color: "#c62828", background: "#ffebee", padding: "3px 6px", borderRadius: "5px", margin: "3px", display: "inline-block", borderBottom: "2px dashed #c62828", fontWeight: "700" }}>{r.target}</span>;
+
+              {/* Stats Summary Pills */}
+              <div className="ai-stats-row">
+                <div className="ai-stat-pill">
+                  <div className="ai-stat-number" style={{ color: '#1b5e20' }}>
+                    {stats.totalTarget}
+                  </div>
+                  <div className="ai-stat-label">کل الفاظ</div>
+                </div>
+                <div className="ai-stat-pill" style={{ background: '#e8f5e9' }}>
+                  <div className="ai-stat-number" style={{ color: '#2e7d32' }}>
+                    {stats.correct}
+                  </div>
+                  <div className="ai-stat-label">درست الفاظ</div>
+                </div>
+                <div className="ai-stat-pill" style={{ background: '#ffebee' }}>
+                  <div className="ai-stat-number" style={{ color: '#c62828' }}>
+                    {stats.missing}
+                  </div>
+                  <div className="ai-stat-label">بھولے ہوئے</div>
+                </div>
+                <div className="ai-stat-pill" style={{ background: '#fff3e0' }}>
+                  <div className="ai-stat-number" style={{ color: '#e65100' }}>
+                    {stats.wrong}
+                  </div>
+                  <div className="ai-stat-label">غلط الفاظ</div>
+                </div>
+                {stats.extra > 0 && (
+                  <div className="ai-stat-pill" style={{ background: '#f3e5f5' }}>
+                    <div className="ai-stat-number" style={{ color: '#6a1b9a' }}>
+                      {stats.extra}
+                    </div>
+                    <div className="ai-stat-label">اضافی الفاظ</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Word-by-Word Diff Board */}
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ margin: '0 0 10px 0', color: '#1b5e20', fontSize: '1.25rem' }}>
+                  لفظ بہ لفظ تفصیلی جائزہ:
+                </h3>
+                <div className="ai-word-board">
+                  {alignedWords.map((w, idx) => {
+                    let chipClass = 'correct';
+                    let title = 'درست';
+                    if (w.status === 'missing') {
+                      chipClass = 'missing';
+                      title = `یہ لفظ چھوٹ گیا: "${w.target}"`;
+                    } else if (w.status === 'wrong') {
+                      chipClass = 'wrong';
+                      title = `غلط پڑھا: "${w.recited || '?'}" بجائے "${w.target}"`;
+                    } else if (w.status === 'close') {
+                      chipClass = 'close';
+                      title = `ملتا جلتا: "${w.recited}"`;
+                    } else if (w.status === 'extra') {
+                      chipClass = 'extra';
+                      title = `اضافی لفظ: "${w.recited}"`;
+                    }
+
+                    return (
+                      <span
+                        key={idx}
+                        className={`ai-word-chip ${chipClass}`}
+                        title={title}
+                        onClick={() => setSelectedWordDetail(w)}
+                      >
+                        {w.target || w.recited}
+                      </span>
+                    );
                   })}
-                  {compareRes.length === 0 && <span style={{ color: "#888" }}>الفاظ کا موازنہ نہیں ہو سکا</span>}
                 </div>
-                <div style={{ marginTop: "10px", display: "flex", gap: "16px", fontSize: "0.85rem", flexWrap: "wrap" }}>
-                  <span><span style={{ color: "#2e7d32", fontWeight: "700" }}>درست</span></span>
-                  <span><span style={{ color: "#c62828", fontWeight: "700" }}>غلط / بھولا</span></span>
-                  <span><span style={{ color: "#f57f17", fontWeight: "700" }}>ملتا جلتا</span></span>
+
+                {/* Legend */}
+                <div className="ai-word-legend">
+                  <div className="ai-legend-item">
+                    <span className="ai-legend-dot" style={{ background: '#2e7d32' }}></span>
+                    <span>درست پڑھا</span>
+                  </div>
+                  <div className="ai-legend-item">
+                    <span className="ai-legend-dot" style={{ background: '#e65100' }}></span>
+                    <span>ملتا جلتا / معمولی فرق</span>
+                  </div>
+                  <div className="ai-legend-item">
+                    <span className="ai-legend-dot" style={{ background: '#b71c1c' }}></span>
+                    <span>غلط لفظ (تبدیل شدہ)</span>
+                  </div>
+                  <div className="ai-legend-item">
+                    <span className="ai-legend-dot" style={{ background: '#7f0000' }}></span>
+                    <span>چھوٹا ہوا لفظ (Missing)</span>
+                  </div>
+                  <div className="ai-legend-item">
+                    <span className="ai-legend-dot" style={{ background: '#6a1b9a' }}></span>
+                    <span>اضافی لفظ (Extra)</span>
+                  </div>
                 </div>
+
+                {/* Selected Word Popover / Info */}
+                {selectedWordDetail && (
+                  <div
+                    style={{
+                      background: '#fff9c4',
+                      border: '1px solid #fbc02d',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      marginTop: '12px',
+                      fontSize: '1rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div>
+                      {selectedWordDetail.status === 'correct' && (
+                        <span style={{ color: '#2e7d32', fontWeight: '700' }}>
+                          یہ لفظ بالکل درست پڑھا گیا: "{selectedWordDetail.target}"
+                        </span>
+                      )}
+                      {selectedWordDetail.status === 'missing' && (
+                        <span style={{ color: '#c62828', fontWeight: '700' }}>
+                          یہ لفظ چھوٹ گیا تھا۔ اصل لفظ: "{selectedWordDetail.target}"
+                        </span>
+                      )}
+                      {selectedWordDetail.status === 'wrong' && (
+                        <span style={{ color: '#b71c1c', fontWeight: '700' }}>
+                          غلطی: طالب علم نے پڑھا "{selectedWordDetail.recited}" جبکہ اصل تھا "{selectedWordDetail.target}"
+                        </span>
+                      )}
+                      {selectedWordDetail.status === 'close' && (
+                        <span style={{ color: '#e65100', fontWeight: '700' }}>
+                          معمولی فرق: طالب علم نے پڑھا "{selectedWordDetail.recited}" (اصل: "{selectedWordDetail.target}")
+                        </span>
+                      )}
+                      {selectedWordDetail.status === 'extra' && (
+                        <span style={{ color: '#6a1b9a', fontWeight: '700' }}>
+                          اضافی لفظ: "{selectedWordDetail.recited}" قرآنی متن کا حصہ نہیں ہے۔
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedWordDetail(null)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        fontSize: '1.1rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* اے آئی فیڈ بیک */}
-              <div style={{ marginBottom: "20px" }}>
-                <h4 style={{ color: "#1565c0", margin: "0 0 10px 0", borderBottom: "1px solid #eee", paddingBottom: "8px" }}>استاد کا تبصرہ</h4>
-                <div id="aiFeedbackArea" style={{ background: "#e8f4fd", borderRadius: "8px", padding: "16px", fontSize: "1rem", lineHeight: "1.9", color: "#1a237e", borderRight: "4px solid #1565c0", direction: "rtl", textAlign: "right", whiteSpace: "pre-line" }}>
-                  {aiFeedback || 'استاد کا تبصرہ آ رہا ہے...'}
+              {/* Student's Recording Playback */}
+              {studentAudioUrl && (
+                <div className="ai-audio-player-box">
+                  <h4 className="ai-audio-player-title">طالب علم کی اپنی ریکارڈ شدہ تلاوت سنیں:</h4>
+                  <audio controls src={studentAudioUrl} style={{ width: '100%', outline: 'none' }} />
                 </div>
+              )}
+
+              {/* Teacher Feedback Box */}
+              <div className="ai-feedback-box">
+                <h4 className="ai-feedback-title">اے آئی استاد کا تبصرہ اور مشورہ:</h4>
+                <p className="ai-feedback-text">{teacherComment}</p>
               </div>
 
-              {/* صحیح تلاوت */}
-              <div style={{ background: "#f1f8e9", borderRadius: "8px", padding: "14px", marginBottom: "12px" }}>
-                <h4 style={{ margin: "0 0 10px 0", color: "#33691e" }}>صحیح تلاوت دوبارہ سنیں</h4>
-                <audio ref={qariAudioRef} id="qariAudio" controls style={{ width: "100%" }}></audio>
-              </div>
-
-              {/* دوبارہ کوشش */}
-              <div style={{ textAlign: "center", marginTop: "16px" }}>
-                <button onClick={resetAiSession} style={{ background: "#546e7a", color: "white", border: "none", padding: "10px 25px", borderRadius: "8px", cursor: "pointer", fontSize: "0.95rem" }}>دوبارہ سنائیں</button>
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="ai-btn-secondary"
+                  onClick={resetSession}
+                  style={{ padding: '10px 24px' }}
+                >
+                  اسی آیت کو دوبارہ سنائیں
+                </button>
+                <button
+                  type="button"
+                  className="ai-btn-primary"
+                  onClick={() => {
+                    goToNextAyah();
+                    resetSession();
+                  }}
+                  style={{ padding: '10px 28px' }}
+                >
+                  اگلی آیت کی طرف جائیں
+                </button>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       )}
-
     </div>
   );
 }

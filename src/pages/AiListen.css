@@ -1,0 +1,489 @@
+/* AI Ustad / Quran Recitation Mistake Detector Styles */
+
+.ai-ustad-container {
+  padding: 10px 0;
+  direction: rtl;
+  font-family: 'Noto Naskh Arabic', 'Segoe UI', Tahoma, sans-serif;
+}
+
+/* Header Banner */
+.ai-ustad-header {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  border-radius: 16px;
+  padding: 24px;
+  color: white;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 25px rgba(27, 94, 32, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-ustad-header::after {
+  content: '﷽';
+  position: absolute;
+  left: 20px;
+  top: 15px;
+  font-size: 3.5rem;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.ai-ustad-title {
+  margin: 0 0 6px 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.ai-ustad-subtitle {
+  margin: 0;
+  font-size: 1.05rem;
+  opacity: 0.92;
+  line-height: 1.6;
+}
+
+/* Mode Selection Tabs (Surah vs Para) */
+.ai-selector-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  margin-bottom: 20px;
+}
+
+.ai-mode-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  background: #f1f8e9;
+  padding: 5px;
+  border-radius: 10px;
+  max-width: 380px;
+}
+
+.ai-mode-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #2e7d32;
+  transition: all 0.25s ease;
+}
+
+.ai-mode-btn.active {
+  background: #2e7d32;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
+}
+
+.ai-nav-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 16px;
+}
+
+.ai-input-group label {
+  display: block;
+  font-weight: 700;
+  color: #1b5e20;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.ai-select,
+.ai-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #c8e6c9;
+  border-radius: 10px;
+  font-size: 1rem;
+  background: #fafafa;
+  color: #2e382e;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.ai-select:focus,
+.ai-input:focus {
+  border-color: #2e7d32;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.12);
+}
+
+/* Quran Ayah Box */
+.ai-ayah-display {
+  background: #f9fbf9;
+  border: 2px solid #a5d6a7;
+  border-radius: 14px;
+  padding: 24px;
+  min-height: 90px;
+  text-align: center;
+  font-size: 2.1rem;
+  line-height: 2.7;
+  color: #1b5e20;
+  font-family: 'Noto Naskh Arabic', serif;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.02);
+  margin-bottom: 16px;
+  word-spacing: 4px;
+}
+
+.ai-ayah-tools {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ai-btn-primary {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-btn-primary:hover {
+  background: #1b5e20;
+}
+
+.ai-btn-secondary {
+  background: #1565c0;
+  color: white;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ai-btn-secondary:hover {
+  background: #0d47a1;
+}
+
+.ai-btn-outline {
+  background: transparent;
+  border: 1.5px solid #2e7d32;
+  color: #2e7d32;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ai-btn-outline:hover {
+  background: #2e7d32;
+  color: white;
+}
+
+/* Mic & Live Recitation Section */
+.ai-mic-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 30px 20px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.ai-mic-button {
+  width: 95px;
+  height: 95px;
+  border-radius: 50%;
+  background: #2e7d32;
+  color: white;
+  font-size: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 15px auto 18px auto;
+  cursor: pointer;
+  border: 4px solid #ffffff;
+  box-shadow: 0 8px 24px rgba(46, 125, 50, 0.35);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.ai-mic-button:hover {
+  transform: scale(1.04);
+}
+
+.ai-mic-button.listening {
+  background: #d32f2f;
+  animation: aiPulse 1.4s infinite;
+  box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.6);
+}
+
+@keyframes aiPulse {
+  0% { transform: scale(0.96); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.6); }
+  70% { transform: scale(1.06); box-shadow: 0 0 0 22px rgba(211, 47, 47, 0); }
+  100% { transform: scale(0.96); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+}
+
+.ai-mic-status {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  transition: color 0.3s;
+}
+
+.ai-mic-hint {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+}
+
+/* Sound Waves Animation when listening */
+.ai-sound-waves {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  height: 35px;
+  margin: 12px auto;
+}
+
+.ai-sound-bar {
+  width: 4px;
+  height: 10px;
+  background: #d32f2f;
+  border-radius: 4px;
+  animation: aiWave 1s ease-in-out infinite alternate;
+}
+
+.ai-sound-bar:nth-child(2) { animation-delay: 0.15s; height: 18px; }
+.ai-sound-bar:nth-child(3) { animation-delay: 0.3s; height: 26px; }
+.ai-sound-bar:nth-child(4) { animation-delay: 0.45s; height: 32px; }
+.ai-sound-bar:nth-child(5) { animation-delay: 0.3s; height: 26px; }
+.ai-sound-bar:nth-child(6) { animation-delay: 0.15s; height: 18px; }
+.ai-sound-bar:nth-child(7) { animation-delay: 0s; height: 10px; }
+
+@keyframes aiWave {
+  0% { height: 6px; }
+  100% { height: 32px; }
+}
+
+/* Live Transcript Box */
+.ai-live-transcript-box {
+  background: #fbfcfb;
+  border: 1.5px solid #dcedc8;
+  border-radius: 12px;
+  padding: 18px;
+  min-height: 85px;
+  font-size: 1.6rem;
+  line-height: 2.2;
+  text-align: right;
+  direction: rtl;
+  color: #1b5e20;
+  font-family: 'Noto Naskh Arabic', serif;
+  box-sizing: border-box;
+}
+
+.ai-live-transcript-empty {
+  color: #aaa;
+  font-size: 1.05rem;
+  font-family: inherit;
+  line-height: 2;
+  text-align: center;
+}
+
+/* Report Panel */
+.ai-report-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1.5px solid #c8e6c9;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  margin-top: 24px;
+}
+
+.ai-score-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f1f8e9;
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  border-right: 6px solid #2e7d32;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.ai-score-big {
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.ai-grade-tag {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.ai-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.ai-stat-pill {
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+  background: #f9f9f9;
+  border: 1px solid #eee;
+}
+
+.ai-stat-number {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.ai-stat-label {
+  font-size: 0.85rem;
+  color: #555;
+  margin-top: 2px;
+}
+
+/* Word by Word Diff Board */
+.ai-word-board {
+  background: #f8faf8;
+  border-radius: 12px;
+  padding: 20px;
+  font-size: 1.8rem;
+  line-height: 3.2;
+  text-align: right;
+  direction: rtl;
+  font-family: 'Noto Naskh Arabic', serif;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 20px;
+}
+
+.ai-word-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  margin: 4px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s;
+  user-select: none;
+}
+
+.ai-word-chip:hover {
+  transform: translateY(-2px);
+}
+
+.ai-word-chip.correct {
+  color: #1b5e20;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+}
+
+.ai-word-chip.close {
+  color: #e65100;
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+}
+
+.ai-word-chip.wrong {
+  color: #b71c1c;
+  background: #ffebee;
+  border: 1.5px dashed #ef9a9a;
+  font-weight: 700;
+}
+
+.ai-word-chip.missing {
+  color: #7f0000;
+  background: #fbe9e7;
+  border: 1px solid #ffab91;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.ai-word-chip.extra {
+  color: #4a148c;
+  background: #f3e5f5;
+  border: 1px dotted #ce93d8;
+  font-size: 1.3rem;
+}
+
+.ai-word-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  margin-top: 10px;
+  color: #444;
+}
+
+.ai-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* Audio Player Section */
+.ai-audio-player-box {
+  background: #f1f8e9;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+  border: 1px solid #dcedc8;
+}
+
+.ai-audio-player-title {
+  margin: 0 0 10px 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2e7d32;
+}
+
+/* Teacher Feedback Box */
+.ai-feedback-box {
+  background: #e3f2fd;
+  border-right: 5px solid #1976d2;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 24px;
+}
+
+.ai-feedback-title {
+  margin: 0 0 8px 0;
+  color: #0d47a1;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.ai-feedback-text {
+  margin: 0;
+  color: #1565c0;
+  font-size: 1.05rem;
+  line-height: 1.9;
+  white-space: pre-line;
+}
+
