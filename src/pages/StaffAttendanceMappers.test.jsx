@@ -10,7 +10,6 @@ import {
   mapUiToStaffAttendancePayload,
   derivePendingDate,
   getStaffAttendanceStatusLabelUrdu,
-  getStaffStatusBadgeStyle,
   calculateStaffAttendanceCounts
 } from '../utils/StaffAttendanceMappers';
 
@@ -61,20 +60,12 @@ describe('Staff Attendance Mappers & Utilities', () => {
     });
   });
 
-  describe('getStaffAttendanceStatusLabelUrdu & getStaffStatusBadgeStyle', () => {
+  describe('getStaffAttendanceStatusLabelUrdu', () => {
     it('returns correct Urdu-only labels', () => {
       expect(getStaffAttendanceStatusLabelUrdu('present')).toBe('حاضر');
       expect(getStaffAttendanceStatusLabelUrdu('absent')).toBe('غیر حاضر');
       expect(getStaffAttendanceStatusLabelUrdu('leave')).toBe('رخصت');
       expect(getStaffAttendanceStatusLabelUrdu('half_leave')).toBe('آدھی چھٹی');
-    });
-
-    it('returns distinct color styles for half_leave', () => {
-      const hlStyle = getStaffStatusBadgeStyle('half_leave');
-      expect(hlStyle).toEqual({ bg: '#f5f3ff', border: '#ddd6fe', color: '#7c3aed' });
-
-      const presentStyle = getStaffStatusBadgeStyle('present');
-      expect(presentStyle.color).toBe('#15803d');
     });
   });
 

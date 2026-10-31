@@ -14,7 +14,6 @@ import {
   mapUiToStaffAttendancePayload,
   derivePendingDate,
   getStaffAttendanceStatusLabelUrdu,
-  getStaffStatusBadgeStyle,
   calculateStaffAttendanceCounts
 } from '../utils/StaffAttendanceMappers';
 import './Entry.css';
@@ -109,7 +108,6 @@ export {
   mapUiToStaffAttendancePayload,
   derivePendingDate,
   getStaffAttendanceStatusLabelUrdu,
-  getStaffStatusBadgeStyle,
   calculateStaffAttendanceCounts
 };
 
@@ -1320,7 +1318,6 @@ export default function Attendance() {
                     <td>
                       <span
                         className={`staff-status-badge status-${r.status}`}
-                        style={getStaffStatusBadgeStyle(r.status)}
                       >
                         {getStaffAttendanceStatusLabelUrdu(r.status)}
                       </span>

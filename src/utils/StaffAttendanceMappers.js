@@ -28,19 +28,6 @@ export const getStaffAttendanceStatusLabelUrdu = (status) => {
   }
 };
 
-/**
- * Returns color tokens for staff status badges across light and dark themes
- */
-export const getStaffStatusBadgeStyle = (status) => {
-  const norm = normalizeStaffAttendanceStatus(status);
-  switch (norm) {
-    case 'present': return { bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' };
-    case 'absent': return { bg: '#fff5f5', border: '#fecaca', color: '#dc2626' };
-    case 'leave': return { bg: '#f0f9ff', border: '#bae6fd', color: '#0284c7' };
-    case 'half_leave': return { bg: '#f5f3ff', border: '#ddd6fe', color: '#7c3aed' };
-    default: return { bg: '#f0fdf4', border: '#bbf7d0', color: '#15803d' };
-  }
-};
 
 /**
  * Computes attendance counts for staff:
