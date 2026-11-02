@@ -1146,6 +1146,32 @@
       text-align: center;
       transition: all 0.2s ease;
     }
+    .session-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      border-color: var(--border) !important;
+      background: #f1f5f9 !important;
+      color: #94a3b8 !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+    .session-btn:disabled:hover {
+      background: #f1f5f9 !important;
+      border-color: var(--border) !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+    [data-theme="dark"] .session-btn:disabled {
+      background: #18181b !important;
+      border-color: #27272a !important;
+      color: #71717a !important;
+    }
+    [data-theme="dark"] .session-btn:disabled:hover {
+      background: #18181b !important;
+      border-color: #27272a !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
     .checkin-btn { color: #15803d; border-color: #bbf7d0; }
     .checkin-btn:hover,
     .checkin-btn.active {
@@ -2034,6 +2060,18 @@
     }
 
     [data-theme="dark"] .half-leave-helper {
+      color: #94a3b8;
+    }
+
+    .staff-locked-status-hint {
+      font-size: 0.74rem;
+      color: #64748b;
+      margin-top: 4px;
+      line-height: 1.35;
+      display: block;
+    }
+
+    [data-theme="dark"] .staff-locked-status-hint {
       color: #94a3b8;
     }
 

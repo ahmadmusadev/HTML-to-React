@@ -950,6 +950,11 @@ export default function Attendance() {
     return [];
   };
   const staffMembers = getStaffForAttendance();
+  const savedStaffDataForDate = staffAttendance[staffAttDate] || {};
+  const isStaffCheckInDone = Boolean(
+    (savedStaffDataForDate && Object.keys(savedStaffDataForDate).length > 0) ||
+    (staffPendingDate && staffPendingDate === staffAttDate)
+  );
 
   useEffect(() => {
     if (activeView === 'staff') {
@@ -966,6 +971,14 @@ export default function Attendance() {
       }
 
       const savedData = staffAttendance[targetDate] || {};
+      const isTargetCheckInDone = Boolean(
+        (savedData && Object.keys(savedData).length > 0) ||
+        (hasPending && targetDate === lockedDate)
+      );
+
+      if (!isTargetCheckInDone && staffSession !== 'checkin') {
+        setStaffSession('checkin');
+      }
       const initialForm = {};
       
       staffMembers.forEach((staff) => {
@@ -985,6 +998,14 @@ export default function Attendance() {
   }, [activeView, staffAttDate, staffSession, staffProfiles, staffAttendance, staffPendingDate, classesList]);
 
   const handleStaffAttChange = (teacherId, field, value) => {
+    if (field === 'status' && staffSession === 'checkout') {
+      const savedData = staffAttendance[staffAttDate] || {};
+      const profile = staffMembers.find(s => s.teacherId === teacherId);
+      const rec = savedData[teacherId] || (profile && (savedData[profile.name] || savedData[profile.id])) || null;
+      if (rec && (rec.status === 'absent' || rec.status === 'leave')) {
+        return;
+      }
+    }
     setStaffAttFormData(prev => {
       const st = prev[teacherId] || {};
       const newSt = { ...st, [field]: value };
@@ -1096,6 +1117,10 @@ export default function Attendance() {
 
   const saveStaffAttendanceCheckOut = async () => {
     if (!staffAttDate) return;
+    if (!isStaffCheckInDone) {
+      alert("پہلے چیک اِن کی حاضری درج اور محفوظ کریں۔");
+      return;
+    }
     if (staffPendingDate && staffPendingDate !== staffAttDate) {
       alert(`پہلے ${staffPendingDate} کی چیک آؤٹ مکمل کریں۔`);
       setStaffAttDate(staffPendingDate);
@@ -1109,7 +1134,8 @@ export default function Attendance() {
       const form = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
       const prev = attRecord[staff.teacherId] || attRecord[staff.name] || attRecord[staff.id] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
       
-      const isPresentOrHalf = form.status === 'present' || form.status === 'half_leave';
+      const finalStatus = (prev.status === 'absent' || prev.status === 'leave') ? prev.status : form.status;
+      const isPresentOrHalf = finalStatus === 'present' || finalStatus === 'half_leave';
       const checkIn = isPresentOrHalf ? (form.checkIn || prev.checkIn || '') : '';
       const checkOut = isPresentOrHalf ? (form.checkOut || '') : '';
       
@@ -1118,7 +1144,7 @@ export default function Attendance() {
         if (form.lateMinutes !== undefined && form.lateMinutes !== null && form.lateMinutes !== '') {
           lateMinutes = Number(form.lateMinutes);
         } else if (checkIn) {
-          lateMinutes = calculateLateMinutes(checkIn, staff.shiftStart, form.status);
+          lateMinutes = calculateLateMinutes(checkIn, staff.shiftStart, finalStatus);
         } else if (prev.lateMinutes !== undefined) {
           lateMinutes = Number(prev.lateMinutes);
         }
@@ -1128,7 +1154,7 @@ export default function Attendance() {
         if (form.earlyLeaveMinutes !== undefined && form.earlyLeaveMinutes !== null && form.earlyLeaveMinutes !== '') {
           earlyLeaveMinutes = Number(form.earlyLeaveMinutes);
         } else if (checkOut) {
-          earlyLeaveMinutes = calculateEarlyLeaveMinutes(checkOut, staff.shiftEnd, form.status);
+          earlyLeaveMinutes = calculateEarlyLeaveMinutes(checkOut, staff.shiftEnd, finalStatus);
         } else if (prev.earlyLeaveMinutes !== undefined) {
           earlyLeaveMinutes = Number(prev.earlyLeaveMinutes);
         }
@@ -1137,7 +1163,7 @@ export default function Attendance() {
       attRecord[staff.teacherId] = {
         teacherId: staff.teacherId,
         teacherName: staff.name,
-        status: form.status,
+        status: finalStatus,
         checkIn,
         checkOut,
         lateMinutes,
@@ -1149,7 +1175,7 @@ export default function Attendance() {
         staff_id: staff.id,
         staffId: staff.id,
         date: staffAttDate,
-        status: form.status,
+        status: finalStatus,
         check_in: checkIn || null,
         check_out: checkOut || null,
         late_minutes: lateMinutes,
@@ -1691,10 +1717,24 @@ export default function Attendance() {
           <div>
             <label>اندراج مرحلہ</label>
             <div className="session-toggle-wrap">
-              <button className={`session-btn checkin-btn ${staffSession === 'checkin' ? 'active' : ''}`} onClick={() => setStaffSession('checkin')}>
+              <button
+                type="button"
+                className={`session-btn checkin-btn ${staffSession === 'checkin' ? 'active' : ''}`}
+                onClick={() => setStaffSession('checkin')}
+              >
                 چیک اِن
               </button>
-              <button className={`session-btn checkout-btn ${staffSession === 'checkout' ? 'active' : ''}`} onClick={() => setStaffSession('checkout')}>
+              <button
+                type="button"
+                className={`session-btn checkout-btn ${staffSession === 'checkout' ? 'active' : ''}`}
+                onClick={() => {
+                  if (isStaffCheckInDone) {
+                    setStaffSession('checkout');
+                  }
+                }}
+                disabled={!isStaffCheckInDone}
+                title={!isStaffCheckInDone ? "پہلے چیک اِن کی حاضری درج اور محفوظ کریں" : "چیک آؤٹ"}
+              >
                 چیک آؤٹ
               </button>
             </div>
@@ -1759,7 +1799,15 @@ export default function Attendance() {
                 <tbody>
                   {staffMembers.map(staff => {
                     const formData = staffAttFormData[staff.teacherId] || { status: 'present', checkIn: staff.shiftStart, checkOut: staff.shiftEnd, remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
-                    const isPresentOrHalf = formData.status === 'present' || formData.status === 'half_leave';
+                    const savedRec = (staffAttendance[staffAttDate] && (
+                      staffAttendance[staffAttDate][staff.teacherId] ||
+                      staffAttendance[staffAttDate][staff.name] ||
+                      staffAttendance[staffAttDate][staff.id]
+                    )) || null;
+                    const checkInStatus = savedRec?.status;
+                    const isLockedAbsentOrLeave = staffSession === 'checkout' && (checkInStatus === 'absent' || checkInStatus === 'leave');
+                    const effectiveStatus = isLockedAbsentOrLeave ? checkInStatus : (formData.status || 'present');
+                    const isPresentOrHalf = effectiveStatus === 'present' || effectiveStatus === 'half_leave';
                     const disable = !isPresentOrHalf;
                     return (
                       <tr key={staff.teacherId}>
@@ -1769,14 +1817,25 @@ export default function Attendance() {
                         <td>
                           <select
                             style={{ width: "auto", minWidth: "120px", padding: "5px" }}
-                            value={formData.status}
-                            onChange={e => handleStaffAttChange(staff.teacherId, 'status', e.target.value)}
+                            value={effectiveStatus}
+                            onChange={e => {
+                              if (!isLockedAbsentOrLeave) {
+                                handleStaffAttChange(staff.teacherId, 'status', e.target.value);
+                              }
+                            }}
+                            disabled={isLockedAbsentOrLeave}
+                            title={isLockedAbsentOrLeave ? `چیک اِن میں ${checkInStatus === 'absent' ? 'غیر حاضر' : 'رخصت'} درج ہے، چیک آؤٹ میں تبدیل نہیں ہو سکتا` : ""}
                           >
-                            <option value="present">حاضر</option>
-                            <option value="absent">غیر حاضر</option>
-                            <option value="leave">رخصت</option>
-                            <option value="half_leave">آدھی چھٹی</option>
+                            <option value="present" disabled={isLockedAbsentOrLeave}>حاضر</option>
+                            <option value="absent" disabled={isLockedAbsentOrLeave && checkInStatus !== 'absent'}>غیر حاضر</option>
+                            <option value="leave" disabled={isLockedAbsentOrLeave && checkInStatus !== 'leave'}>رخصت</option>
+                            <option value="half_leave" disabled={isLockedAbsentOrLeave}>آدھی چھٹی</option>
                           </select>
+                          {isLockedAbsentOrLeave && (
+                            <div className="staff-locked-status-hint">
+                              چیک اِن سے مقفل ({checkInStatus === 'absent' ? 'غیر حاضر' : 'رخصت'})
+                            </div>
+                          )}
                         </td>
                         <td>
                           <input

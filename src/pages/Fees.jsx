@@ -119,26 +119,29 @@ export const FeeReceiptDocument = ({
       {isPrintMode && (
         <style>{`
           @page {
-            size: A5 landscape;
-            margin: 6mm 8mm;
+            size: auto;
+            margin: 4mm 8mm 0 8mm;
           }
           body.printing-fee-receipt {
             display: flex !important;
-            justify-content: center !important;
-            align-items: flex-start !important;
-            min-height: 100vh !important;
-            height: 100% !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            min-height: 0 !important;
+            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
           }
           body.printing-fee-receipt #print-portal-root {
             display: flex !important;
-            justify-content: center !important;
-            align-items: flex-start !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
             width: 100% !important;
-            height: 100% !important;
-            min-height: 100% !important;
+            max-width: 740px !important;
+            height: auto !important;
+            min-height: 0 !important;
             margin: 0 auto !important;
             padding: 0 !important;
             position: static !important;
@@ -146,28 +149,46 @@ export const FeeReceiptDocument = ({
           }
           @media print {
             @page {
-            size: A5 landscape;
-            margin: 6mm 8mm;
-          }
+              size: auto;
+              margin: 4mm 8mm 0 8mm;
+            }
             html, body {
               width: 100% !important;
-              height: 100% !important;
+              height: auto !important;
+              min-height: 0 !important;
               margin: 0 !important;
               padding: 0 !important;
               background: #ffffff !important;
-              overflow: hidden !important;
+              overflow: visible !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
             body.printing-fee-receipt {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: flex-start !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: flex-start !important;
+              align-items: center !important;
+              height: auto !important;
+              min-height: 0 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            body.printing-fee-receipt #print-portal-root {
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: flex-start !important;
+              align-items: center !important;
+              height: auto !important;
+              min-height: 0 !important;
+              margin: 0 auto !important;
+              padding: 0 !important;
             }
             body.printing-fee-receipt .receipt-paper {
               width: 100% !important;
-              max-width: 730px !important;
+              max-width: 740px !important;
               margin: 0 auto !important;
+              margin-top: 0 !important;
+              margin-bottom: 0 !important;
               border: 1px solid #cbd5e1 !important;
               box-shadow: none !important;
               page-break-inside: avoid !important;

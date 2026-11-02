@@ -133,10 +133,11 @@ describe('Staff Attendance UI - half_leave Option & Helper Text', () => {
     fireEvent.change(statusSelect, { target: { value: 'half_leave' } });
 
     // Verify daily summary stats
-    expect(screen.getAllByText('آدھی چھٹی').length).toBeGreaterThanOrEqual(2);
-    // Fractional 0.5 present and 0.5 leave
-    const halfValues = screen.getAllByText('0.5');
-    expect(halfValues.length).toBeGreaterThanOrEqual(2); // One for present equivalent, one for leave equivalent
+    await waitFor(() => {
+      expect(screen.getAllByText('آدھی چھٹی').length).toBeGreaterThanOrEqual(2);
+      const halfValues = screen.getAllByText('0.5');
+      expect(halfValues.length).toBeGreaterThanOrEqual(2);
+    }); // One for present equivalent, one for leave equivalent
   });
   it('renders staff attendance history badges with correct status classes, Urdu labels, and no style attribute', async () => {
     const mockStaffAttendanceRows = [
@@ -253,5 +254,222 @@ describe('Staff Attendance UI - half_leave Option & Helper Text', () => {
     badges.forEach(badge => {
       expect(badge).not.toHaveAttribute('style');
     });
+  });
+});
+
+describe('Staff Attendance UI - Check-In vs Check-Out Locking & Status Preservation', () => {
+  const mockStaffMultiple = [
+    {
+      id: 'staff-uuid-1',
+      name: 'قاری محمد بلال',
+      staff_code: 1001,
+      shift_start: '06:50:00',
+      shift_end: '14:45:00',
+      status: 'active'
+    },
+    {
+      id: 'staff-uuid-2',
+      name: 'مولانا عبداللہ',
+      staff_code: 1002,
+      shift_start: '06:50:00',
+      shift_end: '14:45:00',
+      status: 'active'
+    },
+    {
+      id: 'staff-uuid-3',
+      name: 'حافظ زبیر',
+      staff_code: 1003,
+      shift_start: '06:50:00',
+      shift_end: '14:45:00',
+      status: 'active'
+    }
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.alert = vi.fn();
+  });
+
+  it('disables Check-Out button when Check-In has not yet been saved for the date', async () => {
+    vi.spyOn(MadrasaContextModule, 'useMadrasa').mockReturnValue({
+      activeMadrasaId: '11111111-1111-1111-1111-111111111111',
+      activeMadrasa: { id: '11111111-1111-1111-1111-111111111111', name: 'جامعہ حفظ' },
+      madrasas: [{ id: '11111111-1111-1111-1111-111111111111', name: 'جامعہ حفظ' }],
+      classesList: [],
+      setClassesList: vi.fn(),
+      loadMadrasaData: vi.fn().mockReturnValue(null),
+      saveMadrasaData: vi.fn(),
+      fetchStudentsFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchRecordsFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchClassesFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchStaffFromSupabase: vi.fn().mockResolvedValue(mockStaffMultiple),
+      fetchStudentAttendanceFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchStaffAttendanceFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchStaffAttendancePendingDate: vi.fn().mockResolvedValue(null),
+      upsertStaffAttendanceCheckIn: vi.fn().mockResolvedValue([]),
+      upsertStaffAttendanceCheckOut: vi.fn().mockResolvedValue([])
+    });
+
+    render(<Attendance />);
+
+    const staffTabBtn = screen.getByRole('button', { name: 'عملے کی حاضری' });
+    fireEvent.click(staffTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('قاری محمد بلال')).toBeInTheDocument();
+    });
+
+    const checkinBtn = screen.getByRole('button', { name: 'چیک اِن' });
+    const checkoutBtn = screen.getByRole('button', { name: 'چیک آؤٹ' });
+
+    expect(checkinBtn).toHaveClass('active');
+    expect(checkoutBtn).toBeDisabled();
+    expect(checkoutBtn).toHaveAttribute('title', 'پہلے چیک اِن کی حاضری درج اور محفوظ کریں');
+
+    fireEvent.click(checkoutBtn);
+    expect(checkoutBtn).not.toHaveClass('active');
+    expect(checkinBtn).toHaveClass('active');
+  });
+
+  it('enables Check-Out button when Check-In has been saved', async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const mockSavedAtt = [
+      {
+        id: 'att-1',
+        madrasa_id: '11111111-1111-1111-1111-111111111111',
+        staff_id: 'staff-uuid-1',
+        date: today,
+        status: 'present',
+        check_in: '06:50:00',
+        check_out: null,
+        late_minutes: 0,
+        early_leave_minutes: 0,
+        remarks: ''
+      }
+    ];
+
+    vi.spyOn(MadrasaContextModule, 'useMadrasa').mockReturnValue({
+      activeMadrasaId: '11111111-1111-1111-1111-111111111111',
+      activeMadrasa: { id: '11111111-1111-1111-1111-111111111111', name: 'جامعہ حفظ' },
+      madrasas: [{ id: '11111111-1111-1111-1111-111111111111', name: 'جامعہ حفظ' }],
+      classesList: [],
+      setClassesList: vi.fn(),
+      loadMadrasaData: vi.fn().mockReturnValue(null),
+      saveMadrasaData: vi.fn(),
+      fetchStudentsFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchRecordsFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchClassesFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchStaffFromSupabase: vi.fn().mockResolvedValue(mockStaffMultiple),
+      fetchStudentAttendanceFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchStaffAttendanceFromSupabase: vi.fn().mockResolvedValue(mockSavedAtt),
+      fetchStaffAttendancePendingDate: vi.fn().mockResolvedValue(today),
+      upsertStaffAttendanceCheckIn: vi.fn().mockResolvedValue([]),
+      upsertStaffAttendanceCheckOut: vi.fn().mockResolvedValue([])
+    });
+
+    render(<Attendance />);
+
+    const staffTabBtn = screen.getByRole('button', { name: 'عملے کی حاضری' });
+    fireEvent.click(staffTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('قاری محمد بلال')).toBeInTheDocument();
+    });
+
+    const checkoutBtn = screen.getByRole('button', { name: 'چیک آؤٹ' });
+    expect(checkoutBtn).not.toBeDisabled();
+
+    fireEvent.click(checkoutBtn);
+    expect(checkoutBtn).toHaveClass('active');
+  });
+
+  it('locks absent and leave teachers in Check-Out mode to their check-in status and disables other options', async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const mockSavedAtt = [
+      {
+        id: 'att-1',
+        madrasa_id: '11111111-1111-1111-1111-111111111111',
+        staff_id: 'staff-uuid-1',
+        date: today,
+        status: 'present',
+        check_in: '06:50:00',
+        check_out: null,
+        late_minutes: 0,
+        early_leave_minutes: 0,
+        remarks: ''
+      },
+      {
+        id: 'att-2',
+        madrasa_id: '11111111-1111-1111-1111-111111111111',
+        staff_id: 'staff-uuid-2',
+        date: today,
+        status: 'absent',
+        check_in: null,
+        check_out: null,
+        late_minutes: 0,
+        early_leave_minutes: 0,
+        remarks: 'بیمار ہیں'
+      },
+      {
+        id: 'att-3',
+        madrasa_id: '11111111-1111-1111-1111-111111111111',
+        staff_id: 'staff-uuid-3',
+        date: today,
+        status: 'leave',
+        check_in: null,
+        check_out: null,
+        late_minutes: 0,
+        early_leave_minutes: 0,
+        remarks: 'درخواست منظور شدہ'
+      }
+    ];
+
+    vi.spyOn(MadrasaContextModule, 'useMadrasa').mockReturnValue({
+      activeMadrasaId: '11111111-1111-1111-1111-111111111111',
+      activeMadrasa: { id: '11111111-1111-1111-1111-111111111111', name: 'جامعہ حفظ' },
+      madrasas: [{ id: '11111111-1111-1111-1111-111111111111', name: 'جامعہ حفظ' }],
+      classesList: [],
+      setClassesList: vi.fn(),
+      loadMadrasaData: vi.fn().mockReturnValue(null),
+      saveMadrasaData: vi.fn(),
+      fetchStudentsFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchRecordsFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchClassesFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchStaffFromSupabase: vi.fn().mockResolvedValue(mockStaffMultiple),
+      fetchStudentAttendanceFromSupabase: vi.fn().mockResolvedValue([]),
+      fetchStaffAttendanceFromSupabase: vi.fn().mockResolvedValue(mockSavedAtt),
+      fetchStaffAttendancePendingDate: vi.fn().mockResolvedValue(today),
+      upsertStaffAttendanceCheckIn: vi.fn().mockResolvedValue([]),
+      upsertStaffAttendanceCheckOut: vi.fn().mockResolvedValue([])
+    });
+
+    render(<Attendance />);
+
+    const staffTabBtn = screen.getByRole('button', { name: 'عملے کی حاضری' });
+    fireEvent.click(staffTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('قاری محمد بلال')).toBeInTheDocument();
+      expect(screen.getByText('مولانا عبداللہ')).toBeInTheDocument();
+      expect(screen.getByText('حافظ زبیر')).toBeInTheDocument();
+    });
+
+    const checkoutBtn = screen.getByRole('button', { name: 'چیک آؤٹ' });
+    fireEvent.click(checkoutBtn);
+    expect(checkoutBtn).toHaveClass('active');
+
+    const selects = screen.getAllByRole('combobox');
+    expect(selects.length).toBe(3);
+
+    expect(selects[0]).not.toBeDisabled();
+    expect(selects[0].value).toBe('present');
+
+    expect(selects[1]).toBeDisabled();
+    expect(selects[1].value).toBe('absent');
+    expect(screen.getByText('چیک اِن سے مقفل (غیر حاضر)')).toBeInTheDocument();
+
+    expect(selects[2]).toBeDisabled();
+    expect(selects[2].value).toBe('leave');
+    expect(screen.getByText('چیک اِن سے مقفل (رخصت)')).toBeInTheDocument();
   });
 });
