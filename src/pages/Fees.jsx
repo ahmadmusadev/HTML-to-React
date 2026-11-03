@@ -119,8 +119,8 @@ export const FeeReceiptDocument = ({
       {isPrintMode && (
         <style>{`
           @page {
-            size: auto;
-            margin: 4mm 8mm 0 8mm;
+            size: A5 landscape;
+            margin: 3mm 8mm 0 8mm;
           }
           body.printing-fee-receipt {
             display: flex !important;
@@ -149,9 +149,9 @@ export const FeeReceiptDocument = ({
           }
           @media print {
             @page {
-              size: auto;
-              margin: 4mm 8mm 0 8mm;
-            }
+            size: A5 landscape;
+            margin: 3mm 8mm 0 8mm;
+          }
             html, body {
               width: 100% !important;
               height: auto !important;

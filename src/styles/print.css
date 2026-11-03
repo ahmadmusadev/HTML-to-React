@@ -1,6 +1,6 @@
 @page {
-  size: auto;
-  margin: 4mm 8mm 0 8mm;
+  size: A5 landscape;
+  margin: 3mm 8mm 0 8mm;
 }
 
 /* Screen mode: print portal is strictly hidden from screen view */

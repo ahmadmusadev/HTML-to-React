@@ -756,8 +756,8 @@
 /* Scoped Print Overrides: Top-Aligned Receipt Fit */
 @media print {
   @page {
-    size: auto;
-    margin: 4mm 8mm 0 8mm;
+    size: A5 landscape;
+    margin: 3mm 8mm 0 8mm;
   }
 
   html, body {
