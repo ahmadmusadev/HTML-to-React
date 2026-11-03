@@ -380,7 +380,7 @@
 
 .receipt-org-title {
   margin: 0 !important;
-  font-size: 1.55rem !important;
+  font-size: 1.74rem !important;
   font-weight: 800 !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
@@ -398,7 +398,7 @@
 
 .receipt-section-banner h2 {
   margin: 0 !important;
-  font-size: 1.15rem !important;
+  font-size: 1.34rem !important;
   font-weight: 800 !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
@@ -438,7 +438,7 @@
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   font-weight: 700 !important;
-  font-size: 0.95rem !important;
+  font-size: 1.14rem !important;
   padding: 7px 12px !important;
   border: 1px solid #cbd5e1 !important;
   text-align: left !important;
@@ -453,7 +453,7 @@
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   font-weight: 700 !important;
-  font-size: 0.95rem !important;
+  font-size: 1.14rem !important;
   padding: 7px 12px !important;
   border: 1px solid #cbd5e1 !important;
   text-align: left !important;
@@ -473,7 +473,7 @@
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   font-weight: 800 !important;
-  font-size: 0.98rem !important;
+  font-size: 1.17rem !important;
   padding: 7px 12px !important;
   border: 1px solid #cbd5e1 !important;
   text-align: left !important;
@@ -487,7 +487,7 @@
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   font-weight: 600 !important;
-  font-size: 0.95rem !important;
+  font-size: 1.14rem !important;
   padding: 7px 12px !important;
   border: 1px solid #cbd5e1 !important;
   text-align: left !important;
@@ -501,7 +501,7 @@
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   font-weight: 700 !important;
-  font-size: 1.02rem !important;
+  font-size: 1.21rem !important;
   padding: 7px 12px !important;
   border: 1px solid #cbd5e1 !important;
   text-align: left !important;
@@ -517,7 +517,7 @@
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   font-weight: 800 !important;
-  font-size: 1.08rem !important;
+  font-size: 1.27rem !important;
   padding: 8px 12px !important;
   border: 1px solid #091b3e !important;
   text-align: left !important;
@@ -550,7 +550,7 @@
 }
 
 .receipt-sig-title {
-  font-size: 0.92rem !important;
+  font-size: 1.11rem !important;
   font-weight: 700 !important;
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
@@ -559,7 +559,7 @@
 /* Footer Note */
 .receipt-footer-note {
   margin-top: 8px !important;
-  font-size: 0.82rem !important;
+  font-size: 1.01rem !important;
   font-weight: 600 !important;
   font-style: italic !important;
   color: #1e293b !important;
@@ -1030,18 +1030,18 @@
   .receipt-td-amount,
   .receipt-total-row td {
     padding: 6px 6px !important;
-    font-size: 0.78rem !important;
+    font-size: 0.97rem !important;
   }
   .receipt-header-banner {
     padding: 8px 12px !important;
   }
   .receipt-org-title {
-    font-size: 1.05rem !important;
+    font-size: 1.24rem !important;
   }
   .receipt-section-banner {
     padding: 7px 10px !important;
   }
   .receipt-section-banner h2 {
-    font-size: 0.92rem !important;
+    font-size: 1.11rem !important;
   }
 }
