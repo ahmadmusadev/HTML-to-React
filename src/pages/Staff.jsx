@@ -930,8 +930,8 @@ export default function Staff() {
               return (
                 <div key={s.id || code} className="staff-card-new">
                   <div className="staff-card-actions">
-                    <button className="staff-action-btn staff-edit-btn" style={{ width: 'auto', padding: '0 8px' }} onClick={() => editStaffProfile(code)} title="ترمیم">ترمیم</button>
-                    <button className="staff-action-btn staff-delete-btn" style={{ width: 'auto', padding: '0 8px' }} onClick={() => deleteStaffProfile(code)} title="حذف">حذف</button>
+                    <button className="staff-action-btn staff-edit-btn" onClick={() => editStaffProfile(code)} title="ترمیم">ترمیم</button>
+                    <button className="staff-action-btn staff-delete-btn" onClick={() => deleteStaffProfile(code)} title="حذف">حذف</button>
                   </div>
 
                   <div className="staff-card-top">
@@ -945,35 +945,30 @@ export default function Staff() {
 
                   <div className="staff-details-grid">
                     <div className="staff-detail-item">
-                      <span className="staff-detail-icon"></span>
                       <div>
                         <span className="staff-detail-label">تفویض کردہ کلاس</span>
                         <span className="staff-detail-val">{s.assignedClassName || 'تفویض نہیں'}</span>
                       </div>
                     </div>
                     <div className="staff-detail-item">
-                      <span className="staff-detail-icon"></span>
                       <div>
                         <span className="staff-detail-label">فون نمبر</span>
                         <span className="staff-detail-val">{s.phone || '-'}</span>
                       </div>
                     </div>
                     <div className="staff-detail-item">
-                      <span className="staff-detail-icon"></span>
                       <div>
                         <span className="staff-detail-label">واٹس ایپ</span>
                         <span className="staff-detail-val">{s.whatsapp || '-'}</span>
                       </div>
                     </div>
                     <div className="staff-detail-item">
-                      <span className="staff-detail-icon"></span>
                       <div>
                         <span className="staff-detail-label">شناختی کارڈ</span>
                         <span className="staff-detail-val">{s.cnic || '-'}</span>
                       </div>
                     </div>
                     <div className="staff-detail-item">
-                      <span className="staff-detail-icon"></span>
                       <div>
                         <span className="staff-detail-label">تعلیمی قابلیت</span>
                         <span className="staff-detail-val">{s.qualification || '-'}</span>
@@ -981,7 +976,6 @@ export default function Staff() {
                     </div>
                     {isAuthorizedToSalary && (
                       <div className="staff-detail-item">
-                        <span className="staff-detail-icon"></span>
                         <div>
                           <span className="staff-detail-label">ماہانہ بنیادی تنخواہ</span>
                           <span className="staff-detail-val">
