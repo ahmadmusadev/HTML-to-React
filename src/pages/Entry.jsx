@@ -673,21 +673,21 @@ export default function Entry() {
             </div>
             <div className="me-control-row">
               <div>
-                <label>کلاس منتخب کریں</label>
-                <select value={meClassSelect} onChange={e => setMeClassSelect(e.target.value)}>
+                <label htmlFor="meClassSelect">کلاس منتخب کریں</label>
+                <select id="meClassSelect" value={meClassSelect} onChange={e => setMeClassSelect(e.target.value)}>
                   <option value="">کلاس منتخب کریں...</option>
                   {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.class_name || c.className || c.id}</option>)}
                 </select>
               </div>
               <div>
-                <label>ماہ</label>
-                <select value={meMonth} onChange={e => setMeMonth(e.target.value)}>
+                <label htmlFor="meMonthSelect">ماہ</label>
+                <select id="meMonthSelect" value={meMonth} onChange={e => setMeMonth(e.target.value)}>
                   {['اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر','جنوری','فروری','مارچ'].map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
               <div>
-                <label>سال</label>
-                <select value={meYear} onChange={e => setMeYear(e.target.value)}>
+                <label htmlFor="meYearSelect">سال</label>
+                <select id="meYearSelect" value={meYear} onChange={e => setMeYear(e.target.value)}>
                   {getAcademicYearOptions().map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
