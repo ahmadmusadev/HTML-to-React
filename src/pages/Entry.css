@@ -2194,3 +2194,173 @@
     }
 
 
+
+    /* ==========================================================================
+       HIFZ & ENTRY COMPREHENSIVE DARK MODE SUPPORT
+       ========================================================================== */
+    .expected-end-input {
+      background: #f1f5f9;
+    }
+    [data-theme="dark"] .expected-end-input {
+      background: #141417 !important;
+      color: #ffffff !important;
+      border: 1px solid #3f3f46 !important;
+    }
+
+    .selected-target-row {
+      background: #f0fdf4;
+      font-weight: bold;
+    }
+    [data-theme="dark"] .selected-target-row {
+      background: #1c1c20 !important;
+      color: #ffffff !important;
+      font-weight: bold;
+      border-right: 3px solid #ffffff !important;
+    }
+    [data-theme="dark"] .selected-target-row td {
+      color: #ffffff !important;
+    }
+
+    .hifz-selection-card {
+      background: #eef2f6;
+      border: 1px solid #cbd5e1;
+    }
+    [data-theme="dark"] .hifz-selection-card {
+      background: #141417 !important;
+      border: 1px solid #27272a !important;
+      color: #ffffff !important;
+    }
+
+    .hifz-instruction-text {
+      font-size: 0.9rem;
+      color: #666;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    [data-theme="dark"] .hifz-instruction-text {
+      color: #a1a1aa !important;
+    }
+
+    .days-label {
+      font-size: 0.7rem;
+      color: #555;
+    }
+    [data-theme="dark"] .days-label {
+      color: #a1a1aa !important;
+    }
+
+    [data-theme="dark"] .attendance-header {
+      background: #1c1c20 !important;
+      border-bottom: 2px solid #3f3f46 !important;
+      color: #ffffff !important;
+    }
+
+    [data-theme="dark"] .attendance-row {
+      background: #141417 !important;
+      border-color: #27272a !important;
+      color: #ffffff !important;
+    }
+
+    [data-theme="dark"] .attendance-row .result-cell {
+      background: #1c1c20 !important;
+      color: #ffffff !important;
+      border: 1px solid #27272a !important;
+    }
+    [data-theme="dark"] .attendance-row .result-cell span {
+      color: #ffffff !important;
+    }
+
+    .hifz-summary-card {
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+    .hifz-summary-att {
+      background: #fff8f8;
+      border: 1px dashed #c62828;
+    }
+    [data-theme="dark"] .hifz-summary-att {
+      background: #141417 !important;
+      border: 1px dashed #991b1b !important;
+      color: #ffffff !important;
+    }
+
+    .hifz-summary-edu {
+      background: #f8f9fa;
+      border: 1px dashed #ccc;
+    }
+    [data-theme="dark"] .hifz-summary-edu {
+      background: #141417 !important;
+      border: 1px dashed #3f3f46 !important;
+      color: #ffffff !important;
+    }
+
+    .hifz-save-btn {
+      background: var(--accent);
+      color: #fff;
+      padding: 12px 30px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(13, 59, 102, 0.22);
+      transition: all 0.2s ease;
+    }
+    .hifz-save-btn:hover:not(:disabled) {
+      box-shadow: 0 5px 16px rgba(13, 59, 102, 0.3);
+      transform: translateY(-1px);
+    }
+    [data-theme="dark"] .hifz-save-btn {
+      background: #18181b !important;
+      color: #ffffff !important;
+      border: 1.5px solid #3f3f46 !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+    }
+    [data-theme="dark"] .hifz-save-btn:hover:not(:disabled) {
+      background: #27272a !important;
+      border-color: #ffffff !important;
+      color: #ffffff !important;
+    }
+
+    .report-result-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    [data-theme="dark"] .report-result-card {
+      background: #141417 !important;
+      border-color: #27272a !important;
+      color: #ffffff !important;
+    }
+
+    .report-table-header {
+      background: var(--accent);
+      color: #fff;
+    }
+    [data-theme="dark"] .report-table-header {
+      background: #1c1c20 !important;
+      color: #ffffff !important;
+    }
+    [data-theme="dark"] .report-table-header th {
+      color: #ffffff !important;
+    }
+
+    .ir-stat-card {
+      flex: 1;
+      min-width: 140px;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .ir-stat-green { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .ir-stat-blue { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .ir-stat-amber { background: #fefce8; border: 1px solid #fde68a; }
+
+    [data-theme="dark"] .ir-stat-card {
+      background: #18181b !important;
+      border-color: #27272a !important;
+    }
+    [data-theme="dark"] .ir-stat-card div {
+      color: #ffffff !important;
+    }

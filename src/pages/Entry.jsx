@@ -89,6 +89,9 @@ export default function Entry() {
     saveMadrasaData,
     fetchStudentsFromSupabase,
     fetchClassesFromSupabase,
+    fetchMonthlyEvaluationsFromSupabase,
+    saveMonthlyEvaluationToSupabase,
+    deleteMonthlyEvaluationFromSupabase,
     classesList: contextClassesList,
     setClassesList: setContextClassesList,
     saveHifzHalfYearRecordToSupabase,
@@ -115,10 +118,14 @@ export default function Entry() {
     let isMounted = true;
     const loadData = async () => {
       const storedData = loadMadrasaData('hf_records_v1', activeMadrasaId) || {};
+      const storedMonthly = loadMadrasaData('hf_monthly_exams_v1', activeMadrasaId);
       const storedClasses = loadMadrasaData('hf_classes_v1', activeMadrasaId) || {};
 
       setRecords(storedData.records || []);
-      setMonthlyExams(storedData.monthlyExams || []);
+      const initialMonthly = (Array.isArray(storedMonthly) && storedMonthly.length > 0)
+        ? storedMonthly
+        : (storedData.monthlyExams || []);
+      setMonthlyExams(initialMonthly);
 
       const initialClasses = (contextClassesList && contextClassesList.length > 0)
         ? contextClassesList
@@ -130,7 +137,7 @@ export default function Entry() {
       setClassesList(initialClasses);
 
       try {
-        const [stds, clsData] = await Promise.all([
+        const [stds, clsData, monthlyData] = await Promise.all([
           fetchStudentsFromSupabase(activeMadrasaId).catch(err => {
             console.warn('Could not fetch students in Entry:', err);
             return null;
@@ -138,7 +145,11 @@ export default function Entry() {
           fetchClassesFromSupabase(activeMadrasaId).catch(err => {
             console.warn('Could not fetch classes in Entry:', err);
             return null;
-          })
+          }),
+          fetchMonthlyEvaluationsFromSupabase ? fetchMonthlyEvaluationsFromSupabase({}, activeMadrasaId).catch(err => {
+            console.warn('Could not fetch monthly evaluations in Entry:', err);
+            return null;
+          }) : null
         ]);
 
         if (isMounted) {
@@ -150,6 +161,9 @@ export default function Entry() {
             setClassesList(clsData);
             if (setContextClassesList) setContextClassesList(clsData);
           }
+          if (monthlyData && Array.isArray(monthlyData)) {
+            setMonthlyExams(monthlyData);
+          }
         }
       } catch (err) {
         console.warn('Could not fetch data in Entry:', err);
@@ -160,7 +174,8 @@ export default function Entry() {
   }, [activeMadrasaId]);
 
   const saveToLocal = (newMonthlyExams) => {
-    let storedData = loadMadrasaData('hf_records_v1', activeMadrasaId) || { monthlyExams: [] };
+    saveMadrasaData('hf_monthly_exams_v1', newMonthlyExams, activeMadrasaId);
+    let storedData = loadMadrasaData('hf_records_v1', activeMadrasaId) || {};
     storedData.monthlyExams = newMonthlyExams;
     saveMadrasaData('hf_records_v1', storedData, activeMadrasaId);
     setMonthlyExams(newMonthlyExams);
@@ -242,42 +257,86 @@ export default function Entry() {
     setMeStudents({ ...meStudents, data: list });
   };
 
-  const meSaveExam = () => {
+  const [isSavingExam, setIsSavingExam] = useState(false);
+
+  const meSaveExam = async () => {
     if (!meStudents || meStudents === 'empty') { alert('کوئی طالب علم نہیں۔'); return; }
     
-    const studentData = meStudents.data.map(item => {
-      const row = { regNo: item.student.admRegNo, name: item.student.name };
-      ME_COLS.forEach(c => { row[c.key] = c.max ? Number(item[c.key] || 0) : (item[c.key] || ''); });
-      row.total = item.total;
-      row.pct = item.pct;
-      row.grade = item.gradeObj.g;
-      return row;
-    });
+    setIsSavingExam(true);
+    try {
+      const studentData = meStudents.data.map(item => {
+        const row = {
+          student_id: item.student?.id || null,
+          regNo: item.student?.admRegNo || '',
+          name: item.student?.name || ''
+        };
+        ME_COLS.forEach(c => { row[c.key] = c.max ? Number(item[c.key] || 0) : (item[c.key] || ''); });
+        const pct = (item.pct !== null && item.pct !== undefined) ? Number(item.pct) : (ME_MAX_TOTAL > 0 ? (Number(item.total || 0) / ME_MAX_TOTAL) * 100 : 0);
+        const gradeObj = item.gradeObj || meGrade(pct);
+        row.total = Number(item.total) || 0;
+        row.pct = Number(pct.toFixed(1));
+        row.grade = gradeObj?.g || 'D';
+        return row;
+      });
 
-    const record = {
-      classId: meClassSelect, className: meStudents.clsName,
-      month: meMonth, year: meYear, students: studentData,
-      savedAt: new Date().toISOString()
-    };
+      const record = {
+        classId: meClassSelect,
+        className: meStudents.clsName,
+        month: meMonth,
+        year: String(meYear),
+        students: studentData,
+        savedAt: new Date().toISOString()
+      };
 
-    let newExams = [...monthlyExams];
-    const idx = newExams.findIndex(r => r.classId === meClassSelect && r.month === meMonth && r.year === meYear);
-    if (idx > -1) newExams[idx] = record;
-    else newExams.push(record);
+      // 1. Save to Supabase (and its local cache)
+      if (saveMonthlyEvaluationToSupabase) {
+        try {
+          const remoteRes = await saveMonthlyEvaluationToSupabase(record, activeMadrasaId);
+          if (remoteRes?.id) {
+            record.id = remoteRes.id;
+          }
+        } catch (supaErr) {
+          console.warn('Could not save monthly evaluation to Supabase, continuing locally:', supaErr);
+        }
+      }
 
-    saveToLocal(newExams);
-    const avg = studentData.reduce((s, r) => s + r.pct, 0) / studentData.length;
-    alert(`${meStudents.clsName} — ${meMonth} ${meYear}\n${studentData.length} طلباء کا ریکارڈ محفوظ ہو گیا!\nکلاسی اوسط: ${avg.toFixed(1)}%`);
-    meLoadStudents();
+      // 2. Save locally
+      let newExams = [...monthlyExams];
+      const idx = newExams.findIndex(r =>
+        (r.classId === meClassSelect || r.className === meStudents.clsName) &&
+        r.month === meMonth &&
+        String(r.year) === String(meYear)
+      );
+      if (idx > -1) newExams[idx] = { ...newExams[idx], ...record };
+      else newExams.push(record);
+
+      saveToLocal(newExams);
+      const avg = studentData.reduce((s, r) => s + r.pct, 0) / (studentData.length || 1);
+      alert(`${meStudents.clsName} — ${meMonth} ${formatAcademicYear(meYear)}\n${studentData.length} طلباء کا ریکارڈ محفوظ ہو گیا!\nکلاسی اوسط: ${avg.toFixed(1)}%`);
+      
+      // Reload table with newly saved data
+      meLoadStudents(newExams);
+    } catch (err) {
+      console.error('Error saving exam:', err);
+      alert('ریکارڈ محفوظ کرنے میں خرابی پیش آئی۔');
+    } finally {
+      setIsSavingExam(false);
+    }
   };
 
-  const meDeleteExam = (idx) => {
+  const meDeleteExam = async (targetExam) => {
     if (!window.confirm('کیا آپ یہ ریکارڈ حذف کرنا چاہتے ہیں؟')) return;
-    let filteredExams = monthlyExams.filter(r => (!meHistoryClassFilter || r.classId === meHistoryClassFilter) && (!meHistoryMonthFilter || r.month === meHistoryMonthFilter))
-                                    .sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
-    const target = filteredExams[idx];
-    if (!target) return;
-    const newExams = monthlyExams.filter(r => r !== target);
+    if (!targetExam) return;
+
+    try {
+      if (deleteMonthlyEvaluationFromSupabase) {
+        await deleteMonthlyEvaluationFromSupabase(targetExam, activeMadrasaId);
+      }
+    } catch (supaErr) {
+      console.warn('Could not delete monthly evaluation from Supabase:', supaErr);
+    }
+
+    const newExams = monthlyExams.filter(r => r !== targetExam && (targetExam.id ? r.id !== targetExam.id : true));
     saveToLocal(newExams);
   };
 
@@ -796,7 +855,7 @@ export default function Entry() {
                   id="expectedEnd" 
                   value={expectedEnd} 
                   readOnly 
-                  style={{ background: "#f1f5f9" }}
+                  className="expected-end-input"
                 />
               </div>
             </div>
@@ -819,7 +878,7 @@ export default function Entry() {
                         const arr = yearTargets[y] || [];
                         const total = arr.length * PAGES_PER_JUZ;
                         return (
-                          <tr key={y} style={Number(selectYear) === y ? { background: '#f0fdf4', fontWeight: 'bold' } : {}}>
+                          <tr key={y} className={Number(selectYear) === y ? 'selected-target-row' : ''}>
                             <td>سال {y}</td>
                             <td style={{ fontSize: "0.9rem" }}>{arr.join(', ')}</td>
                             <td>{arr.length}</td>
@@ -833,7 +892,7 @@ export default function Entry() {
               </div>
             </div>
 
-            <div style={{ background: "#eef2f6", padding: "15px", borderRadius: "8px", marginTop: "20px" }}>
+            <div className="hifz-selection-card" style={{ padding: "15px", borderRadius: "8px", marginTop: "20px" }}>
               <h3 style={{ marginTop: "0", textAlign: "center", color: "var(--accent)" }}>سال اور ششماہی کا انتخاب</h3>
               <div className="grid-row">
                 <div>
@@ -853,7 +912,7 @@ export default function Entry() {
             </div>
 
             <h2>1. حاضری کا ریکارڈ (ایامِ کار)</h2>
-            <div style={{ fontSize: "0.9rem", color: "#666", textAlign: "center", marginBottom: "15px" }}>
+            <div className="hifz-instruction-text">
               ایامِ کار خودکار طریقے سے کیلکولیٹ ہوئے ہیں، تاہم آپ دستی تبدیلی کر سکتے ہیں (غیر حاضری اور رخصت ضرور درج کریں)۔
             </div>
 
@@ -913,7 +972,7 @@ export default function Entry() {
                     </div>
                     <div className="result-cell">
                       <span className="present-days-display" style={{ fontWeight: "700" }}>{p}</span>
-                      <span style={{ fontSize: "0.7rem", color: "#555" }}> ایام</span>
+                      <span className="days-label"> ایام</span>
                       <br/>
                       (<span className="monthly-pct-display" style={{ fontWeight: "700" }}>{rowPct}%</span>)
                     </div>
@@ -922,7 +981,7 @@ export default function Entry() {
               })}
             </div>
 
-            <div className="grid-row" style={{ background: "#fff8f8", padding: "15px", borderRadius: "8px", border: "1px dashed #c62828", marginTop: "15px" }}>
+            <div className="grid-row hifz-summary-card hifz-summary-att" style={{ padding: "15px", borderRadius: "8px", marginTop: "15px" }}>
                 <div>
                   <label>ششماہی کل ایامِ کار</label>
                   <input type="text" value={totalWorking} readOnly />
@@ -975,7 +1034,7 @@ export default function Entry() {
               ))}
             </div>
 
-            <div className="grid-row" style={{ background: "#f8f9fa", padding: "15px", borderRadius: "8px", border: "1px dashed #ccc" }}>
+            <div className="grid-row hifz-summary-card hifz-summary-edu" style={{ padding: "15px", borderRadius: "8px", marginTop: "15px" }}>
               <div>
                 <label>کل پڑھے گئے صفحات</label>
                 <input type="text" value={totalPages} readOnly style={{ fontWeight: 'bold' }} />
@@ -1003,7 +1062,7 @@ export default function Entry() {
               <button 
                 onClick={handleSaveHifzRecord} 
                 disabled={hifzSaving}
-                style={{ background: "var(--accent)", color: "#fff", padding: "12px 30px", fontSize: "1.05rem", fontWeight: "700" }}
+                className="hifz-save-btn"
               >
                 {hifzSaving ? 'محفوظ ہو رہا ہے...' : 'مکمل ریکارڈ (تعلیمی + حاضری) محفوظ کریں'}
               </button>
@@ -1051,7 +1110,7 @@ export default function Entry() {
           <div className="printable-area">
             {crResultsData === 'empty' ? <div className="empty-dashboard-state">{crClassSelect} — {crMonth} {crYear} کا کوئی ریکارڈ موجود نہیں</div> :
              crResultsData && (
-                <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "12px", padding: "20px", marginTop: "14px" }}>
+                <div className="report-result-card" style={{ padding: "20px", marginTop: "14px" }}>
                   <div style={{ textAlign: "center", borderBottom: "2px solid var(--accent)", paddingBottom: "12px", marginBottom: "16px" }}>
                     <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--accent)" }}>ماہانہ جائزہ رپورٹ</div>
                     <div style={{ fontSize: "1rem", color: "var(--muted)" }}>{crResultsData.exam.className} — {crResultsData.month} {crResultsData.year}</div>
@@ -1060,7 +1119,7 @@ export default function Entry() {
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
                       <thead>
-                        <tr style={{ background: "var(--accent)", color: "#fff" }}>
+                        <tr className="report-table-header">
                           <th style={{ padding: "8px" }}>نمبر</th><th style={{ padding: "8px" }}>ID</th><th style={{ padding: "8px" }}>نام</th>
                           {ME_COLS.filter(c => !c.sub && c.max).map(c => <th key={c.key} style={{ padding: "8px" }}>{c.label}</th>)}
                           <th style={{ padding: "8px" }}>پارہ</th><th style={{ padding: "8px" }}>ترکو</th><th style={{ padding: "8px" }}>کل</th><th style={{ padding: "8px" }}>فیصد</th>
@@ -1111,7 +1170,7 @@ export default function Entry() {
             {srResultsData === 'notfound' ? <div className="empty-dashboard-state">کوئی طالب علم نہیں ملا</div> :
              srResultsData && srResultsData.empty ? <div className="empty-dashboard-state">{srResultsData.student.name} کا کوئی جائزہ ریکارڈ موجود نہیں</div> :
              srResultsData && (
-                <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "12px", padding: "20px", marginTop: "14px" }}>
+                <div className="report-result-card" style={{ padding: "20px", marginTop: "14px" }}>
                   <div style={{ textAlign: "center", borderBottom: "2px solid var(--accent)", paddingBottom: "12px", marginBottom: "16px" }}>
                     <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--accent)" }}>انفرادی رپورٹ</div>
                     <div style={{ fontSize: "1.1rem", fontWeight: "700" }}>{srResultsData.student.name}</div>
@@ -1121,7 +1180,7 @@ export default function Entry() {
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
                       <thead>
-                        <tr style={{ background: "var(--accent)", color: "#fff" }}>
+                        <tr className="report-table-header">
                           <th style={{ padding: "8px" }}>مہینہ</th><th style={{ padding: "8px" }}>کلاس</th>
                           {ME_COLS.filter(c => !c.sub && c.max).map(c => <th key={c.key} style={{ padding: "8px" }}>{c.label}</th>)}
                           <th style={{ padding: "8px" }}>پارہ</th><th style={{ padding: "8px" }}>ترکو</th><th style={{ padding: "8px" }}>کل</th><th style={{ padding: "8px" }}>فیصد</th>
@@ -1188,22 +1247,22 @@ export default function Entry() {
           <div className="printable-area">
             {irResultsData === 'empty' ? <div className="empty-dashboard-state">{irMonth} {irYear} کا کوئی ریکارڈ موجود نہیں</div> :
              irResultsData && (
-              <div style={{ background: "#fff", border: "1px solid var(--border)", borderRadius: "12px", padding: "20px", marginTop: "14px" }}>
+              <div className="report-result-card" style={{ padding: "20px", marginTop: "14px" }}>
                 <div style={{ textAlign: "center", borderBottom: "2px solid var(--accent)", paddingBottom: "12px", marginBottom: "16px" }}>
                   <div style={{ fontSize: "1.5rem", fontWeight: "800", color: "var(--accent)" }}>نتیجہ ماہانہ جائزہ</div>
                   <div style={{ fontSize: "1rem", color: "var(--muted)" }}>{irResultsData.month} {irResultsData.year} — پورا ادارہ</div>
                 </div>
 
                 <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "20px" }}>
-                  <div style={{ flex: "1", minWidth: "140px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                  <div className="ir-stat-card ir-stat-green">
                     <div style={{ fontSize: "0.85rem", color: "#15803d" }}>کل کلاسز</div>
                     <div style={{ fontSize: "2rem", fontWeight: "800", color: "#15803d" }}>{irResultsData.exams.length}</div>
                   </div>
-                  <div style={{ flex: "1", minWidth: "140px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                  <div className="ir-stat-card ir-stat-blue">
                     <div style={{ fontSize: "0.85rem", color: "#1d4ed8" }}>کل طلباء</div>
                     <div style={{ fontSize: "2rem", fontWeight: "800", color: "#1d4ed8" }}>{irResultsData.totalStudents}</div>
                   </div>
-                  <div style={{ flex: "1", minWidth: "140px", background: "#fefce8", border: "1px solid #fde68a", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                  <div className="ir-stat-card ir-stat-amber">
                     <div style={{ fontSize: "0.85rem", color: "#b45309" }}>مجموعی اوسط</div>
                     <div style={{ fontSize: "2rem", fontWeight: "800", color: "#b45309" }}>{irResultsData.overallAvg.toFixed(1)}%</div>
                     <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#b45309" }}>{meGrade(irResultsData.overallAvg).g}</div>
@@ -1214,7 +1273,7 @@ export default function Entry() {
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
                     <thead>
-                      <tr style={{ background: "var(--accent)", color: "#fff" }}>
+                      <tr className="report-table-header">
                         <th style={{ padding: "10px 14px" }}>کلاس</th><th style={{ padding: "10px" }}>طلباء</th><th style={{ padding: "10px" }}>اوسط</th><th style={{ padding: "10px" }}>گریڈ</th><th style={{ padding: "10px" }}>نمایاں طالب علم</th>
                       </tr>
                     </thead>

@@ -353,14 +353,14 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 }
 
 [data-theme="dark"] .tab-button.active {
-  background: #ffffff !important;
-  color: #000000 !important;
+  background: #27272a !important;
+  color: #ffffff !important;
   border-color: #ffffff !important;
   font-weight: 800 !important;
-  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
 }
 [data-theme="dark"] .tab-button.active * {
-  color: #000000 !important;
+  color: #ffffff !important;
 }
 
 /* --- Sub Navigation, Filter Tabs & Action Buttons --- */
@@ -394,18 +394,17 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 [data-theme="dark"] .fee-report-tab-btn.active,
 [data-theme="dark"] .tab-btn.active,
 [data-theme="dark"] .filter-btn.active {
-  background: #ffffff !important;
-  color: #000000 !important;
+  background: #27272a !important;
+  color: #ffffff !important;
   border-color: #ffffff !important;
   font-weight: 800 !important;
-  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.25) !important;
 }
 [data-theme="dark"] .sub-tab-btn.active *,
 [data-theme="dark"] .adm-type-btn.active *,
 [data-theme="dark"] .fee-report-tab-btn.active *,
 [data-theme="dark"] .tab-btn.active *,
 [data-theme="dark"] .filter-btn.active * {
-  color: #000000 !important;
+  color: #ffffff !important;
 }
 
 /* --- Gender Radio Toggle Labels & Buttons --- */
@@ -465,7 +464,7 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   color: #ffffff !important;
 }
 
-/* --- Primary Action Buttons (Pure White with Jet Black Text) --- */
+/* --- Primary Action Buttons (Dark Charcoal with Crisp White Text & Border) --- */
 [data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn),
 [data-theme="dark"] .wizard-btn-next,
 [data-theme="dark"] .search-container button,
@@ -473,11 +472,11 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 [data-theme="dark"] .me-save-btn,
 [data-theme="dark"] .staff-add-open-btn,
 [data-theme="dark"] .att-view-btn {
-  background: #ffffff !important;
-  color: #000000 !important;
-  border: 1px solid #ffffff !important;
+  background: #18181b !important;
+  color: #ffffff !important;
+  border: 1.5px solid #3f3f46 !important;
   font-weight: 800 !important;
-  box-shadow: 0 3px 12px rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
 }
 
 [data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn):hover,
@@ -487,9 +486,9 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 [data-theme="dark"] .me-save-btn:hover,
 [data-theme="dark"] .staff-add-open-btn:hover,
 [data-theme="dark"] .att-view-btn:hover {
-  background: #f4f4f5 !important;
-  color: #000000 !important;
-  border-color: #f4f4f5 !important;
+  background: #27272a !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
 }
 
 [data-theme="dark"] .wizard-btn-prev,
@@ -1049,8 +1048,8 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 }
 
 [data-theme="dark"] .pagination button.active {
-  background: #ffffff !important;
-  color: #000000 !important;
+  background: #27272a !important;
+  color: #ffffff !important;
   border-color: #ffffff !important;
   font-weight: 800 !important;
 }
