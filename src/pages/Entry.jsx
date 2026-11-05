@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { getCurrentAcademicYearStart, formatAcademicYear, getAcademicYearOptions } from '../utils/academicYear';
 import { DEFAULT_CLASSES } from '../constants/defaults';
@@ -94,8 +94,10 @@ export default function Entry() {
     deleteMonthlyEvaluationFromSupabase,
     classesList: contextClassesList,
     setClassesList: setContextClassesList,
+    fetchHifzHalfYearRecordsFromSupabase,
     saveHifzHalfYearRecordToSupabase,
-    updateStudentHifzStartDate
+    updateStudentHifzStartDate,
+    fetchStudentAttendanceFromSupabase
   } = useMadrasa();
 
   const [activeTab, setActiveTab] = useState('monthly');
@@ -137,7 +139,7 @@ export default function Entry() {
       setClassesList(initialClasses);
 
       try {
-        const [stds, clsData, monthlyData] = await Promise.all([
+        const [stds, clsData, monthlyData, hifzData] = await Promise.all([
           fetchStudentsFromSupabase(activeMadrasaId).catch(err => {
             console.warn('Could not fetch students in Entry:', err);
             return null;
@@ -149,14 +151,30 @@ export default function Entry() {
           fetchMonthlyEvaluationsFromSupabase ? fetchMonthlyEvaluationsFromSupabase({}, activeMadrasaId).catch(err => {
             console.warn('Could not fetch monthly evaluations in Entry:', err);
             return null;
+          }) : null,
+          fetchHifzHalfYearRecordsFromSupabase ? fetchHifzHalfYearRecordsFromSupabase(activeMadrasaId).catch(err => {
+            console.warn('Could not fetch Hifz half-year records in Entry:', err);
+            return null;
           }) : null
         ]);
 
         if (isMounted) {
+          let mergedRecs = [];
           if (stds && Array.isArray(stds)) {
             setStudentsList(stds);
-            setRecords(stds.map(mapStudentToUi).filter(Boolean));
+            mergedRecs = stds.map(mapStudentToUi).filter(Boolean);
+          } else {
+            mergedRecs = (storedData.records || []).filter(r => r.isAdmissionProfile);
           }
+
+          if (hifzData && Array.isArray(hifzData) && hifzData.length > 0) {
+            mergedRecs = [...mergedRecs, ...hifzData];
+          } else {
+            const localHifz = (storedData.records || []).filter(r => !r.isAdmissionProfile && !r.isFeeRecord);
+            mergedRecs = [...mergedRecs, ...localHifz];
+          }
+          setRecords(mergedRecs);
+
           if (clsData && Array.isArray(clsData) && clsData.length > 0) {
             setClassesList(clsData);
             if (setContextClassesList) setContextClassesList(clsData);
@@ -359,49 +377,243 @@ export default function Entry() {
   const [hifzStartDate, setHifzStartDate] = useState('');
   const [hifzSaving, setHifzSaving] = useState(false);
 
+  // Dynamic base start year for academic calculations
+  const baseStartYear = useMemo(() => {
+    if (hifzStartDate) {
+      const d = new Date(hifzStartDate);
+      if (!isNaN(d.getTime())) {
+        const base = getCurrentAcademicYearStart(d);
+        return base + (Number(selectYear) - 1);
+      }
+    }
+    return getCurrentAcademicYearStart() + (Number(selectYear) - 1);
+  }, [hifzStartDate, selectYear]);
+
   // Month configs for Half Year 1 and 2
-  const monthsConfig = selectHalfYear === '1' ? [
-    { name: 'اپریل', mIdx: 3, y: 2025 },
-    { name: 'مئی', mIdx: 4, y: 2025 },
-    { name: 'جون', mIdx: 5, y: 2025 },
-    { name: 'جولائی', mIdx: 6, y: 2025 },
-    { name: 'اگست', mIdx: 7, y: 2025 },
-    { name: 'ستمبر', mIdx: 8, y: 2025 }
-  ] : [
-    { name: 'اکتوبر', mIdx: 9, y: 2025 },
-    { name: 'نومبر', mIdx: 10, y: 2025 },
-    { name: 'دسمبر', mIdx: 11, y: 2025 },
-    { name: 'جنوری', mIdx: 0, y: 2026 },
-    { name: 'فروری', mIdx: 1, y: 2026 },
-    { name: 'مارچ', mIdx: 2, y: 2026 }
-  ];
+  const monthsConfig = useMemo(() => {
+    return selectHalfYear === '1' ? [
+      { name: 'اپریل', mIdx: 3, y: baseStartYear },
+      { name: 'مئی', mIdx: 4, y: baseStartYear },
+      { name: 'جون', mIdx: 5, y: baseStartYear },
+      { name: 'جولائی', mIdx: 6, y: baseStartYear },
+      { name: 'اگست', mIdx: 7, y: baseStartYear },
+      { name: 'ستمبر', mIdx: 8, y: baseStartYear }
+    ] : [
+      { name: 'اکتوبر', mIdx: 9, y: baseStartYear },
+      { name: 'نومبر', mIdx: 10, y: baseStartYear },
+      { name: 'دسمبر', mIdx: 11, y: baseStartYear },
+      { name: 'جنوری', mIdx: 0, y: baseStartYear + 1 },
+      { name: 'فروری', mIdx: 1, y: baseStartYear + 1 },
+      { name: 'مارچ', mIdx: 2, y: baseStartYear + 1 }
+    ];
+  }, [selectHalfYear, baseStartYear]);
 
   // Attendance rows state
   const [attendanceRows, setAttendanceRows] = useState(() => {
+    const curYear = getCurrentAcademicYearStart();
     return [
-      { name: 'اپریل', y: 2025, working: calculateWorkingDays(2025, 3), absent: 0, leave: 0 },
-      { name: 'مئی', y: 2025, working: calculateWorkingDays(2025, 4), absent: 0, leave: 0 },
-      { name: 'جون', y: 2025, working: calculateWorkingDays(2025, 5), absent: 0, leave: 0 },
-      { name: 'جولائی', y: 2025, working: calculateWorkingDays(2025, 6), absent: 0, leave: 0 },
-      { name: 'اگست', y: 2025, working: calculateWorkingDays(2025, 7), absent: 0, leave: 0 },
-      { name: 'ستمبر', y: 2025, working: calculateWorkingDays(2025, 8), absent: 0, leave: 0 }
+      { name: 'اپریل', y: curYear, working: calculateWorkingDays(curYear, 3), absent: 0, leave: 0 },
+      { name: 'مئی', y: curYear, working: calculateWorkingDays(curYear, 4), absent: 0, leave: 0 },
+      { name: 'جون', y: curYear, working: calculateWorkingDays(curYear, 5), absent: 0, leave: 0 },
+      { name: 'جولائی', y: curYear, working: calculateWorkingDays(curYear, 6), absent: 0, leave: 0 },
+      { name: 'اگست', y: curYear, working: calculateWorkingDays(curYear, 7), absent: 0, leave: 0 },
+      { name: 'ستمبر', y: curYear, working: calculateWorkingDays(curYear, 8), absent: 0, leave: 0 }
     ];
   });
 
   // Pages input state: { [monthName]: pagesRead }
   const [monthlyPages, setMonthlyPages] = useState({});
+  const [attSyncedFromDaily, setAttSyncedFromDaily] = useState(false);
+  const [isLoadingDailyAtt, setIsLoadingDailyAtt] = useState(false);
 
-  // Reset or update attendance rows whenever half-year changes
+  // Synchronize monthly attendance and academic details from Daily Attendance & records
+  const populateAttendanceAndAcademic = useCallback(async (studentId, yearVal, halfYearVal, overrideStartDate) => {
+    if (!studentId) return;
+
+    const std = studentsList.find(s => s.id === studentId || s.roll_number === studentId) ||
+                records.find(r => r.id === studentId || r.admRegNo === studentId || r.name === studentId);
+    const targetUuid = std?.id || studentId;
+    const targetRegNo = std?.admRegNo || std?.roll_number || '';
+    const startDateToUse = overrideStartDate !== undefined ? overrideStartDate : (std?.hifz_start_date || std?.admission_date || std?.admDate || hifzStartDate || '');
+
+    let bYear = getCurrentAcademicYearStart();
+    if (startDateToUse) {
+      const d = new Date(startDateToUse);
+      if (!isNaN(d.getTime())) {
+        bYear = getCurrentAcademicYearStart(d) + (Number(yearVal) - 1);
+      }
+    }
+
+    const currentMonths = String(halfYearVal) === '1' ? [
+      { name: 'اپریل', mIdx: 3, y: bYear },
+      { name: 'مئی', mIdx: 4, y: bYear },
+      { name: 'جون', mIdx: 5, y: bYear },
+      { name: 'جولائی', mIdx: 6, y: bYear },
+      { name: 'اگست', mIdx: 7, y: bYear },
+      { name: 'ستمبر', mIdx: 8, y: bYear }
+    ] : [
+      { name: 'اکتوبر', mIdx: 9, y: bYear },
+      { name: 'نومبر', mIdx: 10, y: bYear },
+      { name: 'دسمبر', mIdx: 11, y: bYear },
+      { name: 'جنوری', mIdx: 0, y: bYear + 1 },
+      { name: 'فروری', mIdx: 1, y: bYear + 1 },
+      { name: 'مارچ', mIdx: 2, y: bYear + 1 }
+    ];
+
+    setIsLoadingDailyAtt(true);
+    let dailyMap = {};
+    let hasDailyRecords = false;
+
+    try {
+      // 1. Check local storage dailyAttendance
+      const localHfData = loadMadrasaData('hf_records_v1', activeMadrasaId) || {};
+      const localDaily = localHfData.dailyAttendance || {};
+      Object.keys(localDaily).forEach(clsId => {
+        const dateEntries = localDaily[clsId] || {};
+        Object.keys(dateEntries).forEach(dStr => {
+          const studentEntries = dateEntries[dStr] || {};
+          const matched = studentEntries[targetUuid] || (targetRegNo && studentEntries[targetRegNo]);
+          if (matched) {
+            const st = typeof matched === 'string' ? matched : matched.status;
+            if (st) {
+              dailyMap[dStr] = st;
+              hasDailyRecords = true;
+            }
+          }
+        });
+      });
+
+      // 2. Check local storage hf_student_attendance_v1
+      const localAttList = loadMadrasaData('hf_student_attendance_v1', activeMadrasaId) || [];
+      if (Array.isArray(localAttList)) {
+        localAttList.forEach(item => {
+          if (item && (item.student_id === targetUuid || (targetRegNo && item.student_id === targetRegNo))) {
+            if (item.date && item.status) {
+              dailyMap[item.date] = item.status;
+              hasDailyRecords = true;
+            }
+          }
+        });
+      }
+
+      // 3. Fetch from Supabase student_attendance
+      if (fetchStudentAttendanceFromSupabase && isValidUUID(activeMadrasaId)) {
+        try {
+          const remoteAtt = await fetchStudentAttendanceFromSupabase({ studentId: targetUuid }, activeMadrasaId);
+          if (Array.isArray(remoteAtt) && remoteAtt.length > 0) {
+            remoteAtt.forEach(item => {
+              if (item.date && item.status) {
+                dailyMap[item.date] = item.status;
+                hasDailyRecords = true;
+              }
+            });
+          }
+        } catch (remoteErr) {
+          console.warn('Could not fetch student attendance from Supabase, using local cache:', remoteErr);
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading daily attendance:', e);
+    } finally {
+      setIsLoadingDailyAtt(false);
+    }
+
+    // Check if an existing half-year record exists in records
+    const existingRec = records.find(r =>
+      !r.isAdmissionProfile &&
+      !r.isFeeRecord &&
+      Number(r.year || r.hifz_year) === Number(yearVal) &&
+      Number(r.halfYear || r.half_year) === Number(halfYearVal) &&
+      ((targetUuid && (r.student_id === targetUuid || r.id === targetUuid)) ||
+       (std?.name && r.name === std.name))
+    );
+
+    // If existing pages read exist, populate them
+    if (existingRec?.monthly_academic_details || existingRec?.monthlyAcademicDetails) {
+      setMonthlyPages(existingRec.monthly_academic_details || existingRec.monthlyAcademicDetails || {});
+    } else {
+      setMonthlyPages({});
+    }
+
+    // Build the 6 attendance rows
+    const savedMonthlyAtt = existingRec?.monthly_attendance_details || existingRec?.attendance?.monthlyDetails || {};
+
+    const computedRows = currentMonths.map(m => {
+      const working = calculateWorkingDays(m.y, m.mIdx);
+      const mNum = String(m.mIdx + 1).padStart(2, '0');
+      const prefix = `${m.y}-${mNum}`;
+
+      let monthAbsent = 0;
+      let monthLeave = 0;
+      let foundInDaily = false;
+
+      // Count from dailyMap
+      Object.keys(dailyMap).forEach(dStr => {
+        if (dStr.startsWith(prefix)) {
+          foundInDaily = true;
+          const st = dailyMap[dStr];
+          if (st === 'absent' || st === 'غائب' || st === 'A') {
+            monthAbsent++;
+          } else if (st === 'leave' || st === 'رخصت' || st === 'L') {
+            monthLeave++;
+          } else if (st === 'half_leave') {
+            monthLeave += 0.5;
+          }
+        }
+      });
+
+      if (foundInDaily) {
+        return {
+          name: m.name,
+          y: m.y,
+          working: working,
+          absent: monthAbsent,
+          leave: monthLeave
+        };
+      }
+
+      // If not found in daily, check if previously saved in existing record
+      const prevSaved = savedMonthlyAtt[m.name];
+      if (prevSaved) {
+        return {
+          name: m.name,
+          y: m.y,
+          working: prevSaved.working !== undefined ? Number(prevSaved.working) : working,
+          absent: Number(prevSaved.absent || 0),
+          leave: Number(prevSaved.leave || 0)
+        };
+      }
+
+      // Default
+      return {
+        name: m.name,
+        y: m.y,
+        working: working,
+        absent: 0,
+        leave: 0
+      };
+    });
+
+    setAttendanceRows(computedRows);
+    setAttSyncedFromDaily(hasDailyRecords);
+  }, [studentsList, records, activeMadrasaId, fetchStudentAttendanceFromSupabase, loadMadrasaData, hifzStartDate]);
+
+  // Re-run attendance calculation when student, year, or half-year changes
   useEffect(() => {
-    setAttendanceRows(monthsConfig.map(m => ({
-      name: m.name,
-      y: m.y,
-      working: calculateWorkingDays(m.y, m.mIdx),
-      absent: 0,
-      leave: 0
-    })));
-    setMonthlyPages({});
-  }, [selectHalfYear]);
+    if (hifzStudentId) {
+      populateAttendanceAndAcademic(hifzStudentId, selectYear, selectHalfYear);
+    } else {
+      setAttendanceRows(monthsConfig.map(m => ({
+        name: m.name,
+        y: m.y,
+        working: calculateWorkingDays(m.y, m.mIdx),
+        absent: 0,
+        leave: 0
+      })));
+      setMonthlyPages({});
+      setAttSyncedFromDaily(false);
+    }
+  }, [hifzStudentId, selectYear, selectHalfYear, populateAttendanceAndAcademic, monthsConfig]);
 
   // Expected completion calculation (+3 years)
   const calculateExpectedEnd = (start) => {
@@ -421,7 +633,12 @@ export default function Entry() {
   // Student selection helper
   const handleStudentSelect = (selectedId) => {
     setHifzStudentId(selectedId);
-    if (!selectedId) return;
+    if (!selectedId) {
+      setHifzStudentName('');
+      setHifzStartDate('');
+      setAttSyncedFromDaily(false);
+      return;
+    }
 
     const std = studentsList.find(s => s.id === selectedId || s.roll_number === selectedId) ||
                 records.find(r => r.id === selectedId || r.admRegNo === selectedId || r.name === selectedId);
@@ -429,9 +646,9 @@ export default function Entry() {
     if (std) {
       setHifzStudentName(std.name || std.admName || '');
       const sDate = std.hifz_start_date || std.admission_date || std.admDate || '';
-      if (sDate) {
-        setHifzStartDate(sDate.split('T')[0]);
-      }
+      const cleanDate = sDate ? sDate.split('T')[0] : '';
+      setHifzStartDate(cleanDate);
+      populateAttendanceAndAcademic(selectedId, selectYear, selectHalfYear, cleanDate);
     }
   };
 
@@ -569,15 +786,37 @@ export default function Entry() {
 
       alert(`سال ${yearVal} ششماہی ${selectHalfYear} کا ریکارڈ کامیابی سے محفوظ ہو گیا!\nطالب علم: ${name}\nکل صفحات: ${totalPages} (${eduPct}%)\nحاضری: ${attPct}%`);
 
-      // Reset form
-      setMonthlyPages({});
-      setAttendanceRows(monthsConfig.map(m => ({
-        name: m.name,
-        y: m.y,
-        working: calculateWorkingDays(m.y, m.mIdx),
-        absent: 0,
-        leave: 0
-      })));
+      // Update in-memory records so existing record is immediately present
+      setRecords(prev => {
+        const next = [...prev];
+        const idx = next.findIndex(r =>
+          !r.isAdmissionProfile &&
+          Number(r.year || r.hifz_year) === yearVal &&
+          Number(r.halfYear || r.half_year) === Number(selectHalfYear) &&
+          ((resolvedStudentId && (r.student_id === resolvedStudentId || r.id === resolvedStudentId)) ||
+           (name && r.name === name))
+        );
+        const newRec = {
+          ...payload,
+          id: existingRecord?.id || `rec_${Date.now()}`,
+          name: name,
+          year: yearVal,
+          halfYear: Number(selectHalfYear),
+          pages: totalPages,
+          attendance: {
+            working: totalWorking,
+            present: totalPresent,
+            absent: totalAbsent,
+            leave: totalLeave,
+            pct: attPct,
+            monthlyDetails: attendanceMonthlyDetails
+          },
+          monthlyAcademicDetails: academicMonthlyDetails
+        };
+        if (idx > -1) next[idx] = newRec;
+        else next.unshift(newRec);
+        return next;
+      });
     } catch (err) {
       console.error('Error saving Hifz record:', err);
       alert('ریکارڈ محفوظ کرنے میں خرابی پیش آئی: ' + (err.message || err));
@@ -828,8 +1067,9 @@ export default function Entry() {
         <div id="entrySection-hifz" className="no-print">
             <div className="grid-row" style={{ marginTop: "20px" }}>
               <div>
-                <label>طالب علم منتخب کریں</label>
+                <label htmlFor="hifzStudentSelect">طالب علم منتخب کریں</label>
                 <select 
+                  id="hifzStudentSelect"
                   value={hifzStudentId} 
                   onChange={e => handleStudentSelect(e.target.value)}
                   style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--border)" }}
@@ -925,8 +1165,18 @@ export default function Entry() {
             </div>
 
             <h2>1. حاضری کا ریکارڈ (ایامِ کار)</h2>
-            <div className="hifz-instruction-text">
-              ایامِ کار خودکار طریقے سے کیلکولیٹ ہوئے ہیں، تاہم آپ دستی تبدیلی کر سکتے ہیں (غیر حاضری اور رخصت ضرور درج کریں)۔
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "10px", flexWrap: "wrap" }}>
+              <div className="hifz-instruction-text" style={{ margin: "0" }}>
+                ایامِ کار خودکار طریقے سے کیلکولیٹ ہوئے ہیں، تاہم آپ دستی تبدیلی کر سکتے ہیں (غیر حاضری اور رخصت ضرور درج کریں)۔
+              </div>
+              {attSyncedFromDaily && (
+                <span className="me-chip me-chip-green" style={{ fontSize: "0.82rem", fontWeight: "700" }}>
+                  روزانہ حاضری سے خودکار ہم آہنگ
+                </span>
+              )}
+              {isLoadingDailyAtt && (
+                <span style={{ fontSize: "0.82rem", color: "var(--muted)" }}>حاضری لوڈ ہو رہی ہے...</span>
+              )}
             </div>
 
             <div id="attendanceInputArea">

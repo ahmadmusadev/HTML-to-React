@@ -1501,6 +1501,9 @@ export function MadrasaProvider({ children }) {
           console.warn('Failed to sync attendance to local cache:', syncErr);
         }
 
+        // Also sync updated attendance to any existing Hifz half-year records in Supabase & local cache
+        syncDailyAttendanceToHifzRecords(data || payload, madrasaId);
+
         return data;
       } catch (e) {
         console.error('Supabase save student attendance error:', e.message || e);
@@ -1527,7 +1530,132 @@ export function MadrasaProvider({ children }) {
       newRows.forEach(row => updatedMap.set(`${row.student_id}_${row.date}`, row));
       const finalArr = Array.from(updatedMap.values());
       saveMadrasaData('hf_student_attendance_v1', finalArr, madrasaId);
+
+      // Also sync updated attendance to any existing Hifz half-year records in local cache
+      syncDailyAttendanceToHifzRecords(newRows, madrasaId);
+
       return newRows;
+    }
+  };
+
+  const syncDailyAttendanceToHifzRecords = async (savedAttendanceRecords, madrasaId = activeMadrasaId) => {
+    if (!savedAttendanceRecords || !savedAttendanceRecords.length) return;
+
+    try {
+      const studentIds = new Set(savedAttendanceRecords.map(r => r.student_id || r.studentUuid).filter(Boolean));
+      if (!studentIds.size) return;
+
+      const localHfData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+      const localRecs = localHfData.records || [];
+      const allStudentAtt = loadMadrasaData('hf_student_attendance_v1', madrasaId) || [];
+      const monthNames = ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'];
+
+      let recordsChanged = false;
+
+      for (const stdId of studentIds) {
+        const matchingHifzRecs = localRecs.filter(r =>
+          !r.isAdmissionProfile &&
+          !r.isFeeRecord &&
+          (r.student_id === stdId || r.id === stdId || r.studentUuid === stdId)
+        );
+
+        if (!matchingHifzRecs.length) continue;
+
+        const studentDaily = allStudentAtt.filter(a => a && (a.student_id === stdId || a.studentUuid === stdId));
+
+        for (const hifzRec of matchingHifzRecs) {
+          const halfYear = Number(hifzRec.halfYear || hifzRec.half_year || 1);
+          const monthlyDetails = hifzRec.monthly_attendance_details || hifzRec.attendance?.monthlyDetails || {};
+
+          let totalW = 0;
+          let totalA = 0;
+          let totalL = 0;
+          let totalP = 0;
+          const updatedMonthlyDetails = { ...monthlyDetails };
+
+          const targetMonths = halfYear === 1
+            ? ['اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر']
+            : ['اکتوبر', 'نومبر', 'دسمبر', 'جنوری', 'فروری', 'مارچ'];
+
+          targetMonths.forEach(mName => {
+            const mIdx = monthNames.indexOf(mName);
+            const mNumStr = String(mIdx + 1).padStart(2, '0');
+            const prevRow = monthlyDetails[mName] || {};
+            const w = Number(prevRow.working) || 24;
+
+            let a = 0;
+            let l = 0;
+            let hasDaily = false;
+
+            studentDaily.forEach(att => {
+              if (att.date && att.date.slice(5, 7) === mNumStr) {
+                hasDaily = true;
+                if (att.status === 'absent' || att.status === 'غائب' || att.status === 'A') a++;
+                else if (att.status === 'leave' || att.status === 'رخصت' || att.status === 'L') l++;
+                else if (att.status === 'half_leave') l += 0.5;
+              }
+            });
+
+            const finalA = hasDaily ? a : Number(prevRow.absent || 0);
+            const finalL = hasDaily ? l : Number(prevRow.leave || 0);
+            const finalP = Math.max(0, w - (finalA + finalL));
+
+            totalW += w;
+            totalA += finalA;
+            totalL += finalL;
+            totalP += finalP;
+
+            updatedMonthlyDetails[mName] = {
+              working: w,
+              absent: finalA,
+              leave: finalL,
+              present: finalP
+            };
+          });
+
+          const attPct = totalW > 0 ? +((totalP / totalW) * 100).toFixed(2) : 0;
+
+          hifzRec.total_working = totalW;
+          hifzRec.total_present = totalP;
+          hifzRec.total_absent = totalA;
+          hifzRec.total_leave = totalL;
+          hifzRec.attendance_pct = attPct;
+          hifzRec.monthly_attendance_details = updatedMonthlyDetails;
+          if (hifzRec.attendance) {
+            hifzRec.attendance.working = totalW;
+            hifzRec.attendance.present = totalP;
+            hifzRec.attendance.absent = totalA;
+            hifzRec.attendance.leave = totalL;
+            hifzRec.attendance.pct = attPct;
+            hifzRec.attendance.monthlyDetails = updatedMonthlyDetails;
+          }
+          recordsChanged = true;
+
+          if (isValidUUID(madrasaId) && hifzRec.id && isValidUUID(hifzRec.id)) {
+            supabase
+              .from('hifz_half_year_records')
+              .update({
+                total_working: totalW,
+                total_present: totalP,
+                total_absent: totalA,
+                total_leave: totalL,
+                attendance_pct: attPct,
+                monthly_attendance_details: updatedMonthlyDetails,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', hifzRec.id)
+              .then(() => {})
+              .catch(err => console.warn('Could not sync attendance to Supabase Hifz record:', err));
+          }
+        }
+      }
+
+      if (recordsChanged) {
+        localHfData.records = localRecs;
+        saveMadrasaData('hf_records_v1', localHfData, madrasaId);
+      }
+    } catch (err) {
+      console.warn('syncDailyAttendanceToHifzRecords warning:', err);
     }
   };
 
@@ -2445,6 +2573,7 @@ export function MadrasaProvider({ children }) {
       fetchMonthlyEvaluationsFromSupabase,
       saveMonthlyEvaluationToSupabase,
       deleteMonthlyEvaluationFromSupabase,
+      syncDailyAttendanceToHifzRecords,
       isMadrasaDisabled: activeMadrasa?.status === 'disabled'
     }}>
       {children}
