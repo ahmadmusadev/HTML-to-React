@@ -208,7 +208,7 @@ export default function Entry() {
   const [meHistoryClassFilter, setMeHistoryClassFilter] = useState('');
   const [meHistoryMonthFilter, setMeHistoryMonthFilter] = useState('');
 
-  const meLoadStudents = () => {
+  const meLoadStudents = (overrideExams) => {
     if (!meClassSelect) { alert('براہ کرم پہلے کلاس منتخب کریں۔'); return; }
     
     const cls = classesList.find(c => c.id === meClassSelect || c.name === meClassSelect || c.class_name === meClassSelect);
@@ -225,12 +225,22 @@ export default function Entry() {
       return;
     }
 
-    const existing = monthlyExams.find(r => r.classId === meClassSelect && r.month === meMonth && r.year === meYear);
+    const examList = Array.isArray(overrideExams) ? overrideExams : monthlyExams;
+    const existing = examList.find(r => 
+      (r.classId === meClassSelect || (cls && (r.className === cls.name || r.className === cls.class_name))) && 
+      r.month === meMonth && 
+      String(r.year) === String(meYear)
+    );
     
     const loadedStudents = students.map(s => {
-      const prev = existing?.students?.find(r => r.regNo === s.admRegNo) || {};
+      const prev = existing?.students?.find(r => 
+        (r.student_id && s.id && String(r.student_id) === String(s.id)) || 
+        String(r.regNo) === String(s.admRegNo)
+      ) || {};
       let item = { student: s };
-      ME_COLS.forEach(c => { item[c.key] = prev[c.key] ?? ''; });
+      ME_COLS.forEach(c => { 
+        item[c.key] = (prev[c.key] !== undefined && prev[c.key] !== null) ? prev[c.key] : ''; 
+      });
       
       // Compute total
       item.total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Math.min(Number(item[c.key] || 0), c.max), 0);
@@ -326,17 +336,18 @@ export default function Entry() {
 
   const meDeleteExam = async (targetExam) => {
     if (!window.confirm('کیا آپ یہ ریکارڈ حذف کرنا چاہتے ہیں؟')) return;
-    if (!targetExam) return;
+    const examToDelete = (typeof targetExam === 'number') ? monthlyExams[targetExam] : targetExam;
+    if (!examToDelete) return;
 
     try {
       if (deleteMonthlyEvaluationFromSupabase) {
-        await deleteMonthlyEvaluationFromSupabase(targetExam, activeMadrasaId);
+        await deleteMonthlyEvaluationFromSupabase(examToDelete, activeMadrasaId);
       }
     } catch (supaErr) {
       console.warn('Could not delete monthly evaluation from Supabase:', supaErr);
     }
 
-    const newExams = monthlyExams.filter(r => r !== targetExam && (targetExam.id ? r.id !== targetExam.id : true));
+    const newExams = monthlyExams.filter(r => r !== examToDelete && (examToDelete.id ? r.id !== examToDelete.id : true));
     saveToLocal(newExams);
   };
 
@@ -611,8 +622,8 @@ export default function Entry() {
                     studentsList.find(s => s.roll_number === id || s.id === id);
     if (!student) { setSrResultsData('notfound'); return; }
     
-    const exams = monthlyExams.filter(exam => exam.students && exam.students.some(s => s.regNo === id))
-                              .sort((a,b) => a.year - b.year || 0);
+    const exams = monthlyExams.filter(exam => exam.students && exam.students.some(s => String(s.regNo) === id || (s.student_id && String(s.student_id) === id)))
+                              .sort((a,b) => Number(a.year) - Number(b.year) || 0);
     
     if (!exams.length) { setSrResultsData({ empty: true, student }); return; }
     const avgAll = exams.reduce((s, e) => { const st = e.students.find(x => x.regNo === id); return s + (st?.pct || 0); }, 0) / exams.length;
@@ -625,7 +636,7 @@ export default function Entry() {
   const [irResultsData, setIrResultsData] = useState(null);
 
   const renderInstituteResult = () => {
-    const exams = monthlyExams.filter(r => r.month === irMonth && r.year == irYear);
+    const exams = monthlyExams.filter(r => r.month === irMonth && String(r.year) === String(irYear));
     if (!exams.length) { setIrResultsData('empty'); return; }
     
     const totalStudents = exams.reduce((s, e) => s + e.students.length, 0);
@@ -725,7 +736,9 @@ export default function Entry() {
                   </table>
                 </div>
                 <div className="me-save-bar" style={{ marginTop: "18px" }}>
-                  <button className="me-save-btn" onClick={meSaveExam}>{meStudents.clsName} — {meMonth} {formatAcademicYear(meYear)} محفوظ کریں</button>
+                  <button className="me-save-btn" onClick={meSaveExam} disabled={isSavingExam}>
+                    {isSavingExam ? 'محفوظ ہو رہا ہے...' : `${meStudents.clsName} — ${meMonth} ${formatAcademicYear(meYear)} محفوظ کریں`}
+                  </button>
                   <div className="me-summary-chips">
                     <span className="me-chip me-chip-green">طلباء: {meStudents.data.length}</span>
                     <span className="me-chip me-chip-blue">کل نمبر: {ME_MAX_TOTAL}</span>
@@ -770,7 +783,7 @@ export default function Entry() {
                                   <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                                     <span className="me-chip me-chip-green">اوسط: {avg.toFixed(1)}% {gd.g}</span>
                                     <span className="me-chip me-chip-blue">طلباء: {exam.students.length}</span>
-                                    <button className="me-del-btn" onClick={() => meDeleteExam(ei)}>حذف</button>
+                                    <button className="me-del-btn" onClick={() => meDeleteExam(exam)}>حذف</button>
                                   </div>
                                 </div>
                                 <div className="me-table-wrap" style={{ marginBottom: "0" }}>

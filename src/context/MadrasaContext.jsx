@@ -1218,6 +1218,211 @@ export function MadrasaProvider({ children }) {
     }
   };
 
+  // --- Monthly Evaluations (ماہانہ جائزہ) ---
+  const fetchMonthlyEvaluationsFromSupabase = async (filters = {}, madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId)) {
+      const stored = loadMadrasaData('hf_monthly_exams_v1', madrasaId);
+      if (Array.isArray(stored) && stored.length > 0) return stored;
+      const legacy = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      return Array.isArray(legacy.monthlyExams) ? legacy.monthlyExams : [];
+    }
+
+    try {
+      let query = supabase
+        .from('monthly_evaluations')
+        .select('*')
+        .eq('madrasa_id', madrasaId);
+
+      if (filters.classId && isValidUUID(filters.classId)) {
+        query = query.eq('class_id', filters.classId);
+      }
+      if (filters.month) {
+        query = query.eq('month', filters.month);
+      }
+      if (filters.year) {
+        query = query.eq('year', String(filters.year));
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const mapped = (data || []).map(r => ({
+        id: r.id,
+        classId: r.class_id,
+        className: r.class_name,
+        month: r.month,
+        year: r.year,
+        students: r.students || [],
+        savedAt: r.saved_at || r.updated_at || r.created_at
+      }));
+
+      // Update local cache
+      try {
+        saveMadrasaData('hf_monthly_exams_v1', mapped, madrasaId);
+        const legacy = loadMadrasaData('hf_records_v1', madrasaId) || {};
+        legacy.monthlyExams = mapped;
+        saveMadrasaData('hf_records_v1', legacy, madrasaId);
+      } catch (e) {
+        console.warn('Local cache sync warning:', e);
+      }
+
+      return mapped;
+    } catch (e) {
+      console.error('[MadrasaContext] Error fetching monthly evaluations from Supabase:', e);
+      // Fallback to local cache on network error
+      const stored = loadMadrasaData('hf_monthly_exams_v1', madrasaId);
+      if (Array.isArray(stored) && stored.length > 0) return stored;
+      const legacy = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      return Array.isArray(legacy.monthlyExams) ? legacy.monthlyExams : [];
+    }
+  };
+
+  const saveMonthlyEvaluationToSupabase = async (recordData, madrasaId = activeMadrasaId) => {
+    const isRemote = isValidUUID(madrasaId);
+
+    if (isRemote) {
+      try {
+        const payload = {
+          madrasa_id: madrasaId,
+          class_id: isValidUUID(recordData.classId) ? recordData.classId : null,
+          class_name: recordData.className || '',
+          month: recordData.month,
+          year: String(recordData.year),
+          students: recordData.students || [],
+          saved_at: recordData.savedAt || new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        if (recordData.id && isValidUUID(recordData.id)) {
+          payload.id = recordData.id;
+        }
+
+        const { data, error } = await supabase
+          .from('monthly_evaluations')
+          .upsert(payload, { onConflict: 'madrasa_id,class_id,month,year' })
+          .select('*')
+          .single();
+
+        if (error) throw error;
+
+        const resultRecord = {
+          id: data.id,
+          classId: data.class_id,
+          className: data.class_name,
+          month: data.month,
+          year: data.year,
+          students: data.students || [],
+          savedAt: data.saved_at
+        };
+
+        // Sync to local cache
+        try {
+          const localData = loadMadrasaData('hf_monthly_exams_v1', madrasaId) || [];
+          const exams = Array.isArray(localData) ? [...localData] : [];
+          const idx = exams.findIndex(r =>
+            (r.id && r.id === resultRecord.id) ||
+            ((r.classId === resultRecord.classId || r.className === resultRecord.className) &&
+              r.month === resultRecord.month &&
+              String(r.year) === String(resultRecord.year))
+          );
+          if (idx > -1) exams[idx] = resultRecord;
+          else exams.unshift(resultRecord);
+
+          saveMadrasaData('hf_monthly_exams_v1', exams, madrasaId);
+          const legacy = loadMadrasaData('hf_records_v1', madrasaId) || {};
+          legacy.monthlyExams = exams;
+          saveMadrasaData('hf_records_v1', legacy, madrasaId);
+        } catch (syncErr) {
+          console.warn('Local cache sync warning for monthly evaluation:', syncErr);
+        }
+
+        return resultRecord;
+      } catch (e) {
+        console.error('Supabase save monthly evaluation error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    } else {
+      // Local fallback
+      const localData = loadMadrasaData('hf_monthly_exams_v1', madrasaId) || [];
+      const exams = Array.isArray(localData) ? [...localData] : [];
+      const localRecord = {
+        ...recordData,
+        id: recordData.id || `me_${Date.now()}`,
+        year: String(recordData.year),
+        savedAt: recordData.savedAt || new Date().toISOString()
+      };
+      const idx = exams.findIndex(r =>
+        (recordData.id && r.id === recordData.id) ||
+        ((r.classId === recordData.classId || r.className === recordData.className) &&
+          r.month === recordData.month &&
+          String(r.year) === String(recordData.year))
+      );
+      if (idx > -1) exams[idx] = localRecord;
+      else exams.unshift(localRecord);
+
+      saveMadrasaData('hf_monthly_exams_v1', exams, madrasaId);
+      const legacy = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      legacy.monthlyExams = exams;
+      saveMadrasaData('hf_records_v1', legacy, madrasaId);
+      return localRecord;
+    }
+  };
+
+  const deleteMonthlyEvaluationFromSupabase = async (target, madrasaId = activeMadrasaId) => {
+    const isRemote = isValidUUID(madrasaId);
+    const targetObj = typeof target === 'object' && target !== null ? target : {};
+    const targetId = typeof target === 'string' ? target : targetObj.id;
+
+    if (isRemote) {
+      try {
+        if (targetId && isValidUUID(targetId)) {
+          const { error } = await supabase
+            .from('monthly_evaluations')
+            .delete()
+            .eq('id', targetId)
+            .eq('madrasa_id', madrasaId);
+          if (error) throw error;
+        } else if (targetObj.month && targetObj.year) {
+          let q = supabase
+            .from('monthly_evaluations')
+            .delete()
+            .eq('madrasa_id', madrasaId)
+            .eq('month', targetObj.month)
+            .eq('year', String(targetObj.year));
+          if (targetObj.classId && isValidUUID(targetObj.classId)) {
+            q = q.eq('class_id', targetObj.classId);
+          }
+          const { error } = await q;
+          if (error) throw error;
+        }
+      } catch (e) {
+        console.error('Supabase delete monthly evaluation error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    }
+
+    // Sync local cache
+    try {
+      const localData = loadMadrasaData('hf_monthly_exams_v1', madrasaId) || [];
+      const filtered = (Array.isArray(localData) ? localData : []).filter(r => {
+        if (targetId && r.id === targetId) return false;
+        if (targetObj.classId && r.classId === targetObj.classId && r.month === targetObj.month && String(r.year) === String(targetObj.year)) return false;
+        if (target === r) return false;
+        return true;
+      });
+      saveMadrasaData('hf_monthly_exams_v1', filtered, madrasaId);
+      const legacy = loadMadrasaData('hf_records_v1', madrasaId) || {};
+      legacy.monthlyExams = filtered;
+      saveMadrasaData('hf_records_v1', legacy, madrasaId);
+    } catch (syncErr) {
+      console.warn('Local cache sync warning for delete monthly evaluation:', syncErr);
+    }
+
+    return true;
+  };
+
   const fetchStudentAttendanceFromSupabase = async (filters = {}, madrasaId = activeMadrasaId) => {
     if (!isValidUUID(madrasaId)) {
       const localCustom = loadMadrasaData('hf_student_attendance_v1', madrasaId) || [];
@@ -2237,6 +2442,9 @@ export function MadrasaProvider({ children }) {
       upsertExamMiqdarSingle,
       fetchExamResultsFromSupabase,
       upsertExamResultsToSupabase,
+      fetchMonthlyEvaluationsFromSupabase,
+      saveMonthlyEvaluationToSupabase,
+      deleteMonthlyEvaluationFromSupabase,
       isMadrasaDisabled: activeMadrasa?.status === 'disabled'
     }}>
       {children}

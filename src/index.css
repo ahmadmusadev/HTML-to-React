@@ -805,7 +805,7 @@ body, .card, .tab-button, input, select, textarea, th, td, .modal-content,
 }
 
 [data-theme="dark"] body { color: #f3f4f6 !important; }
-[data-theme="dark"] .tab-button.active { background: #27272a !important; color: #ffffff !important; border-color: #ffffff !important; }
+[data-theme="dark"] .tab-button.active { background: #ffffff !important; color: #000000 !important; }
 [data-theme="dark"] .tab-button:hover:not(.active) {
   color: #ffffff !important;
 }
@@ -823,7 +823,7 @@ body, .card, .tab-button, input, select, textarea, th, td, .modal-content,
 [data-theme="dark"] .section-title { color: #ffffff !important; }
 [data-theme="dark"] .data-table tbody tr:hover { background: #2a2a2a !important; }
 [data-theme="dark"] .pagination button { color: #ffffff !important; }
-[data-theme="dark"] .pagination button.active { background: #27272a !important; color: #ffffff !important; border-color: #ffffff !important; }
+[data-theme="dark"] .pagination button.active { background: #ffffff !important; color: #000000 !important; }
 [data-theme="dark"] .tooltip { color: #ffffff !important; }
 
 [data-theme="dark"] [style*="color:var(--accent)"], 
