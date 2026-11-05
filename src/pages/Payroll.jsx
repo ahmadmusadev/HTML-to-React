@@ -30,6 +30,7 @@ import {
   formatShiftDurationUrdu
 } from '../utils/PayrollMappers';
 import './Payroll.css';
+import PayrollRun from './PayrollRun';
 
 export default function Payroll() {
   const { role, madrasaId: authMadrasaId } = useAuth();
@@ -620,6 +621,15 @@ export default function Payroll() {
         >
           چھٹیوں کا ابتدائی حساب
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeSubTab === 'monthly'}
+          className={`payroll-subtab-btn ${activeSubTab === 'monthly' ? 'active' : ''}`}
+          onClick={() => handleSwitchTab('monthly')}
+        >
+          ماہانہ تنخواہ
+        </button>
       </div>
 
       {loading ? (
@@ -1149,6 +1159,13 @@ export default function Payroll() {
                 </div>
               )}
             </div>
+          )}
+          {activeSubTab === 'monthly' && (
+            <PayrollRun
+              staffList={staffList}
+              activeMadrasaId={activeMadrasaId}
+              isMadrasaMismatch={isMadrasaMismatch}
+            />
           )}
         </>
       )}
