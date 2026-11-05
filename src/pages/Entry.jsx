@@ -19,6 +19,76 @@ const ME_COLS = [
 ];
 const ME_MAX_TOTAL = ME_COLS.filter(c => c.max).reduce((s, c) => s + c.max, 0);
 
+// Helper for monthly evaluation attendance calculations
+export function getPreviousMonthInfo(currentMonthName, academicStartYear) {
+  const startY = parseInt(String(academicStartYear), 10) || getCurrentAcademicYearStart();
+  const map = {
+    'اپریل': { prevName: 'مارچ', y: startY, mNum: '03' },
+    'مئی': { prevName: 'اپریل', y: startY, mNum: '04' },
+    'جون': { prevName: 'مئی', y: startY, mNum: '05' },
+    'جولائی': { prevName: 'جون', y: startY, mNum: '06' },
+    'اگست': { prevName: 'جولائی', y: startY, mNum: '07' },
+    'ستمبر': { prevName: 'اگست', y: startY, mNum: '08' },
+    'اکتوبر': { prevName: 'ستمبر', y: startY, mNum: '09' },
+    'نومبر': { prevName: 'اکتوبر', y: startY, mNum: '10' },
+    'دسمبر': { prevName: 'نومبر', y: startY, mNum: '11' },
+    'جنوری': { prevName: 'دسمبر', y: startY, mNum: '12' },
+    'فروری': { prevName: 'جنوری', y: startY + 1, mNum: '01' },
+    'مارچ': { prevName: 'فروری', y: startY + 1, mNum: '02' }
+  };
+  const info = map[currentMonthName] || { prevName: 'اپریل', y: startY, mNum: '04' };
+  return {
+    ...info,
+    prefix: `${info.y}-${info.mNum}`
+  };
+}
+
+export function calculateAttendanceMarks(absentDays) {
+  const abs = Math.max(0, Number(absentDays) || 0);
+  const deduction = Math.floor(abs / 4);
+  return Math.max(0, 10 - deduction);
+}
+
+export function getStudentMonthlyAbsents(student, targetPrefix, allAttendance = [], records = [], prevMonthName = '') {
+  const stdId = student?.id;
+  const regNo = student?.admRegNo || student?.roll_number;
+
+  let absentCount = 0;
+  let foundInDaily = false;
+
+  if (Array.isArray(allAttendance) && allAttendance.length > 0) {
+    allAttendance.forEach(att => {
+      if (att && att.date && String(att.date).startsWith(targetPrefix)) {
+        const aSid = att.student_id || att.studentUuid;
+        if ((stdId && aSid === stdId) || (regNo && aSid === regNo)) {
+          foundInDaily = true;
+          const st = String(att.status || '').trim();
+          if (st === 'absent' || st === 'غائب' || st === 'A') {
+            absentCount++;
+          }
+          // Note: leave, رخصت, L, half_leave are NOT counted as absent
+        }
+      }
+    });
+  }
+
+  // If not found in daily records, check hf_records_v1 (monthly_attendance_details)
+  if (!foundInDaily && prevMonthName && Array.isArray(records)) {
+    const hfRec = records.find(r =>
+      !r.isAdmissionProfile &&
+      !r.isFeeRecord &&
+      ((stdId && (r.student_id === stdId || r.id === stdId || r.studentUuid === stdId)) ||
+       (student?.name && r.name === student.name))
+    );
+    const prevDetails = hfRec?.monthly_attendance_details?.[prevMonthName] || hfRec?.attendance?.monthlyDetails?.[prevMonthName];
+    if (prevDetails && prevDetails.absent !== undefined) {
+      absentCount = Number(prevDetails.absent || 0);
+    }
+  }
+
+  return absentCount;
+}
+
 export const PAGES_PER_PAO = 5;
 export const PAGES_PER_JUZ = 20;
 
@@ -226,7 +296,7 @@ export default function Entry() {
   const [meHistoryClassFilter, setMeHistoryClassFilter] = useState('');
   const [meHistoryMonthFilter, setMeHistoryMonthFilter] = useState('');
 
-  const meLoadStudents = (overrideExams) => {
+  const meLoadStudents = async (overrideExams) => {
     if (!meClassSelect) { alert('براہ کرم پہلے کلاس منتخب کریں۔'); return; }
     
     const cls = classesList.find(c => c.id === meClassSelect || c.name === meClassSelect || c.class_name === meClassSelect);
@@ -249,6 +319,31 @@ export default function Entry() {
       r.month === meMonth && 
       String(r.year) === String(meYear)
     );
+
+    const prevMonthInfo = getPreviousMonthInfo(meMonth, meYear);
+    let allAttendance = loadMadrasaData('hf_student_attendance_v1', activeMadrasaId) || [];
+
+    if (fetchStudentAttendanceFromSupabase && isValidUUID(activeMadrasaId)) {
+      try {
+        const remoteAtt = await fetchStudentAttendanceFromSupabase({ month: prevMonthInfo.prefix }, activeMadrasaId);
+        if (Array.isArray(remoteAtt) && remoteAtt.length > 0) {
+          const map = new Map();
+          allAttendance.forEach(a => {
+            if (a && a.date && (a.student_id || a.studentUuid)) {
+              map.set(`${a.student_id || a.studentUuid}_${a.date}`, a);
+            }
+          });
+          remoteAtt.forEach(a => {
+            if (a && a.date && (a.student_id || a.studentUuid)) {
+              map.set(`${a.student_id || a.studentUuid}_${a.date}`, a);
+            }
+          });
+          allAttendance = Array.from(map.values());
+        }
+      } catch (err) {
+        console.warn('Could not fetch remote attendance for monthly exam:', err);
+      }
+    }
     
     const loadedStudents = students.map(s => {
       const prev = existing?.students?.find(r => 
@@ -259,6 +354,12 @@ export default function Entry() {
       ME_COLS.forEach(c => { 
         item[c.key] = (prev[c.key] !== undefined && prev[c.key] !== null) ? prev[c.key] : ''; 
       });
+
+      // Automatically calculate attendance marks from previous month's attendance if not already saved
+      if (item.attendance === '' || item.attendance === undefined || item.attendance === null) {
+        const absCount = getStudentMonthlyAbsents(s, prevMonthInfo.prefix, allAttendance, records, prevMonthInfo.prevName);
+        item.attendance = calculateAttendanceMarks(absCount);
+      }
       
       // Compute total
       item.total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Math.min(Number(item[c.key] || 0), c.max), 0);
@@ -269,7 +370,32 @@ export default function Entry() {
       return item;
     });
     
-    setMeStudents({ clsName: cls ? (cls.name || cls.className || meClassSelect) : meClassSelect, data: loadedStudents, existing: !!existing });
+    setMeStudents({
+      clsName: cls ? (cls.name || cls.className || meClassSelect) : meClassSelect,
+      data: loadedStudents,
+      existing: !!existing,
+      prevMonthName: prevMonthInfo.prevName
+    });
+  };
+
+  const meRecalcAttendanceMarks = () => {
+    if (!meStudents || !Array.isArray(meStudents.data)) return;
+    const prevMonthInfo = getPreviousMonthInfo(meMonth, meYear);
+    const allAttendance = loadMadrasaData('hf_student_attendance_v1', activeMadrasaId) || [];
+
+    const updated = meStudents.data.map(item => {
+      const absCount = getStudentMonthlyAbsents(item.student, prevMonthInfo.prefix, allAttendance, records, prevMonthInfo.prevName);
+      const marks = calculateAttendanceMarks(absCount);
+      const newItem = { ...item, attendance: marks };
+
+      newItem.total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Math.min(Number(newItem[c.key] || 0), c.max), 0);
+      const pct = ME_MAX_TOTAL > 0 ? (newItem.total / ME_MAX_TOTAL) * 100 : 0;
+      newItem.pct = +pct.toFixed(1);
+      newItem.gradeObj = meGrade(pct);
+      return newItem;
+    });
+
+    setMeStudents({ ...meStudents, data: updated, prevMonthName: prevMonthInfo.prevName });
   };
 
   const meCalcRow = (index, key, value, isSub) => {
@@ -939,6 +1065,20 @@ export default function Entry() {
             {meStudents === 'empty' ? <div className="empty-dashboard-state">اس کلاس میں کوئی طالب علم موجود نہیں۔</div> :
              meStudents && (
               <>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", justifyContent: "space-between" }}>
+                  <div className="hifz-instruction-text" style={{ margin: "0" }}>
+                    حاضری کے 10 نمبرات پچھلے ماہ ({meStudents.prevMonthName || getPreviousMonthInfo(meMonth, meYear).prevName}) کی روزانہ حاضری سے خودکار درج ہوئے ہیں (ہر 4 غیر حاضریوں پر 1 نمبر منہا، رخصت پر کوئی کٹوتی نہیں)۔ ضرورت پڑنے پر دستی تبدیلی ممکن ہے۔
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={meRecalcAttendanceMarks}
+                    className="btn-secondary"
+                    style={{ padding: "4px 12px", fontSize: "0.82rem", cursor: "pointer", background: "var(--card-bg)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: "4px" }}
+                    title="پچھلے ماہ کی حاضری سے دوبارہ نمبرات لگائیں"
+                  >
+                    حاضری نمبرات ریفریش کریں
+                  </button>
+                </div>
                 <div className="me-table-wrap">
                   <table className="me-table">
                     <thead>
