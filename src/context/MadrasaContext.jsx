@@ -1581,32 +1581,33 @@ export function MadrasaProvider({ children }) {
             const mIdx = monthNames.indexOf(mName);
             const mNumStr = String(mIdx + 1).padStart(2, '0');
             const prevRow = monthlyDetails[mName] || {};
-            const w = Number(prevRow.working) || 24;
 
             let a = 0;
             let l = 0;
-            let hasDaily = false;
+            const recordedDates = new Set();
 
             studentDaily.forEach(att => {
               if (att.date && att.date.slice(5, 7) === mNumStr) {
-                hasDaily = true;
+                recordedDates.add(att.date);
                 if (att.status === 'absent' || att.status === 'غائب' || att.status === 'A') a++;
                 else if (att.status === 'leave' || att.status === 'رخصت' || att.status === 'L') l++;
                 else if (att.status === 'half_leave') l += 0.5;
               }
             });
 
+            const hasDaily = recordedDates.size > 0;
+            const finalW = hasDaily ? recordedDates.size : Number(prevRow.working || 0);
             const finalA = hasDaily ? a : Number(prevRow.absent || 0);
             const finalL = hasDaily ? l : Number(prevRow.leave || 0);
-            const finalP = Math.max(0, w - (finalA + finalL));
+            const finalP = Math.max(0, finalW - (finalA + finalL));
 
-            totalW += w;
+            totalW += finalW;
             totalA += finalA;
             totalL += finalL;
             totalP += finalP;
 
             updatedMonthlyDetails[mName] = {
-              working: w,
+              working: finalW,
               absent: finalA,
               leave: finalL,
               present: finalP

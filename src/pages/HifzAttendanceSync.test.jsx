@@ -99,18 +99,32 @@ describe('Hifz Half-Year Attendance Auto-Sync from Daily Attendance', () => {
     });
 
     // Check attendance input fields:
-    // April (0): absent = 2, leave = 1
-    // May (1): absent = 1, leave = 0
+    // April (0): working = 4, absent = 2, leave = 1
+    // May (1): working = 2, absent = 1, leave = 0
+    // June-September (2-5): working = 0, absent = 0, leave = 0
+    const workingInputs = document.querySelectorAll('.working-days');
     const absentInputs = document.querySelectorAll('.absent-days');
     const leaveInputs = document.querySelectorAll('.leave-days');
 
+    expect(workingInputs.length).toBe(6);
     expect(absentInputs.length).toBe(6);
     expect(leaveInputs.length).toBe(6);
 
+    // April: 4 days marked (2 absent, 1 leave, 1 present)
+    expect(workingInputs[0].value).toBe('4');
     expect(absentInputs[0].value).toBe('2');
     expect(leaveInputs[0].value).toBe('1');
+
+    // May: 2 days marked (1 absent, 1 present)
+    expect(workingInputs[1].value).toBe('2');
     expect(absentInputs[1].value).toBe('1');
     expect(leaveInputs[1].value).toBe('0');
+
+    // Future months with no attendance marked yet should have 0 working days
+    expect(workingInputs[2].value).toBe('0');
+    expect(workingInputs[3].value).toBe('0');
+    expect(workingInputs[4].value).toBe('0');
+    expect(workingInputs[5].value).toBe('0');
 
     // Enter some pages read so record can be saved
     const pageInputs = document.querySelectorAll('.month-pages');
@@ -130,11 +144,19 @@ describe('Hifz Half-Year Attendance Auto-Sync from Daily Attendance', () => {
     const passedPayload = mockSaveHifzHalfYearRecord.mock.calls[0][0];
     expect(passedPayload.student_id).toBe(STUDENT_ID);
     expect(passedPayload.student_name).toBe('محمد حذیفہ');
+    expect(passedPayload.total_working).toBe(6); // 4 + 2 = 6
+    expect(passedPayload.total_present).toBe(2); // 1 + 1 = 2
     expect(passedPayload.total_absent).toBe(3); // 2 + 1 = 3
     expect(passedPayload.total_leave).toBe(1); // 1 + 0 = 1
+    expect(passedPayload.attendance_pct).toBe(33.33); // (2 / 6) * 100
+    expect(passedPayload.monthly_attendance_details['اپریل'].working).toBe(4);
     expect(passedPayload.monthly_attendance_details['اپریل'].absent).toBe(2);
     expect(passedPayload.monthly_attendance_details['اپریل'].leave).toBe(1);
+    expect(passedPayload.monthly_attendance_details['اپریل'].present).toBe(1);
+    expect(passedPayload.monthly_attendance_details['مئی'].working).toBe(2);
     expect(passedPayload.monthly_attendance_details['مئی'].absent).toBe(1);
+    expect(passedPayload.monthly_attendance_details['مئی'].present).toBe(1);
+    expect(passedPayload.monthly_attendance_details['جون'].working).toBe(0);
   });
 
   it('restores previously saved academic pages when a student with an existing record is selected', async () => {

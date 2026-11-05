@@ -408,16 +408,16 @@ export default function Entry() {
     ];
   }, [selectHalfYear, baseStartYear]);
 
-  // Attendance rows state
+  // Attendance rows state (initialized to 0 working days instead of full-month assumption)
   const [attendanceRows, setAttendanceRows] = useState(() => {
     const curYear = getCurrentAcademicYearStart();
     return [
-      { name: 'اپریل', y: curYear, working: calculateWorkingDays(curYear, 3), absent: 0, leave: 0 },
-      { name: 'مئی', y: curYear, working: calculateWorkingDays(curYear, 4), absent: 0, leave: 0 },
-      { name: 'جون', y: curYear, working: calculateWorkingDays(curYear, 5), absent: 0, leave: 0 },
-      { name: 'جولائی', y: curYear, working: calculateWorkingDays(curYear, 6), absent: 0, leave: 0 },
-      { name: 'اگست', y: curYear, working: calculateWorkingDays(curYear, 7), absent: 0, leave: 0 },
-      { name: 'ستمبر', y: curYear, working: calculateWorkingDays(curYear, 8), absent: 0, leave: 0 }
+      { name: 'اپریل', y: curYear, working: 0, absent: 0, leave: 0 },
+      { name: 'مئی', y: curYear, working: 0, absent: 0, leave: 0 },
+      { name: 'جون', y: curYear, working: 0, absent: 0, leave: 0 },
+      { name: 'جولائی', y: curYear, working: 0, absent: 0, leave: 0 },
+      { name: 'اگست', y: curYear, working: 0, absent: 0, leave: 0 },
+      { name: 'ستمبر', y: curYear, working: 0, absent: 0, leave: 0 }
     ];
   });
 
@@ -539,19 +539,18 @@ export default function Entry() {
     const savedMonthlyAtt = existingRec?.monthly_attendance_details || existingRec?.attendance?.monthlyDetails || {};
 
     const computedRows = currentMonths.map(m => {
-      const working = calculateWorkingDays(m.y, m.mIdx);
       const mNum = String(m.mIdx + 1).padStart(2, '0');
       const prefix = `${m.y}-${mNum}`;
 
       let monthAbsent = 0;
       let monthLeave = 0;
-      let foundInDaily = false;
+      let monthRecordedDays = 0;
 
-      // Count from dailyMap
+      // Count from dailyMap: working days = actual attendance days marked so far
       Object.keys(dailyMap).forEach(dStr => {
         if (dStr.startsWith(prefix)) {
-          foundInDaily = true;
           const st = dailyMap[dStr];
+          monthRecordedDays++;
           if (st === 'absent' || st === 'غائب' || st === 'A') {
             monthAbsent++;
           } else if (st === 'leave' || st === 'رخصت' || st === 'L') {
@@ -562,33 +561,33 @@ export default function Entry() {
         }
       });
 
-      if (foundInDaily) {
+      if (monthRecordedDays > 0) {
         return {
           name: m.name,
           y: m.y,
-          working: working,
+          working: monthRecordedDays, // Actual attendance days marked so far
           absent: monthAbsent,
           leave: monthLeave
         };
       }
 
-      // If not found in daily, check if previously saved in existing record
+      // If not found in daily attendance, check if previously saved in existing record
       const prevSaved = savedMonthlyAtt[m.name];
-      if (prevSaved) {
+      if (prevSaved && (prevSaved.working !== undefined || prevSaved.absent !== undefined)) {
         return {
           name: m.name,
           y: m.y,
-          working: prevSaved.working !== undefined ? Number(prevSaved.working) : working,
+          working: Number(prevSaved.working || 0),
           absent: Number(prevSaved.absent || 0),
           leave: Number(prevSaved.leave || 0)
         };
       }
 
-      // Default
+      // Default: 0 working days if no attendance marked yet
       return {
         name: m.name,
         y: m.y,
-        working: working,
+        working: 0,
         absent: 0,
         leave: 0
       };
@@ -606,7 +605,7 @@ export default function Entry() {
       setAttendanceRows(monthsConfig.map(m => ({
         name: m.name,
         y: m.y,
-        working: calculateWorkingDays(m.y, m.mIdx),
+        working: 0,
         absent: 0,
         leave: 0
       })));
@@ -1167,7 +1166,7 @@ export default function Entry() {
             <h2>1. حاضری کا ریکارڈ (ایامِ کار)</h2>
             <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "10px", flexWrap: "wrap" }}>
               <div className="hifz-instruction-text" style={{ margin: "0" }}>
-                ایامِ کار خودکار طریقے سے کیلکولیٹ ہوئے ہیں، تاہم آپ دستی تبدیلی کر سکتے ہیں (غیر حاضری اور رخصت ضرور درج کریں)۔
+                ایامِ کار اور حاضری اب تک لگنے والی روزانہ حاضری سے خودکار اپڈیٹ ہوتے ہیں، ضرورت پڑنے پر دستی تبدیلی بھی ممکن ہے۔
               </div>
               {attSyncedFromDaily && (
                 <span className="me-chip me-chip-green" style={{ fontSize: "0.82rem", fontWeight: "700" }}>
