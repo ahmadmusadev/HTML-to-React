@@ -493,21 +493,27 @@
 }
 
 [data-theme="dark"] .payroll-subtab-btn {
-  background: #141417 !important;
+  background: #18181b !important;
   border-color: #27272a !important;
   color: #a1a1aa !important;
 }
 
-[data-theme="dark"] .payroll-subtab-btn:hover {
-  border-color: #ffffff !important;
+[data-theme="dark"] .payroll-subtab-btn:hover:not(.active) {
+  border-color: #3f3f46 !important;
   color: #ffffff !important;
-  background: #1c1c20 !important;
+  background: #27272a !important;
 }
 
 [data-theme="dark"] .payroll-subtab-btn.active {
-  background: #2563eb !important;
-  color: #ffffff !important;
-  border-color: #2563eb !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-theme="dark"] .payroll-subtab-btn.active * {
+  color: #000000 !important;
 }
 
 [data-theme="dark"] .payroll-summary-card,

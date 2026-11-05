@@ -589,7 +589,7 @@ export default function Payroll() {
           type="button"
           role="tab"
           aria-selected={activeSubTab === 'salary'}
-          className={`payroll-subtab-btn ${activeSubTab === 'salary' ? 'active' : ''}`}
+          className={`payroll-subtab-btn sub-tab-btn ${activeSubTab === 'salary' ? 'active' : ''}`}
           onClick={() => handleSwitchTab('salary')}
         >
           تنخواہ کا اندراج
@@ -598,7 +598,7 @@ export default function Payroll() {
           type="button"
           role="tab"
           aria-selected={activeSubTab === 'settings'}
-          className={`payroll-subtab-btn ${activeSubTab === 'settings' ? 'active' : ''}`}
+          className={`payroll-subtab-btn sub-tab-btn ${activeSubTab === 'settings' ? 'active' : ''}`}
           onClick={() => handleSwitchTab('settings')}
         >
           ترتیبات
@@ -607,7 +607,7 @@ export default function Payroll() {
           type="button"
           role="tab"
           aria-selected={activeSubTab === 'holidays'}
-          className={`payroll-subtab-btn ${activeSubTab === 'holidays' ? 'active' : ''}`}
+          className={`payroll-subtab-btn sub-tab-btn ${activeSubTab === 'holidays' ? 'active' : ''}`}
           onClick={() => handleSwitchTab('holidays')}
         >
           تعطیلات
@@ -616,7 +616,7 @@ export default function Payroll() {
           type="button"
           role="tab"
           aria-selected={activeSubTab === 'leave_opening'}
-          className={`payroll-subtab-btn ${activeSubTab === 'leave_opening' ? 'active' : ''}`}
+          className={`payroll-subtab-btn sub-tab-btn ${activeSubTab === 'leave_opening' ? 'active' : ''}`}
           onClick={() => handleSwitchTab('leave_opening')}
         >
           چھٹیوں کا ابتدائی حساب
@@ -625,7 +625,7 @@ export default function Payroll() {
           type="button"
           role="tab"
           aria-selected={activeSubTab === 'monthly'}
-          className={`payroll-subtab-btn ${activeSubTab === 'monthly' ? 'active' : ''}`}
+          className={`payroll-subtab-btn sub-tab-btn ${activeSubTab === 'monthly' ? 'active' : ''}`}
           onClick={() => handleSwitchTab('monthly')}
         >
           ماہانہ تنخواہ
