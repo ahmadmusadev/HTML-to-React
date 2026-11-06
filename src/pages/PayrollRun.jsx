@@ -45,27 +45,6 @@ import {
 } from '../utils/PayrollRunLogic';
 import './PayrollRun.css';
 
-/**
- * Validates a monetary adjustment input (>= 0, max 2 decimals, max 9,999,999.99).
- *
- * @param {string|number} val
- * @returns {{ isValid: boolean, value?: number, error?: string }}
- */
-function validateAdjustmentInput(val) {
-  if (val === undefined || val === null || String(val).trim() === '') {
-    return { isValid: true, value: 0 };
-  }
-  const clean = String(val).trim();
-  if (!/^\d+(\.\d{1,2})?$/.test(clean)) {
-    return { isValid: false, error: 'رقم صرف مثبت اعداد یا دو اعشاریہ تک ہونی چاہیے۔' };
-  }
-  const num = Number(clean);
-  if (num < 0 || num > 9999999.99) {
-    return { isValid: false, error: 'رقم 0 سے 9,999,999.99 کے درمیان ہونی چاہیے۔' };
-  }
-  return { isValid: true, value: num };
-}
-
 export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaMismatch }) {
   const { role } = useAuth();
   const isAuthorized = role === 'admin' || role === 'super_admin';
