@@ -89,6 +89,47 @@ export function getStudentMonthlyAbsents(student, targetPrefix, allAttendance = 
   return absentCount;
 }
 
+// Helpers for Monthly Literacy (اندراج ماہانہ خواندگی)
+export function formatMiqdarJuzPages(totalPages) {
+  const pages = Math.max(0, parseInt(totalPages, 10) || 0);
+  if (pages === 0) return '0 صفحات';
+  const juz = Math.floor(pages / 20);
+  const rem = pages % 20;
+
+  if (juz > 0 && rem > 0) {
+    return `${juz} ${juz === 1 ? 'پارہ' : 'پارے'} / ${rem} صفحات`;
+  }
+  if (juz > 0 && rem === 0) {
+    return `${juz} ${juz === 1 ? 'پارہ' : 'پارے'}`;
+  }
+  return `${rem} صفحات`;
+}
+
+export function calculateSuggestedPages(startPara, startPage, endPara, endPage) {
+  const sp = parseInt(startPara, 10);
+  const sg = parseInt(startPage, 10);
+  const ep = parseInt(endPara, 10);
+  const eg = parseInt(endPage, 10);
+
+  if (!sp || !sg || !ep || !eg) return '';
+
+  // Forward progression
+  if (ep > sp || (ep === sp && eg >= sg)) {
+    const startAbs = (sp - 1) * 20 + sg;
+    const endAbs = (ep - 1) * 20 + eg;
+    return Math.max(0, endAbs - startAbs + 1);
+  }
+
+  // Reverse progression (e.g. Para 30 down to 29)
+  if (ep < sp || (ep === sp && eg < sg)) {
+    const startAbs = (30 - sp) * 20 + sg;
+    const endAbs = (30 - ep) * 20 + eg;
+    return Math.max(0, endAbs - startAbs + 1);
+  }
+
+  return '';
+}
+
 export const PAGES_PER_PAO = 5;
 export const PAGES_PER_JUZ = 20;
 
@@ -162,6 +203,9 @@ export default function Entry() {
     fetchMonthlyEvaluationsFromSupabase,
     saveMonthlyEvaluationToSupabase,
     deleteMonthlyEvaluationFromSupabase,
+    fetchMonthlyLiteracyFromSupabase,
+    saveMonthlyLiteracyToSupabase,
+    deleteMonthlyLiteracyFromSupabase,
     classesList: contextClassesList,
     setClassesList: setContextClassesList,
     fetchHifzHalfYearRecordsFromSupabase,
@@ -178,6 +222,7 @@ export default function Entry() {
     contextClassesList && contextClassesList.length > 0 ? contextClassesList : []
   ));
   const [monthlyExams, setMonthlyExams] = useState([]);
+  const [monthlyLiteracyList, setMonthlyLiteracyList] = useState([]);
 
   // Keep classes synchronized with central MadrasaContext
   useEffect(() => {
@@ -191,6 +236,7 @@ export default function Entry() {
     const loadData = async () => {
       const storedData = loadMadrasaData('hf_records_v1', activeMadrasaId) || {};
       const storedMonthly = loadMadrasaData('hf_monthly_exams_v1', activeMadrasaId);
+      const storedLiteracy = loadMadrasaData('hf_monthly_literacy_v1', activeMadrasaId);
       const storedClasses = loadMadrasaData('hf_classes_v1', activeMadrasaId) || {};
 
       setRecords(storedData.records || []);
@@ -198,6 +244,11 @@ export default function Entry() {
         ? storedMonthly
         : (storedData.monthlyExams || []);
       setMonthlyExams(initialMonthly);
+
+      const initialLiteracy = (Array.isArray(storedLiteracy) && storedLiteracy.length > 0)
+        ? storedLiteracy
+        : (storedData.monthlyLiteracy || []);
+      setMonthlyLiteracyList(initialLiteracy);
 
       const initialClasses = (contextClassesList && contextClassesList.length > 0)
         ? contextClassesList
@@ -209,7 +260,7 @@ export default function Entry() {
       setClassesList(initialClasses);
 
       try {
-        const [stds, clsData, monthlyData, hifzData] = await Promise.all([
+        const [stds, clsData, monthlyData, hifzData, litData] = await Promise.all([
           fetchStudentsFromSupabase(activeMadrasaId).catch(err => {
             console.warn('Could not fetch students in Entry:', err);
             return null;
@@ -224,6 +275,10 @@ export default function Entry() {
           }) : null,
           fetchHifzHalfYearRecordsFromSupabase ? fetchHifzHalfYearRecordsFromSupabase(activeMadrasaId).catch(err => {
             console.warn('Could not fetch Hifz half-year records in Entry:', err);
+            return null;
+          }) : null,
+          fetchMonthlyLiteracyFromSupabase ? fetchMonthlyLiteracyFromSupabase({}, activeMadrasaId).catch(err => {
+            console.warn('Could not fetch monthly literacy in Entry:', err);
             return null;
           }) : null
         ]);
@@ -251,6 +306,9 @@ export default function Entry() {
           }
           if (monthlyData && Array.isArray(monthlyData)) {
             setMonthlyExams(monthlyData);
+          }
+          if (litData && Array.isArray(litData)) {
+            setMonthlyLiteracyList(litData);
           }
         }
       } catch (err) {
@@ -280,6 +338,7 @@ export default function Entry() {
   const switchTab = (tab) => {
     setActiveTab(tab);
     setMeStudents(null);
+    setMlStudents(null);
     setCrResultsData(null);
     setSrResultsData(null);
     setIrResultsData(null);
@@ -495,7 +554,170 @@ export default function Entry() {
     saveToLocal(newExams);
   };
 
-  // --- 2. Hifz Logic (ششماہی و سالانہ) ---
+  // --- 2. Monthly Literacy (اندراج ماہانہ خواندگی) ---
+  const [mlClassSelect, setMlClassSelect] = useState('');
+  const [mlMonth, setMlMonth] = useState('اپریل');
+  const [mlYear, setMlYear] = useState(defaultYear);
+  const [mlStudents, setMlStudents] = useState(null);
+  const [mlHistoryClassFilter, setMlHistoryClassFilter] = useState('');
+  const [mlHistoryMonthFilter, setMlHistoryMonthFilter] = useState('');
+  const [isSavingLiteracy, setIsSavingLiteracy] = useState(false);
+  const [litSyncedFromMonthly, setLitSyncedFromMonthly] = useState(false);
+
+  const mlLoadStudents = async (overrideList) => {
+    if (!mlClassSelect) { alert('براہ کرم پہلے کلاس منتخب کریں۔'); return; }
+
+    const cls = classesList.find(c => c.id === mlClassSelect || c.name === mlClassSelect || c.class_name === mlClassSelect);
+    const students = records.filter(r =>
+      r.isAdmissionProfile &&
+      (r.admClass === mlClassSelect || r.class_id === mlClassSelect || r.classId === mlClassSelect || (cls && (r.admClass === cls.name || r.admClass === cls.class_name || r.admClass === cls.id))) &&
+      !r.isWithdrawn &&
+      r.status !== 'left' &&
+      r.status !== 'withdrawn'
+    ).sort((a, b) => Number(a.admRegNo || 0) - Number(b.admRegNo || 0));
+
+    if (students.length === 0) {
+      setMlStudents('empty');
+      return;
+    }
+
+    const list = Array.isArray(overrideList) ? overrideList : monthlyLiteracyList;
+    const existing = list.find(r =>
+      (r.classId === mlClassSelect || (cls && (r.className === cls.name || r.className === cls.class_name))) &&
+      r.month === mlMonth &&
+      String(r.year) === String(mlYear)
+    );
+
+    const loadedStudents = students.map(s => {
+      const prev = existing?.students?.find(r =>
+        (r.student_id && s.id && String(r.student_id) === String(s.id)) ||
+        String(r.regNo) === String(s.admRegNo)
+      ) || {};
+
+      const pagesVal = prev.pages !== undefined && prev.pages !== null ? prev.pages : '';
+      return {
+        student: s,
+        start_para: prev.start_para !== undefined && prev.start_para !== null ? prev.start_para : '',
+        start_page: prev.start_page !== undefined && prev.start_page !== null ? prev.start_page : '',
+        end_para: prev.end_para !== undefined && prev.end_para !== null ? prev.end_para : '',
+        end_page: prev.end_page !== undefined && prev.end_page !== null ? prev.end_page : '',
+        pages: pagesVal,
+        juz_text: prev.juz_text || (pagesVal !== '' ? formatMiqdarJuzPages(pagesVal) : '0 صفحات'),
+        isAutoPages: false
+      };
+    });
+
+    setMlStudents({
+      clsName: cls ? (cls.name || cls.className || mlClassSelect) : mlClassSelect,
+      data: loadedStudents,
+      existing: !!existing
+    });
+  };
+
+  const mlCalcRow = (index, key, value) => {
+    const list = [...mlStudents.data];
+    list[index][key] = value;
+
+    if (key === 'start_para' || key === 'start_page' || key === 'end_para' || key === 'end_page') {
+      const suggested = calculateSuggestedPages(
+        list[index].start_para,
+        list[index].start_page,
+        list[index].end_para,
+        list[index].end_page
+      );
+      if (suggested !== '' && (list[index].pages === '' || list[index].isAutoPages)) {
+        list[index].pages = suggested;
+        list[index].isAutoPages = true;
+      }
+    } else if (key === 'pages') {
+      list[index].isAutoPages = false;
+    }
+
+    list[index].juz_text = formatMiqdarJuzPages(list[index].pages);
+    setMlStudents({ ...mlStudents, data: list });
+  };
+
+  const mlSaveLiteracy = async () => {
+    if (!mlStudents || mlStudents === 'empty') { alert('کوئی طالب علم نہیں۔'); return; }
+
+    setIsSavingLiteracy(true);
+    try {
+      const studentData = mlStudents.data.map(item => ({
+        student_id: item.student?.id || null,
+        regNo: item.student?.admRegNo || '',
+        name: item.student?.name || '',
+        start_para: item.start_para !== '' ? Number(item.start_para) : '',
+        start_page: item.start_page !== '' ? Number(item.start_page) : '',
+        end_para: item.end_para !== '' ? Number(item.end_para) : '',
+        end_page: item.end_page !== '' ? Number(item.end_page) : '',
+        pages: item.pages !== '' ? Number(item.pages) : '',
+        juz_text: item.juz_text || (item.pages !== '' ? formatMiqdarJuzPages(item.pages) : '0 صفحات')
+      }));
+
+      const record = {
+        classId: mlClassSelect,
+        className: mlStudents.clsName,
+        month: mlMonth,
+        year: String(mlYear),
+        students: studentData,
+        savedAt: new Date().toISOString()
+      };
+
+      if (saveMonthlyLiteracyToSupabase) {
+        try {
+          const remoteRes = await saveMonthlyLiteracyToSupabase(record, activeMadrasaId);
+          if (remoteRes?.id) {
+            record.id = remoteRes.id;
+          }
+        } catch (supaErr) {
+          console.warn('Could not save monthly literacy to Supabase, continuing locally:', supaErr);
+        }
+      }
+
+      let newLiteracy = [...monthlyLiteracyList];
+      const idx = newLiteracy.findIndex(r =>
+        (r.classId === mlClassSelect || r.className === mlStudents.clsName) &&
+        r.month === mlMonth &&
+        String(r.year) === String(mlYear)
+      );
+      if (idx > -1) newLiteracy[idx] = { ...newLiteracy[idx], ...record };
+      else newLiteracy.push(record);
+
+      setMonthlyLiteracyList(newLiteracy);
+      saveMadrasaData('hf_monthly_literacy_v1', newLiteracy, activeMadrasaId);
+
+      const totalPgs = studentData.reduce((s, r) => s + (Number(r.pages) || 0), 0);
+      alert(`${mlStudents.clsName} — ${mlMonth} ${formatAcademicYear(mlYear)}\nماہانہ خواندگی کامیابی سے محفوظ ہو گئی!\nطلباء: ${studentData.length} | کل صفحات: ${totalPgs}`);
+
+      mlLoadStudents(newLiteracy);
+    } catch (err) {
+      console.error('Error saving monthly literacy:', err);
+      alert('ماہانہ خواندگی محفوظ کرنے میں خرابی پیش آئی۔');
+    } finally {
+      setIsSavingLiteracy(false);
+    }
+  };
+
+  const mlDeleteLiteracy = async (targetRecord) => {
+    if (!window.confirm('کیا آپ یہ ماہانہ خواندگی ریکارڈ حذف کرنا چاہتے ہیں؟')) return;
+    try {
+      if (deleteMonthlyLiteracyFromSupabase) {
+        await deleteMonthlyLiteracyFromSupabase(targetRecord, activeMadrasaId);
+      }
+      const updated = monthlyLiteracyList.filter(r => r !== targetRecord && r.id !== targetRecord?.id);
+      setMonthlyLiteracyList(updated);
+      saveMadrasaData('hf_monthly_literacy_v1', updated, activeMadrasaId);
+      if (mlStudents && mlStudents.clsName === targetRecord.className && mlMonth === targetRecord.month && String(mlYear) === String(targetRecord.year)) {
+        mlLoadStudents(updated);
+      }
+      alert('ریکارڈ کامیابی سے حذف کر دیا گیا۔');
+    } catch (err) {
+      console.error('Error deleting monthly literacy:', err);
+      alert('ریکارڈ حذف کرنے میں خرابی پیش آئی۔');
+    }
+  };
+
+  // --- 3. Hifz Logic (ششماہی و سالانہ) ---
   const [selectYear, setSelectYear] = useState('1');
   const [selectHalfYear, setSelectHalfYear] = useState('1');
   const [hifzStudentId, setHifzStudentId] = useState('');
@@ -655,11 +877,32 @@ export default function Entry() {
     );
 
     // If existing pages read exist, populate them
+    let pagesMap = {};
     if (existingRec?.monthly_academic_details || existingRec?.monthlyAcademicDetails) {
-      setMonthlyPages(existingRec.monthly_academic_details || existingRec.monthlyAcademicDetails || {});
-    } else {
-      setMonthlyPages({});
+      pagesMap = { ...(existingRec.monthly_academic_details || existingRec.monthlyAcademicDetails || {}) };
     }
+
+    // Auto-populate from monthlyLiteracyList if records exist for this student
+    let foundInLiteracy = false;
+    currentMonths.forEach(m => {
+      const litRec = (monthlyLiteracyList || []).find(r =>
+        r.month === m.name &&
+        String(r.year) === String(m.y)
+      );
+      if (litRec && Array.isArray(litRec.students)) {
+        const litSt = litRec.students.find(s =>
+          (targetUuid && (s.student_id === targetUuid || s.id === targetUuid)) ||
+          (targetRegNo && s.regNo === targetRegNo)
+        );
+        if (litSt && litSt.pages !== undefined && litSt.pages !== null && litSt.pages !== '') {
+          pagesMap[m.name] = Number(litSt.pages);
+          foundInLiteracy = true;
+        }
+      }
+    });
+
+    setMonthlyPages(pagesMap);
+    setLitSyncedFromMonthly(foundInLiteracy);
 
     // Build the 6 attendance rows
     const savedMonthlyAtt = existingRec?.monthly_attendance_details || existingRec?.attendance?.monthlyDetails || {};
@@ -721,7 +964,7 @@ export default function Entry() {
 
     setAttendanceRows(computedRows);
     setAttSyncedFromDaily(hasDailyRecords);
-  }, [studentsList, records, activeMadrasaId, fetchStudentAttendanceFromSupabase, loadMadrasaData, hifzStartDate]);
+  }, [studentsList, records, activeMadrasaId, fetchStudentAttendanceFromSupabase, loadMadrasaData, hifzStartDate, monthlyLiteracyList]);
 
   // Re-run attendance calculation when student, year, or half-year changes
   useEffect(() => {
@@ -737,6 +980,7 @@ export default function Entry() {
       })));
       setMonthlyPages({});
       setAttSyncedFromDaily(false);
+      setLitSyncedFromMonthly(false);
     }
   }, [hifzStudentId, selectYear, selectHalfYear, populateAttendanceAndAcademic, monthsConfig]);
 
@@ -1013,6 +1257,7 @@ export default function Entry() {
       <div className="adm-type-grid no-print" style={{ marginBottom: "20px" }}>
         {[
           { id: 'monthly', label: 'اندراج ماہانہ جائزہ' },
+          { id: 'monthly_literacy', label: 'اندراج ماہانہ خواندگی' },
           { id: 'hifz', label: 'ششماہی و سالانہ خواندگی' },
           { id: 'classreport', label: 'کلاس کی انفرادی رپورٹ' },
           { id: 'studentreport', label: 'طالب علم کی انفرادی رپورٹ' },
@@ -1201,7 +1446,240 @@ export default function Entry() {
         </div>
       )}
 
-      {/* 2. Hifz Entry */}
+      {/* 2. Monthly Literacy Entry (اندراج ماہانہ خواندگی) */}
+      {activeTab === 'monthly_literacy' && (
+        <div id="entrySection-monthly-literacy" className="no-print">
+          <div className="me-control-card">
+            <div className="form-section-header" style={{ marginBottom: "18px" }}>
+              <div className="form-section-icon icon-amber"></div>
+              <div>
+                <div className="form-section-title">اندراج ماہانہ خواندگی</div>
+                <div className="form-section-subtitle">کلاس اور مہینہ منتخب کر کے ماہانہ آغاز و اختتام اور مقدارِ خواندگی درج کریں</div>
+              </div>
+            </div>
+            <div className="me-control-row">
+              <div>
+                <label htmlFor="mlClassSelect">کلاس منتخب کریں</label>
+                <select id="mlClassSelect" value={mlClassSelect} onChange={e => setMlClassSelect(e.target.value)}>
+                  <option value="">کلاس منتخب کریں...</option>
+                  {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.class_name || c.className || c.id}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="mlMonthSelect">ماہ</label>
+                <select id="mlMonthSelect" value={mlMonth} onChange={e => setMlMonth(e.target.value)}>
+                  {['اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر','جنوری','فروری','مارچ'].map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="mlYearSelect">سال</label>
+                <select id="mlYearSelect" value={mlYear} onChange={e => setMlYear(e.target.value)}>
+                  {getAcademicYearOptions().map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <button className="me-load-btn" onClick={() => mlLoadStudents()}>طلباء لوڈ کریں</button>
+            </div>
+          </div>
+
+          <div id="mlTableArea">
+            {mlStudents === 'empty' ? <div className="empty-dashboard-state">اس کلاس میں کوئی طالب علم موجود نہیں۔</div> :
+             mlStudents && (
+              <>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", justifyContent: "space-between" }}>
+                  <div className="hifz-instruction-text" style={{ margin: "0" }}>
+                    مہینے کے آغاز میں صرف پہلا کالم (سبق آغازِ ماہ) درج کریں، مہینہ مکمل ہونے پر اختتام اور کل صفحات درج کریں۔ یہ صفحات خودکار ششماہی خواندگی میں بھی اپڈیٹ ہوں گے۔
+                  </div>
+                </div>
+
+                <div className="me-table-wrap">
+                  <table className="me-table">
+                    <thead>
+                      <tr>
+                        <th style={{ minWidth: "48px" }}>نمبر</th>
+                        <th style={{ minWidth: "160px", textAlign: "right", paddingRight: "12px" }}>طالب علم</th>
+                        <th style={{ minWidth: "160px" }}>سبق آغازِ ماہ<br/><span className="me-max-label">(پارہ — صفحہ)</span></th>
+                        <th style={{ minWidth: "160px" }}>سبق اختتامِ ماہ<br/><span className="me-max-label">(پارہ — صفحہ)</span></th>
+                        <th style={{ minWidth: "110px" }}>اس ماہ کی خواندگی<br/><span className="me-max-label">(کل صفحات)</span></th>
+                        <th style={{ minWidth: "140px" }}>کل مقدارِ خواندگی<br/><span className="me-max-label">(پارہ / صفحات)</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mlStudents.data.map((item, idx) => (
+                        <tr key={item.student.id || item.student.admRegNo || idx}>
+                          <td><span className="me-reg">{item.student.admRegNo || idx + 1}</span></td>
+                          <td className="me-td-info"><span className="me-name">{item.student.name || '-'}</span></td>
+                          {/* 1. سبق آغاز ماہ (پارہ ---- صفحہ) */}
+                          <td>
+                            <div style={{ display: "flex", gap: "6px", justifyContent: "center", alignItems: "center" }}>
+                              <input 
+                                type="number" 
+                                min="1" 
+                                max="30" 
+                                className="me-input ml-start-para" 
+                                style={{ width: "65px", textAlign: "center" }} 
+                                value={item.start_para} 
+                                placeholder="پارہ" 
+                                title="آغاز پارہ نمبر (1 تا 30)"
+                                onChange={e => mlCalcRow(idx, 'start_para', e.target.value)} 
+                              />
+                              <span style={{ color: "var(--muted)" }}>—</span>
+                              <input 
+                                type="number" 
+                                min="1" 
+                                max="20" 
+                                className="me-input ml-start-page" 
+                                style={{ width: "65px", textAlign: "center" }} 
+                                value={item.start_page} 
+                                placeholder="صفحہ" 
+                                title="آغاز صفحہ نمبر (1 تا 20)"
+                                onChange={e => mlCalcRow(idx, 'start_page', e.target.value)} 
+                              />
+                            </div>
+                          </td>
+                          {/* 2. سبق اختتام ماہ (پارہ ---- صفحہ) */}
+                          <td>
+                            <div style={{ display: "flex", gap: "6px", justifyContent: "center", alignItems: "center" }}>
+                              <input 
+                                type="number" 
+                                min="1" 
+                                max="30" 
+                                className="me-input ml-end-para" 
+                                style={{ width: "65px", textAlign: "center" }} 
+                                value={item.end_para} 
+                                placeholder="پارہ" 
+                                title="اختتام پارہ نمبر (1 تا 30)"
+                                onChange={e => mlCalcRow(idx, 'end_para', e.target.value)} 
+                              />
+                              <span style={{ color: "var(--muted)" }}>—</span>
+                              <input 
+                                type="number" 
+                                min="1" 
+                                max="20" 
+                                className="me-input ml-end-page" 
+                                style={{ width: "65px", textAlign: "center" }} 
+                                value={item.end_page} 
+                                placeholder="صفحہ" 
+                                title="اختتام صفحہ نمبر (1 تا 20)"
+                                onChange={e => mlCalcRow(idx, 'end_page', e.target.value)} 
+                              />
+                            </div>
+                          </td>
+                          {/* 3. اس ماہ کی خواندگی (کل صفحات) */}
+                          <td>
+                            <input 
+                              type="number" 
+                              min="0" 
+                              className="me-input ml-pages" 
+                              style={{ width: "85px", textAlign: "center", fontWeight: "700" }} 
+                              value={item.pages} 
+                              placeholder="0" 
+                              title="اس ماہ میں پڑھے گئے کل صفحات"
+                              onChange={e => mlCalcRow(idx, 'pages', e.target.value)} 
+                            />
+                          </td>
+                          {/* 4. کل مقدار خواندگی (پارہ / صفحات کا حساب) */}
+                          <td style={{ textAlign: "center" }}>
+                            <span 
+                              className="me-chip me-chip-green ml-juz-text" 
+                              style={{ fontSize: "0.84rem", fontWeight: "700", display: "inline-block", minWidth: "90px" }}
+                            >
+                              {item.juz_text || '0 صفحات'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="me-save-bar" style={{ marginTop: "18px" }}>
+                  <button className="me-save-btn" onClick={mlSaveLiteracy} disabled={isSavingLiteracy}>
+                    {isSavingLiteracy ? 'محفوظ ہو رہا ہے...' : `${mlStudents.clsName} — ${mlMonth} ${formatAcademicYear(mlYear)} محفوظ کریں`}
+                  </button>
+                  <div className="me-summary-chips">
+                    <span className="me-chip me-chip-green">طلباء: {mlStudents.data.length}</span>
+                    <span className="me-chip me-chip-blue">
+                      کل صفحات: {mlStudents.data.reduce((s, it) => s + (Number(it.pages) || 0), 0)}
+                    </span>
+                  </div>
+                  {mlStudents.existing && (
+                    <span style={{ color: "#16a34a", fontSize: "0.88rem", fontWeight: "700" }}>
+                      پہلے سے ریکارڈ موجود — اپ ڈیٹ ہو گا
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* سابقہ ریکارڈ */}
+          <div className="me-history-section">
+            <div className="form-section-card">
+              <div className="form-section-header" style={{ marginBottom: "16px" }}>
+                <div className="form-section-icon icon-blue"></div>
+                <div>
+                  <div className="form-section-title">ماہانہ خواندگی — سابقہ ریکارڈ</div>
+                  <div className="form-section-subtitle">محفوظ شدہ ماہانہ خواندگی کا ریکارڈ دیکھیں یا حذف کریں</div>
+                </div>
+              </div>
+              <div className="me-filter-row">
+                <div>
+                  <label htmlFor="mlHistClass">کلاس کے ذریعے فلٹر</label>
+                  <select id="mlHistClass" value={mlHistoryClassFilter} onChange={e => setMlHistoryClassFilter(e.target.value)}>
+                    <option value="">تمام کلاسیں</option>
+                    {classesList.map(c => <option key={c.id} value={c.name || c.class_name || c.className || c.id}>{c.name || c.class_name || c.className || c.id}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="mlHistMonth">ماہ کے ذریعے فلٹر</label>
+                  <select id="mlHistMonth" value={mlHistoryMonthFilter} onChange={e => setMlHistoryMonthFilter(e.target.value)}>
+                    <option value="">تمام مہینے</option>
+                    {['اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر','جنوری','فروری','مارچ'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div id="mlHistoryArea" style={{ marginTop: "14px" }}>
+                {(() => {
+                  const filtered = monthlyLiteracyList.filter(r => {
+                    if (mlHistoryClassFilter && r.className !== mlHistoryClassFilter) return false;
+                    if (mlHistoryMonthFilter && r.month !== mlHistoryMonthFilter) return false;
+                    return true;
+                  });
+
+                  if (filtered.length === 0) {
+                    return <div className="empty-dashboard-state">کوئی سابقہ ماہانہ خواندگی ریکارڈ موجود نہیں۔</div>;
+                  }
+
+                  return filtered.map((r, i) => {
+                    const totalPages = (r.students || []).reduce((s, it) => s + (Number(it.pages) || 0), 0);
+                    return (
+                      <div key={r.id || i} className="me-history-card">
+                        <div className="me-history-card-header">
+                          <div>
+                            <span className="me-history-title">{r.className} — {r.month} {formatAcademicYear(r.year)}</span>
+                            <span className="me-chip me-chip-green" style={{ marginRight: "10px" }}>طلباء: {r.students?.length || 0}</span>
+                            <span className="me-chip me-chip-blue">کل صفحات: {totalPages} ({formatMiqdarJuzPages(totalPages)})</span>
+                          </div>
+                          <div>
+                            <button className="btn-secondary" style={{ padding: "4px 10px", fontSize: "0.8rem", color: "#dc2626", border: "1px solid #dc2626", borderRadius: "4px", cursor: "pointer" }} onClick={() => mlDeleteLiteracy(r)}>
+                              حذف کریں
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Hifz Entry */}
       {activeTab === 'hifz' && (
         <div id="entrySection-hifz" className="no-print">
             <div className="grid-row" style={{ marginTop: "20px" }}>
@@ -1407,7 +1885,14 @@ export default function Entry() {
                 </div>
             </div>
 
-            <h2>2. مقدارِ خواندگی (تعلیمی ریکارڈ)</h2>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "10px", flexWrap: "wrap" }}>
+              <h2 style={{ margin: "0" }}>2. مقدارِ خواندگی (تعلیمی ریکارڈ)</h2>
+              {litSyncedFromMonthly && (
+                <span className="me-chip me-chip-green" style={{ fontSize: "0.82rem", fontWeight: "700" }}>
+                  ماہانہ خواندگی سے خودکار ہم آہنگ
+                </span>
+              )}
+            </div>
             <div className="grid-row">
                 <div>
                   <label>ششماہی ہدف (صفحات — حاضری کے تناسب سے)</label>

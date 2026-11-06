@@ -2353,3 +2353,22 @@
     [data-theme="dark"] .ir-stat-card div {
       color: #ffffff !important;
     }
+
+    [data-theme="dark"] .me-table {
+      background: var(--card-bg, #18181b);
+      color: var(--text, #f4f4f5);
+    }
+    [data-theme="dark"] .me-table tbody tr {
+      border-bottom: 1px solid var(--border, #27272a);
+    }
+    [data-theme="dark"] .me-table tbody tr:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    [data-theme="dark"] .me-name {
+      color: var(--text, #f4f4f5);
+    }
+    [data-theme="dark"] .me-input {
+      background: var(--card-bg, #18181b);
+      color: var(--text, #f4f4f5);
+      border-color: var(--border, #3f3f46);
+    }
