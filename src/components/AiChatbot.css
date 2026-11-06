@@ -14,7 +14,7 @@
   pointer-events: none;
 }
 
-/* Floating Trigger Action Button (Draggable) */
+/* Floating Trigger Action Button (Draggable Round FAB) */
 .ai-chatbot-trigger {
   position: fixed;
   pointer-events: auto;
@@ -24,60 +24,53 @@
   -webkit-user-select: none;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 18px;
-  border-radius: 50px;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  max-width: 52px;
+  max-height: 52px;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border-radius: 50%;
   background: linear-gradient(135deg, #0d3b66 0%, #1a6b3c 100%);
   color: #ffffff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 6px 20px rgba(13, 59, 102, 0.35);
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
   z-index: 99999;
+  box-sizing: border-box;
 }
 
 .ai-chatbot-trigger:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-2px) scale(1.06);
   box-shadow: 0 10px 28px rgba(13, 59, 102, 0.45);
 }
 
 .ai-chatbot-trigger.is-dragging {
   cursor: grabbing !important;
   transition: none !important;
-  transform: scale(1.04);
+  transform: scale(1.08);
   box-shadow: 0 14px 34px rgba(13, 59, 102, 0.55);
 }
 
 .ai-chatbot-trigger:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.96);
 }
 
 .ai-chatbot-trigger.active {
   background: #c62828;
   box-shadow: 0 6px 20px rgba(198, 40, 40, 0.4);
-  padding: 14px;
-  border-radius: 50%;
 }
 
 .chatbot-icon-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.chatbot-badge {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-}
-
-.drag-pill-indicator {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 2px;
-  opacity: 0.7;
+  width: 100%;
+  height: 100%;
 }
 
 /* Slide-out Drawer Container (Draggable) */
@@ -421,7 +414,8 @@
 [data-theme="dark"] .ai-chatbot-trigger {
   background: linear-gradient(135deg, #27272a 0%, #3f3f46 100%);
   color: #ffffff;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  border: 1px solid #52525b;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
 }
 
 [data-theme="dark"] .ai-chatbot-drawer {

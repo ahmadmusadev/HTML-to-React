@@ -8,7 +8,8 @@ describe('AiChatbot Component', () => {
     render(<AiChatbot />);
     const button = screen.getByRole('button', { name: /Toggle AI Rehnuma Assistant/i });
     expect(button).toBeInTheDocument();
-    expect(screen.getByText('اے آئی رہنما')).toBeInTheDocument();
+    expect(button.querySelector('.chatbot-icon-wrapper svg')).toBeInTheDocument();
+    expect(screen.queryByText('اے آئی رہنما')).not.toBeInTheDocument();
   });
 
   it('opens drawer on trigger button click and shows welcome message', () => {

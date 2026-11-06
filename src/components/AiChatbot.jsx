@@ -623,7 +623,7 @@ function getInitialTriggerPos() {
       const parsed = JSON.parse(saved);
       const pos = parsed?.trigger || parsed;
       if (typeof pos?.x === 'number' && typeof pos?.y === 'number') {
-        return clampPosition(pos.x, pos.y, 160, 50);
+        return clampPosition(pos.x, pos.y, 54, 54);
       }
     }
   } catch {
@@ -758,8 +758,8 @@ export default function AiChatbot() {
     const currentPos = targetType === 'trigger' ? triggerPos : drawerPos;
     const targetElem = targetType === 'trigger' ? triggerRef.current : drawerRef.current;
     const rect = targetElem?.getBoundingClientRect();
-    const elemWidth = (rect?.width && rect.width > 0) ? rect.width : (targetType === 'trigger' ? 160 : 410);
-    const elemHeight = (rect?.height && rect.height > 0) ? rect.height : (targetType === 'trigger' ? 50 : 600);
+    const elemWidth = (rect?.width && rect.width > 0) ? rect.width : (targetType === 'trigger' ? 54 : 410);
+    const elemHeight = (rect?.height && rect.height > 0) ? rect.height : (targetType === 'trigger' ? 54 : 600);
 
     dragInfoRef.current = {
       isDown: true,
@@ -1037,17 +1037,6 @@ export default function AiChatbot() {
               <circle cx="8.5" cy="11.5" r="1" fill="currentColor"></circle>
               <circle cx="12" cy="11.5" r="1" fill="currentColor"></circle>
               <circle cx="15.5" cy="11.5" r="1" fill="currentColor"></circle>
-            </svg>
-          </span>
-          <span className="chatbot-badge">اے آئی رہنما</span>
-          <span className="drag-pill-indicator" title="کھینچ کر منتقل کریں (Drag to move)">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" opacity="0.65">
-              <circle cx="9" cy="6" r="2" />
-              <circle cx="15" cy="6" r="2" />
-              <circle cx="9" cy="12" r="2" />
-              <circle cx="15" cy="12" r="2" />
-              <circle cx="9" cy="18" r="2" />
-              <circle cx="15" cy="18" r="2" />
             </svg>
           </span>
         </button>
