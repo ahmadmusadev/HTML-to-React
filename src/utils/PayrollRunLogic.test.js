@@ -14,7 +14,9 @@ import {
   findDrift,
   getFinalizeBlockers,
   totalsFromRows,
-  toUrduRunError
+  toUrduRunError,
+  validateAllAdjustments,
+  hasUnsavedChanges
 } from './PayrollRunLogic';
 
 describe('PayrollRunLogic - Pure Helpers & Business Logic', () => {
@@ -345,6 +347,45 @@ describe('PayrollRunLogic - Pure Helpers & Business Logic', () => {
       const blockers = getFinalizeBlockers({ engineResult });
       expect(blockers).toHaveLength(0);
     });
+
+    it('resolves teacher name from staffList for not_calculable teachers without staff_name', () => {
+      const engineResult = {
+        items: [{ staff_id: 't-1', is_complete: true }],
+        not_calculable: [
+          {
+            staff_id: 't-2',
+            reasons: ['no_salary']
+          }
+        ]
+      };
+      const staffList = [
+        { id: 't-2', name: 'قاری احمد علی', staff_code: '102' }
+      ];
+      const blockers = getFinalizeBlockers({ engineResult, staffList });
+      expect(blockers).toHaveLength(1);
+      expect(blockers[0].code).toBe('NO_SALARY');
+      expect(blockers[0].message).toContain('قاری احمد علی');
+      expect(blockers[0].message).not.toContain('نامعلوم');
+    });
+
+    it('falls back to staff_code from staffList if teacher name is missing', () => {
+      const engineResult = {
+        items: [{ staff_id: 't-1', is_complete: true }],
+        not_calculable: [
+          {
+            staff_id: 't-3',
+            reasons: ['no_shift']
+          }
+        ]
+      };
+      const staffList = [
+        { id: 't-3', name: '', staff_code: 'CODE-99' }
+      ];
+      const blockers = getFinalizeBlockers({ engineResult, staffList });
+      expect(blockers).toHaveLength(1);
+      expect(blockers[0].message).toContain('CODE-99');
+      expect(blockers[0].message).not.toContain('نامعلوم');
+    });
   });
 
   describe('totalsFromRows', () => {
@@ -405,4 +446,75 @@ describe('PayrollRunLogic - Pure Helpers & Business Logic', () => {
       }
     });
   });
+
+  describe('validateAllAdjustments', () => {
+    const staffMap = new Map([
+      ['t-1', { id: 't-1', name: 'قاری بلال', staff_code: '101' }]
+    ]);
+
+    it('passes for valid numbers, 2 decimal places, zero, or empty values', () => {
+      const validCases = [
+        { 't-1': { bonus: '500', advance_deduction: '0', other_deduction: '' } },
+        { 't-1': { bonus: '1250.50', advance_deduction: '25.75', other_deduction: '0.00' } },
+        { 't-1': { bonus: '', advance_deduction: null, other_deduction: undefined } }
+      ];
+      for (const adj of validCases) {
+        const res = validateAllAdjustments(adj, staffMap);
+        expect(res.valid).toBe(true);
+        expect(res.messageUrdu).toBe('');
+      }
+    });
+
+    it('rejects non-numeric text like "abc"', () => {
+      const res = validateAllAdjustments({ 't-1': { bonus: 'abc', advance_deduction: '0', other_deduction: '0' } }, staffMap);
+      expect(res.valid).toBe(false);
+      expect(res.messageUrdu).toContain('قاری بلال');
+      expect(res.messageUrdu).toContain('بونس');
+      expect(res.messageUrdu).toContain('رقم صرف مثبت اعداد یا دو اعشاریہ تک ہونی چاہیے۔');
+    });
+
+    it('rejects negative numbers', () => {
+      const res = validateAllAdjustments({ 't-1': { bonus: '0', advance_deduction: '-500', other_deduction: '0' } }, staffMap);
+      expect(res.valid).toBe(false);
+      expect(res.messageUrdu).toContain('پیشگی رقم');
+    });
+
+    it('rejects numbers with more than 2 decimal places (3 decimals)', () => {
+      const res = validateAllAdjustments({ 't-1': { bonus: '0', advance_deduction: '0', other_deduction: '10.123' } }, staffMap);
+      expect(res.valid).toBe(false);
+      expect(res.messageUrdu).toContain('دیگر کٹوتی');
+      expect(res.messageUrdu).toContain('دو اعشاریہ');
+    });
+  });
+
+  describe('hasUnsavedChanges', () => {
+    const stored = [
+      {
+        staff_id: 't-1',
+        bonus: 1000,
+        advance_deduction: 500,
+        other_deduction: 0,
+        notes: 'اصل نوٹ'
+      }
+    ];
+
+    it('returns false when typed values match stored row', () => {
+      const adjs = { 't-1': { bonus: '1000', advance_deduction: '500', other_deduction: '0' } };
+      const notes = { 't-1': 'اصل نوٹ' };
+      expect(hasUnsavedChanges(stored, adjs, notes)).toBe(false);
+    });
+
+    it('returns true when bonus differs', () => {
+      const adjs = { 't-1': { bonus: '1200', advance_deduction: '500', other_deduction: '0' } };
+      const notes = { 't-1': 'اصل نوٹ' };
+      expect(hasUnsavedChanges(stored, adjs, notes)).toBe(true);
+    });
+
+    it('returns true when note differs', () => {
+      const adjs = { 't-1': { bonus: '1000', advance_deduction: '500', other_deduction: '0' } };
+      const notes = { 't-1': 'نیا غیر محفوظ نوٹ' };
+      expect(hasUnsavedChanges(stored, adjs, notes)).toBe(true);
+    });
+  });
+
 });

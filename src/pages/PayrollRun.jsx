@@ -30,6 +30,8 @@ import {
   getFiscalYearStart
 } from '../utils/PayrollMappers';
 import {
+  validateAllAdjustments,
+  hasUnsavedChanges,
   isoMonthToRunDate,
   monthLabelUrdu,
   dateLabelUrdu,
@@ -74,6 +76,10 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
 
   // Selected Month State
   const [selectedMonth, setSelectedMonth] = useState(todayMonth);
+
+  // References to keep current inputs across silent action reloads
+  const adjustmentsRef = useRef({});
+  const notesRef = useRef({});
 
   // Core Data States (All state local to component)
   const [loading, setLoading] = useState(false);
@@ -212,12 +218,15 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
   /**
    * Loads the run and its items for the currently selected month.
    */
-  const loadMonthRun = useCallback(async () => {
+  const loadMonthRun = useCallback(async (options = {}) => {
+    const { keepMessages = false } = options;
     if (!isAuthorized || !isValidUUID(activeMadrasaId) || !savedSettings) return;
 
-    setLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
+    if (!keepMessages) {
+      setLoading(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+    }
 
     try {
       const runDate = isoMonthToRunDate(selectedMonth);
@@ -243,13 +252,30 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
           nextPayDates[item.staff_id] = item.paid_on || todayDate;
         }
 
-        setAdjustments(nextAdjs);
-        setNotesState(nextNotes);
-        setPaymentDates(nextPayDates);
+        if (keepMessages) {
+          setAdjustments((prev) => {
+            const merged = { ...nextAdjs, ...prev };
+            adjustmentsRef.current = merged;
+            return merged;
+          });
+          setNotesState((prev) => {
+            const merged = { ...nextNotes, ...prev };
+            notesRef.current = merged;
+            return merged;
+          });
+          setPaymentDates((prev) => ({ ...nextPayDates, ...prev }));
+        } else {
+          setAdjustments(nextAdjs);
+          adjustmentsRef.current = nextAdjs;
+          setNotesState(nextNotes);
+          notesRef.current = nextNotes;
+          setPaymentDates(nextPayDates);
+        }
 
         // If draft, run fresh calculation to assess attendance completeness & warnings
         if (run.status === 'draft') {
-          const calc = await runEngineCalculation(savedSettings, nextAdjs);
+          const adjsToUse = keepMessages ? { ...nextAdjs, ...adjustmentsRef.current } : nextAdjs;
+          const calc = await runEngineCalculation(savedSettings, adjsToUse);
           setEngineResult(calc);
         } else {
           setEngineResult(null);
@@ -257,13 +283,17 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
       } else {
         setRunItems([]);
         setAdjustments({});
+        adjustmentsRef.current = {};
         setNotesState({});
+        notesRef.current = {};
         setEngineResult(null);
       }
     } catch (err) {
       setErrorMsg(toUrduRunError(err));
     } finally {
-      setLoading(false);
+      if (!keepMessages) {
+        setLoading(false);
+      }
     }
   }, [isAuthorized, activeMadrasaId, savedSettings, selectedMonth, todayDate, runEngineCalculation]);
 
@@ -305,7 +335,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
       const refreshedRuns = await fetchRuns(supabase, activeMadrasaId);
       setAllRuns(refreshedRuns || []);
       setSuccessMsg('ماہانہ پے رول کا مسودہ کامیابی سے تیار ہو گیا ہے۔');
-      await loadMonthRun();
+      await loadMonthRun({ keepMessages: true });
     } catch (err) {
       setErrorMsg(toUrduRunError(err));
     } finally {
@@ -317,23 +347,31 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
    * Handles adjustment input change.
    */
   const handleAdjustmentChange = (staffId, field, value) => {
-    setAdjustments((prev) => ({
-      ...prev,
-      [staffId]: {
-        ...(prev[staffId] || { bonus: '0', advance_deduction: '0', other_deduction: '0' }),
-        [field]: value
-      }
-    }));
+    setAdjustments((prev) => {
+      const next = {
+        ...prev,
+        [staffId]: {
+          ...(prev[staffId] || { bonus: '0', advance_deduction: '0', other_deduction: '0' }),
+          [field]: value
+        }
+      };
+      adjustmentsRef.current = next;
+      return next;
+    });
   };
 
   /**
    * Handles note input change.
    */
   const handleNoteChange = (staffId, value) => {
-    setNotesState((prev) => ({
-      ...prev,
-      [staffId]: value
-    }));
+    setNotesState((prev) => {
+      const next = {
+        ...prev,
+        [staffId]: value
+      };
+      notesRef.current = next;
+      return next;
+    });
   };
 
   /**
@@ -342,26 +380,11 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
   const handleSaveAdjustments = async () => {
     if (!currentRun || currentRun.status !== 'draft' || !savedSettings) return;
 
-    // Validate inputs
-    for (const [staffId, adj] of Object.entries(adjustments)) {
-      const staff = staffMap.get(staffId);
-      const staffLabel = staff ? (staff.name || staff.staff_code) : staffId;
-
-      const vBonus = validateAdjustmentInput(adj.bonus);
-      if (!vBonus.isValid) {
-        setErrorMsg(`استاد ${staffLabel}: بونس: ${vBonus.error}`);
-        return;
-      }
-      const vAdv = validateAdjustmentInput(adj.advance_deduction);
-      if (!vAdv.isValid) {
-        setErrorMsg(`استاد ${staffLabel}: پیشگی رقم: ${vAdv.error}`);
-        return;
-      }
-      const vOth = validateAdjustmentInput(adj.other_deduction);
-      if (!vOth.isValid) {
-        setErrorMsg(`استاد ${staffLabel}: دیگر کٹوتی: ${vOth.error}`);
-        return;
-      }
+    // Validate inputs before calling the engine
+    const v = validateAllAdjustments(adjustments, staffMap);
+    if (!v.valid) {
+      setErrorMsg(v.messageUrdu);
+      return;
     }
 
     setActionLoading(true);
@@ -389,7 +412,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
       }
 
       setSuccessMsg('تبدیلیاں کامیابی سے محفوظ ہو گئیں۔');
-      await loadMonthRun();
+      await loadMonthRun({ keepMessages: true });
     } catch (err) {
       setErrorMsg(toUrduRunError(err));
     } finally {
@@ -402,6 +425,13 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
    */
   const handleRecalculateDraft = async () => {
     if (!currentRun || currentRun.status !== 'draft' || !savedSettings) return;
+
+    // Validate inputs before calling the engine
+    const v = validateAllAdjustments(adjustments, staffMap);
+    if (!v.valid) {
+      setErrorMsg(v.messageUrdu);
+      return;
+    }
 
     setActionLoading(true);
     setErrorMsg('');
@@ -424,7 +454,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
       }
 
       setSuccessMsg('تازہ ڈیٹا کے مطابق تنخواہ کا دوبارہ حساب کامیابی سے ہو گیا۔');
-      await loadMonthRun();
+      await loadMonthRun({ keepMessages: true });
     } catch (err) {
       setErrorMsg(toUrduRunError(err));
     } finally {
@@ -437,6 +467,19 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
    */
   const handleInitiateFinalize = async () => {
     if (!currentRun || currentRun.status !== 'draft' || !savedSettings) return;
+
+    // 1. Validate inputs before calling the engine
+    const v = validateAllAdjustments(adjustments, staffMap);
+    if (!v.valid) {
+      setErrorMsg(v.messageUrdu);
+      return;
+    }
+
+    // 2. Unsaved changes guard: do NOT show drift message, do NOT finalize
+    if (hasUnsavedChanges(runItems, adjustments, notesState)) {
+      setErrorMsg('پہلے تبدیلیاں محفوظ کریں');
+      return;
+    }
 
     setActionLoading(true);
     setErrorMsg('');
@@ -487,7 +530,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
       const refreshedRuns = await fetchRuns(supabase, activeMadrasaId);
       setAllRuns(refreshedRuns || []);
       setSuccessMsg('ماہانہ پے رول کامیابی سے فائنل اور مقفل ہو گیا ہے۔');
-      await loadMonthRun();
+      await loadMonthRun({ keepMessages: true });
     } catch (err) {
       setErrorMsg(toUrduRunError(err));
     } finally {
@@ -511,7 +554,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
       const refreshedRuns = await fetchRuns(supabase, activeMadrasaId);
       setAllRuns(refreshedRuns || []);
       setSuccessMsg('پے رول کا مسودہ کامیابی سے حذف ہو گیا۔');
-      await loadMonthRun();
+      await loadMonthRun({ keepMessages: true });
     } catch (err) {
       setErrorMsg(toUrduRunError(err));
     } finally {
@@ -535,7 +578,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
       const refreshedRuns = await fetchRuns(supabase, activeMadrasaId);
       setAllRuns(refreshedRuns || []);
       setSuccessMsg('پے رول دوبارہ مسودہ بنا دیا گیا ہے۔');
-      await loadMonthRun();
+      await loadMonthRun({ keepMessages: true });
     } catch (err) {
       setErrorMsg(toUrduRunError(err));
     } finally {
@@ -559,7 +602,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
         paid_on: paid ? (paidOnDate || todayDate) : null
       });
       setSuccessMsg(paid ? 'ادائیگی درج ہو گئی ہے۔' : 'ادائیگی منسوخ کر دی گئی ہے۔');
-      await loadMonthRun();
+      await loadMonthRun({ keepMessages: true });
     } catch (err) {
       setErrorMsg(toUrduRunError(err));
     } finally {
@@ -581,7 +624,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
       const noteVal = notesState[staffId] || '';
       await updateItemNotes(supabase, activeMadrasaId, itemId, noteVal);
       setSuccessMsg('نوٹ محفوظ ہو گیا۔');
-      await loadMonthRun();
+      await loadMonthRun({ keepMessages: true });
     } catch (err) {
       setErrorMsg(toUrduRunError(err));
     } finally {
@@ -689,7 +732,11 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
             className="payroll-run-month-input"
             value={selectedMonth}
             max={todayMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
+            onChange={(e) => {
+            setSelectedMonth(e.target.value);
+            setErrorMsg('');
+            setSuccessMsg('');
+          }}
           />
           <span className="payroll-run-label">
             ({monthLabelUrdu(selectedMonth)})
@@ -740,7 +787,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
           {createCheck.allowed && (
             <button
               type="button"
-              className="payroll-btn-primary"
+              className="payroll-run-btn-primary"
               disabled={actionLoading}
               onClick={handleCreateDraft}
             >
@@ -928,7 +975,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                         <td>
                           <button
                             type="button"
-                            className="payroll-btn-secondary payroll-btn-sm"
+                            className="payroll-run-btn-secondary payroll-run-btn-sm"
                             onClick={() => setDetailItem({ ...item, staff_name: staffName, staff_code: staffCode })}
                           >
                             تفصیل
@@ -945,7 +992,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                                 </span>
                                 <button
                                   type="button"
-                                  className="payroll-btn-secondary payroll-btn-sm"
+                                  className="payroll-run-btn-secondary payroll-run-btn-sm"
                                   disabled={actionLoading}
                                   onClick={() => handleSetPayment(item.id, false)}
                                 >
@@ -968,7 +1015,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                                 />
                                 <button
                                   type="button"
-                                  className="payroll-btn-success payroll-btn-sm"
+                                  className="payroll-run-btn-success payroll-run-btn-sm"
                                   disabled={actionLoading}
                                   onClick={() => handleSetPayment(item.id, true, payDateVal)}
                                 >
@@ -1002,7 +1049,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                               />
                               <button
                                 type="button"
-                                className="payroll-btn-secondary payroll-btn-sm"
+                                className="payroll-run-btn-secondary payroll-run-btn-sm"
                                 disabled={actionLoading}
                                 onClick={() => handleSaveNote(item.id, item.staff_id)}
                               >
@@ -1043,7 +1090,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                 <div className="payroll-run-actions-left">
                   <button
                     type="button"
-                    className="payroll-btn-primary"
+                    className="payroll-run-btn-primary"
                     disabled={actionLoading}
                     onClick={handleSaveAdjustments}
                   >
@@ -1051,7 +1098,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                   </button>
                   <button
                     type="button"
-                    className="payroll-btn-secondary"
+                    className="payroll-run-btn-secondary"
                     disabled={actionLoading}
                     onClick={handleRecalculateDraft}
                   >
@@ -1059,7 +1106,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                   </button>
                   <button
                     type="button"
-                    className="payroll-btn-danger"
+                    className="payroll-run-btn-danger"
                     disabled={actionLoading}
                     onClick={() => setShowDeleteModal(true)}
                   >
@@ -1070,7 +1117,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                 <div className="payroll-run-actions-right">
                   <button
                     type="button"
-                    className="payroll-btn-success"
+                    className="payroll-run-btn-success"
                     disabled={actionLoading || finalizeBlockers.length > 0}
                     onClick={handleInitiateFinalize}
                   >
@@ -1088,7 +1135,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                 <div className="payroll-run-actions-right">
                   <button
                     type="button"
-                    className="payroll-btn-danger"
+                    className="payroll-run-btn-danger"
                     disabled={actionLoading || !canReopenCheck.allowed}
                     title={canReopenCheck.reasonUrdu}
                     onClick={() => setShowReopenModal(true)}
@@ -1112,7 +1159,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
               </h2>
               <button
                 type="button"
-                className="payroll-btn-secondary payroll-btn-sm"
+                className="payroll-run-btn-secondary payroll-run-btn-sm"
                 onClick={() => setDetailItem(null)}
               >
                 بند کریں
@@ -1202,7 +1249,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                     </div>
                   </div>
                 )}
-                <div className="payroll-detail-item" style={{ gridColumn: 'span 2', background: '#e0f2fe' }}>
+                <div className="payroll-detail-item payroll-run-detail-net" style={{ gridColumn: 'span 2' }}>
                   <div className="payroll-detail-item-label">خالص ادا شدہ تنخواہ</div>
                   <div className="payroll-detail-item-value">{formatRupees(detailItem.net_salary)}</div>
                 </div>
@@ -1211,7 +1258,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
             <div className="payroll-run-modal-footer">
               <button
                 type="button"
-                className="payroll-btn-secondary"
+                className="payroll-run-btn-secondary"
                 onClick={() => setDetailItem(null)}
               >
                 بند کریں
@@ -1246,14 +1293,14 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                   <div className="payroll-detail-item-value">{formatRupees(totals.net_total)}</div>
                 </div>
               </div>
-              <p style={{ color: '#b91c1c', fontWeight: 600 }}>
+              <p className="payroll-run-warning-text">
                 تنبیہ: فائنل کرنے کے بعد تمام اعداد و شمار مقفل ہو جائیں گے اور صرف ادائیگیاں درج کی جا سکیں گی۔
               </p>
             </div>
             <div className="payroll-run-modal-footer">
               <button
                 type="button"
-                className="payroll-btn-secondary"
+                className="payroll-run-btn-secondary"
                 disabled={actionLoading}
                 onClick={() => setShowFinalizeModal(false)}
               >
@@ -1261,7 +1308,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
               </button>
               <button
                 type="button"
-                className="payroll-btn-success"
+                className="payroll-run-btn-success"
                 disabled={actionLoading}
                 onClick={handleConfirmFinalize}
               >
@@ -1287,7 +1334,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
             <div className="payroll-run-modal-footer">
               <button
                 type="button"
-                className="payroll-btn-secondary"
+                className="payroll-run-btn-secondary"
                 disabled={actionLoading}
                 onClick={() => setShowDeleteModal(false)}
               >
@@ -1295,7 +1342,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
               </button>
               <button
                 type="button"
-                className="payroll-btn-danger"
+                className="payroll-run-btn-danger"
                 disabled={actionLoading}
                 onClick={handleConfirmDeleteDraft}
               >
@@ -1321,7 +1368,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
             <div className="payroll-run-modal-footer">
               <button
                 type="button"
-                className="payroll-btn-secondary"
+                className="payroll-run-btn-secondary"
                 disabled={actionLoading}
                 onClick={() => setShowReopenModal(false)}
               >
@@ -1329,7 +1376,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
               </button>
               <button
                 type="button"
-                className="payroll-btn-danger"
+                className="payroll-run-btn-danger"
                 disabled={actionLoading}
                 onClick={handleConfirmReopen}
               >

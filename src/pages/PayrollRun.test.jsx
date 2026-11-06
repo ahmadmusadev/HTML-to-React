@@ -526,4 +526,390 @@ describe('PayrollRun Component - Stage 5 Monthly Payroll', () => {
       }
     });
   });
+
+  describe('Stage 5 Defect Fixes & Behavioral Invariants', () => {
+    it('shows Urdu success message after save and preserves it after reload', async () => {
+      const draftRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'draft' };
+      const draftItems = [
+        {
+          id: 'item-1',
+          staff_id: 'staff-1',
+          base_salary: 30000,
+          net_salary: 30000,
+          bonus: 0,
+          advance_deduction: 0,
+          other_deduction: 0,
+          notes: '',
+          payment_status: 'unpaid'
+        }
+      ];
+
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockResolvedValue(draftRun);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue(draftItems);
+      vi.spyOn(payrollRunsApi, 'saveRunItems').mockResolvedValue([]);
+
+      render(
+        <PayrollRun
+          staffList={[MOCK_STAFF[0]]}
+          activeMadrasaId={VALID_MADRASA_ID}
+          isMadrasaMismatch={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/بونس برائے قاری محمد بلال/)).toBeInTheDocument();
+      });
+
+      const bonusInput = screen.getByLabelText(/بونس برائے قاری محمد بلال/);
+      fireEvent.change(bonusInput, { target: { value: '1500' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'تبدیلیاں محفوظ کریں' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('status')).toHaveTextContent('تبدیلیاں کامیابی سے محفوظ ہو گئیں۔');
+      });
+
+      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('تبدیلیاں کامیابی سے محفوظ ہو گئیں۔');
+    });
+
+    it('shows Urdu success message and status chip "فائنل شدہ" after successful finalize, calling finalizeRun once', async () => {
+      const draftRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'draft' };
+      const finalizedRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'finalized' };
+      const completeAtt = getWorkingDates('2026-11', [5], []).map((date) => ({
+        staff_id: 'staff-1',
+        date,
+        status: 'present',
+        late_minutes: 0,
+        early_leave_minutes: 0
+      }));
+      const storedItems = [
+        {
+          id: 'item-1',
+          staff_id: 'staff-1',
+          base_salary: 30000,
+          net_salary: 30000,
+          payable_working_days: completeAtt.length,
+          present_days: completeAtt.length,
+          absent_days: 0,
+          paid_leave_days: 0,
+          unpaid_leave_days: 0,
+          absence_deduction: 0,
+          unpaid_leave_deduction: 0,
+          time_deduction: 0,
+          bonus: 0,
+          advance_deduction: 0,
+          other_deduction: 0,
+          notes: '',
+          payment_status: 'unpaid'
+        }
+      ];
+
+      let runState = draftRun;
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockImplementation(async () => runState);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue(storedItems);
+      vi.spyOn(payrollRunsApi, 'fetchMonthAttendance').mockResolvedValue(completeAtt);
+      const finalizeSpy = vi.spyOn(payrollRunsApi, 'finalizeRun').mockImplementation(async () => {
+        runState = finalizedRun;
+        return finalizedRun;
+      });
+
+      render(
+        <PayrollRun
+          staffList={[MOCK_STAFF[0]]}
+          activeMadrasaId={VALID_MADRASA_ID}
+          isMadrasaMismatch={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'فائنل کریں' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'فائنل کریں' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'ہاں، فائنل کریں' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'ہاں، فائنل کریں' }));
+
+      await waitFor(() => {
+        expect(finalizeSpy).toHaveBeenCalledTimes(1);
+        expect(finalizeSpy).toHaveBeenCalledWith(expect.anything(), VALID_MADRASA_ID, VALID_RUN_ID);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('فائنل شدہ')).toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent('ماہانہ پے رول کامیابی سے فائنل اور مقفل ہو گیا ہے۔');
+      });
+    });
+
+    it('has no inline color or backgroundColor on any rendered element', async () => {
+      const draftRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'draft' };
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockResolvedValue(draftRun);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue([]);
+
+      const { container } = render(
+        <PayrollRun
+          staffList={MOCK_STAFF}
+          activeMadrasaId={VALID_MADRASA_ID}
+          isMadrasaMismatch={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('مسودہ')).toBeInTheDocument();
+      });
+
+      const styledElements = container.querySelectorAll('[style]');
+      for (const el of styledElements) {
+        expect(el.style.color).toBe('');
+        expect(el.style.backgroundColor).toBe('');
+      }
+    });
+
+    it('does not render any CSS class starting with payroll-btn-', async () => {
+      const draftRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'draft' };
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockResolvedValue(draftRun);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue([]);
+
+      const { container } = render(
+        <PayrollRun
+          staffList={MOCK_STAFF}
+          activeMadrasaId={VALID_MADRASA_ID}
+          isMadrasaMismatch={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('مسودہ')).toBeInTheDocument();
+      });
+
+      const allElements = container.querySelectorAll('*');
+      for (const el of allElements) {
+        for (const cls of el.classList) {
+          expect(cls.startsWith('payroll-btn-')).toBe(false);
+        }
+      }
+    });
+
+    it('shows teacher name and not "نامعلوم" in finalize blocker for teacher with no salary', async () => {
+      const draftRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'draft' };
+      const storedItems = [
+        {
+          id: 'item-1',
+          staff_id: 'staff-1',
+          base_salary: 30000,
+          net_salary: 30000,
+          payable_working_days: 26,
+          present_days: 26,
+          absent_days: 0,
+          paid_leave_days: 0,
+          unpaid_leave_days: 0,
+          payment_status: 'unpaid'
+        }
+      ];
+
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockResolvedValue(draftRun);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue(storedItems);
+      vi.spyOn(payrollApi, 'fetchStaffSalaries').mockResolvedValue([
+        { staff_id: 'staff-1', base_salary: 30000 }
+      ]);
+
+      render(
+        <PayrollRun
+          staffList={MOCK_STAFF}
+          activeMadrasaId={VALID_MADRASA_ID}
+          isMadrasaMismatch={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/حافظ عبد الرحمن/)).toBeInTheDocument();
+      });
+
+      const blockerBanner = screen.getByText(/استاد حافظ عبد الرحمن کا پے رول نامکمل ہے/);
+      expect(blockerBanner).toBeInTheDocument();
+      expect(blockerBanner.textContent).not.toContain('نامعلوم استاد');
+      expect(blockerBanner.textContent).not.toContain('نامعلوم');
+    });
+
+    it('blocks save, recalculate, and finalize when adjustment is invalid ("abc", negative, 3 decimals) without calling engine or saveRunItems', async () => {
+      const draftRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'draft' };
+      const storedItems = [
+        {
+          id: 'item-1',
+          staff_id: 'staff-1',
+          base_salary: 30000,
+          net_salary: 30000,
+          bonus: 0,
+          advance_deduction: 0,
+          other_deduction: 0,
+          notes: '',
+          payment_status: 'unpaid'
+        }
+      ];
+
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockResolvedValue(draftRun);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue(storedItems);
+      const saveSpy = vi.spyOn(payrollRunsApi, 'saveRunItems').mockResolvedValue([]);
+      const finalizeSpy = vi.spyOn(payrollRunsApi, 'finalizeRun');
+
+      render(
+        <PayrollRun
+          staffList={[MOCK_STAFF[0]]}
+          activeMadrasaId={VALID_MADRASA_ID}
+          isMadrasaMismatch={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/بونس برائے قاری محمد بلال/)).toBeInTheDocument();
+      });
+
+      const bonusInput = screen.getByLabelText(/بونس برائے قاری محمد بلال/);
+
+      // 1. Test "abc" on Save
+      fireEvent.change(bonusInput, { target: { value: 'abc' } });
+      fireEvent.click(screen.getByRole('button', { name: 'تبدیلیاں محفوظ کریں' }));
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(/رقم صرف مثبت اعداد یا دو اعشاریہ تک ہونی چاہیے۔/);
+      });
+      expect(saveSpy).not.toHaveBeenCalled();
+
+      // 2. Test negative on Recalculate
+      fireEvent.change(bonusInput, { target: { value: '-200' } });
+      fireEvent.click(screen.getByRole('button', { name: 'دوبارہ حساب کریں' }));
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(/رقم صرف مثبت اعداد یا دو اعشاریہ تک ہونی چاہیے۔/);
+      });
+      expect(saveSpy).not.toHaveBeenCalled();
+
+      // 3. Test 3 decimals on Finalize
+      fireEvent.change(bonusInput, { target: { value: '10.123' } });
+      fireEvent.click(screen.getByRole('button', { name: 'فائنل کریں' }));
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(/رقم صرف مثبت اعداد یا دو اعشاریہ تک ہونی چاہیے۔/);
+      });
+      expect(finalizeSpy).not.toHaveBeenCalled();
+      expect(screen.queryByText('ہاں، فائنل کریں')).not.toBeInTheDocument();
+    });
+
+    it('pressing finalize with typed unsaved adjustment displays "پہلے تبدیلیاں محفوظ کریں" and does not call finalizeRun', async () => {
+      const draftRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'draft' };
+      const completeAtt = getWorkingDates('2026-11', [5], []).map((date) => ({
+        staff_id: 'staff-1',
+        date,
+        status: 'present',
+        late_minutes: 0,
+        early_leave_minutes: 0
+      }));
+      const storedItems = [
+        {
+          id: 'item-1',
+          staff_id: 'staff-1',
+          base_salary: 30000,
+          net_salary: 30000,
+          payable_working_days: completeAtt.length,
+          present_days: completeAtt.length,
+          absent_days: 0,
+          paid_leave_days: 0,
+          unpaid_leave_days: 0,
+          absence_deduction: 0,
+          unpaid_leave_deduction: 0,
+          time_deduction: 0,
+          bonus: 0,
+          advance_deduction: 0,
+          other_deduction: 0,
+          notes: '',
+          payment_status: 'unpaid'
+        }
+      ];
+
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockResolvedValue(draftRun);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue(storedItems);
+      vi.spyOn(payrollRunsApi, 'fetchMonthAttendance').mockResolvedValue(completeAtt);
+      const finalizeSpy = vi.spyOn(payrollRunsApi, 'finalizeRun');
+
+      render(
+        <PayrollRun
+          staffList={[MOCK_STAFF[0]]}
+          activeMadrasaId={VALID_MADRASA_ID}
+          isMadrasaMismatch={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/بونس برائے قاری محمد بلال/)).toBeInTheDocument();
+      });
+
+      const bonusInput = screen.getByLabelText(/بونس برائے قاری محمد بلال/);
+      fireEvent.change(bonusInput, { target: { value: '800' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'فائنل کریں' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent('پہلے تبدیلیاں محفوظ کریں');
+      });
+
+      expect(finalizeSpy).not.toHaveBeenCalled();
+      expect(screen.queryByText(/ڈیٹا بدل چکا ہے/)).not.toBeInTheDocument();
+      expect(screen.queryByText('ہاں، فائنل کریں')).not.toBeInTheDocument();
+    });
+
+    it('marking one teacher paid does not clear a typed unsaved note in another row', async () => {
+      const finalizedRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'finalized' };
+      const storedItems = [
+        {
+          id: 'item-1',
+          staff_id: 'staff-1',
+          base_salary: 30000,
+          net_salary: 30000,
+          payment_status: 'unpaid',
+          notes: 'نوٹ استاد اول'
+        },
+        {
+          id: 'item-2',
+          staff_id: 'staff-2',
+          base_salary: 35000,
+          net_salary: 35000,
+          payment_status: 'unpaid',
+          notes: 'پہلا نوٹ استاد دوم'
+        }
+      ];
+
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockResolvedValue(finalizedRun);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue(storedItems);
+      vi.spyOn(payrollRunsApi, 'setItemPayment').mockResolvedValue({ id: 'item-1', payment_status: 'paid' });
+
+      render(
+        <PayrollRun
+          staffList={MOCK_STAFF}
+          activeMadrasaId={VALID_MADRASA_ID}
+          isMadrasaMismatch={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('فائنل شدہ')).toBeInTheDocument();
+      });
+
+      const staff2NoteInput = screen.getByDisplayValue('پہلا نوٹ استاد دوم');
+      expect(staff2NoteInput).toBeInTheDocument();
+
+      fireEvent.change(staff2NoteInput, { target: { value: 'غیر محفوظ شدہ تبدیل شدہ نوٹ دوم' } });
+      expect(staff2NoteInput.value).toBe('غیر محفوظ شدہ تبدیل شدہ نوٹ دوم');
+
+      const payButtons = screen.getAllByRole('button', { name: 'ادا شدہ' });
+      fireEvent.click(payButtons[0]);
+
+      await waitFor(() => {
+        expect(screen.getByRole('status')).toHaveTextContent('ادائیگی درج ہو گئی ہے۔');
+      });
+
+      expect(staff2NoteInput.value).toBe('غیر محفوظ شدہ تبدیل شدہ نوٹ دوم');
+    });
+  });
+
 });

@@ -469,13 +469,39 @@ export function getFinalizeBlockers({ engineResult, staffList = [] }) {
     return blockers;
   }
 
+  const staffMap = new Map();
+  if (Array.isArray(staffList)) {
+    for (const s of staffList) {
+      if (s && s.id !== undefined && s.id !== null) {
+        staffMap.set(String(s.id), s);
+      }
+    }
+  }
+
+  const resolveStaffName = (id, existingName, existingCode) => {
+    if (existingName && existingName !== 'نامعلوم استاد' && existingName !== 'نامعلوم') {
+      return existingName;
+    }
+    const staff = staffMap.get(String(id));
+    if (staff && staff.name && String(staff.name).trim() !== '') {
+      return staff.name;
+    }
+    if (existingCode) {
+      return existingCode;
+    }
+    if (staff && staff.staff_code && String(staff.staff_code).trim() !== '') {
+      return staff.staff_code;
+    }
+    return 'نامعلوم استاد';
+  };
+
   // Check incomplete attendance for any calculable item
   for (const item of engineResult.items) {
     if (!item.is_complete) {
       const missingDates = Array.isArray(item.missing_dates) ? item.missing_dates : [];
       const formattedDates = missingDates.map(dateLabelUrdu).filter(Boolean);
       const datesStr = formattedDates.length > 0 ? formattedDates.join('، ') : 'نامعلوم تاریخیں';
-      const staffName = item.staff_name || item.staff_code || 'نامعلوم استاد';
+      const staffName = resolveStaffName(item.staff_id, item.staff_name, item.staff_code);
 
       blockers.push({
         code: 'INCOMPLETE_ATTENDANCE',
@@ -495,7 +521,7 @@ export function getFinalizeBlockers({ engineResult, staffList = [] }) {
       const reasonsUrdu = nonNotStartedReasons
         .map((r) => PAYROLL_REASON_URDU[r] || r)
         .join('، ');
-      const staffName = nc.staff_name || nc.staff_code || 'نامعلوم استاد';
+      const staffName = resolveStaffName(nc.staff_id, nc.staff_name, nc.staff_code);
 
       blockers.push({
         code: nonNotStartedReasons[0].toUpperCase(),
@@ -612,3 +638,122 @@ export function toUrduRunError(err) {
   return fallback;
 }
 
+/**
+ * Validates all typed adjustments before calling the engine or saving.
+ *
+ * @param {object} adjustments - Map of staff_id -> { bonus, advance_deduction, other_deduction }
+ * @param {Map|Array|object} [staffMap] - Staff lookup map, list, or dictionary
+ * @returns {{ valid: boolean, messageUrdu: string }}
+ */
+export function validateAllAdjustments(adjustments = {}, staffMap = null) {
+  if (!adjustments || typeof adjustments !== 'object') {
+    return { valid: true, messageUrdu: '' };
+  }
+
+  const getStaffLabel = (staffId) => {
+    let staff = null;
+    if (staffMap instanceof Map) {
+      staff = staffMap.get(String(staffId)) || staffMap.get(staffId);
+    } else if (Array.isArray(staffMap)) {
+      staff = staffMap.find((s) => s && (String(s.id) === String(staffId) || s.id === staffId));
+    } else if (staffMap && typeof staffMap === 'object') {
+      staff = staffMap[staffId] || staffMap[String(staffId)];
+    }
+    return staff ? (staff.name || staff.staff_code || staffId) : staffId;
+  };
+
+  const fields = [
+    { key: 'bonus', label: 'بونس' },
+    { key: 'advance_deduction', label: 'پیشگی رقم' },
+    { key: 'other_deduction', label: 'دیگر کٹوتی' }
+  ];
+
+  for (const [staffId, adj] of Object.entries(adjustments)) {
+    if (!adj || typeof adj !== 'object') continue;
+
+    for (const field of fields) {
+      const raw = adj[field.key];
+      if (raw === undefined || raw === null || String(raw).trim() === '') {
+        continue;
+      }
+      const clean = String(raw).trim();
+      // Must be non-negative digits, optional decimal with at most 2 digits
+      if (!/^\d+(\.\d{1,2})?$/.test(clean)) {
+        const staffName = getStaffLabel(staffId);
+        return {
+          valid: false,
+          messageUrdu: `استاد ${staffName}: ${field.label}: رقم صرف مثبت اعداد یا دو اعشاریہ تک ہونی چاہیے۔`
+        };
+      }
+      const num = Number(clean);
+      if (Number.isNaN(num) || num < 0 || num > 9999999.99) {
+        const staffName = getStaffLabel(staffId);
+        return {
+          valid: false,
+          messageUrdu: `استاد ${staffName}: ${field.label}: رقم 0 سے 9,999,999.99 کے درمیان ہونی چاہیے۔`
+        };
+      }
+    }
+  }
+
+  return { valid: true, messageUrdu: '' };
+}
+
+/**
+ * Detects whether any typed adjustments or notes differ from the stored rows.
+ *
+ * @param {Array} storedRows - Array of stored payroll_items rows
+ * @param {object} adjustments - Map of staff_id -> { bonus, advance_deduction, other_deduction }
+ * @param {object} notesState - Map of staff_id -> note string
+ * @returns {boolean}
+ */
+export function hasUnsavedChanges(storedRows = [], adjustments = {}, notesState = {}) {
+  const safeRows = Array.isArray(storedRows) ? storedRows : [];
+  const storedStaffIds = new Set();
+
+  for (const row of safeRows) {
+    if (!row || !row.staff_id) continue;
+    const sId = String(row.staff_id);
+    storedStaffIds.add(sId);
+
+    const adj = adjustments[sId] || adjustments[row.staff_id] || {};
+    const storedBonus = row.bonus !== null && row.bonus !== undefined ? Number(row.bonus) : 0;
+    const storedAdv = row.advance_deduction !== null && row.advance_deduction !== undefined ? Number(row.advance_deduction) : 0;
+    const storedOth = row.other_deduction !== null && row.other_deduction !== undefined ? Number(row.other_deduction) : 0;
+
+    const typedBonus = adj.bonus !== undefined && adj.bonus !== null && String(adj.bonus).trim() !== '' ? Number(adj.bonus) : 0;
+    const typedAdv = adj.advance_deduction !== undefined && adj.advance_deduction !== null && String(adj.advance_deduction).trim() !== '' ? Number(adj.advance_deduction) : 0;
+    const typedOth = adj.other_deduction !== undefined && adj.other_deduction !== null && String(adj.other_deduction).trim() !== '' ? Number(adj.other_deduction) : 0;
+
+    if (Math.abs(typedBonus - storedBonus) > 0.001) return true;
+    if (Math.abs(typedAdv - storedAdv) > 0.001) return true;
+    if (Math.abs(typedOth - storedOth) > 0.001) return true;
+
+    const storedNote = row.notes || '';
+    const typedNote = notesState[sId] !== undefined ? notesState[sId] : (notesState[row.staff_id] !== undefined ? notesState[row.staff_id] : '');
+    if (String(typedNote) !== String(storedNote)) return true;
+  }
+
+  // Check adjustments for any staff not in stored rows
+  if (adjustments && typeof adjustments === 'object') {
+    for (const [staffId, adj] of Object.entries(adjustments)) {
+      if (!storedStaffIds.has(String(staffId)) && adj && typeof adj === 'object') {
+        const b = adj.bonus !== undefined && adj.bonus !== null && String(adj.bonus).trim() !== '' ? Number(adj.bonus) : 0;
+        const a = adj.advance_deduction !== undefined && adj.advance_deduction !== null && String(adj.advance_deduction).trim() !== '' ? Number(adj.advance_deduction) : 0;
+        const o = adj.other_deduction !== undefined && adj.other_deduction !== null && String(adj.other_deduction).trim() !== '' ? Number(adj.other_deduction) : 0;
+        if (b !== 0 || a !== 0 || o !== 0) return true;
+      }
+    }
+  }
+
+  // Check notes for any staff not in stored rows
+  if (notesState && typeof notesState === 'object') {
+    for (const [staffId, note] of Object.entries(notesState)) {
+      if (!storedStaffIds.has(String(staffId)) && note && String(note).trim() !== '') {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
