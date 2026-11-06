@@ -318,14 +318,222 @@ body {
   border-radius: 50% !important;
 }
 
-@media (max-width: 768px) {
-  .header-controls-container {
-    width: auto !important;
+/* Mobile Hamburger Button (Hidden on Desktop) */
+.mobile-hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card, #ffffff);
+  color: var(--text, #1e293b);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.mobile-hamburger-btn:hover,
+.mobile-hamburger-btn.active {
+  background: var(--bg, #f1f5f9);
+  border-color: var(--accent, #0d3b66);
+  color: var(--accent, #0d3b66);
+}
+
+[data-theme="dark"] .mobile-hamburger-btn {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .mobile-hamburger-btn:hover,
+[data-theme="dark"] .mobile-hamburger-btn.active {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #ffffff !important;
+}
+
+/* Ensure desktop navigation always displays properly */
+@media (min-width: 769px) {
+  .mobile-hamburger-btn {
+    display: none !important;
   }
+
+  nav.tabs.mobile-nav-closed,
+  nav.tabs.mobile-nav-open {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+  }
+}
+
+/* Mobile & Tablet Header Controls Line Layout (Single Line: Right Hamburger, Center Toggle, Left Profile) */
+@media (max-width: 768px) {
+  .mobile-hamburger-btn {
+    display: inline-flex !important;
+  }
+
+  .header-controls-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
   .header-actions-row {
-    width: auto !important;
-    justify-content: flex-end !important;
-    gap: 10px !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr auto !important;
+    align-items: center !important;
+    width: 100% !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Right in RTL: Hamburger Menu Button */
+  .header-actions-row .mobile-hamburger-btn {
+    grid-column: 1 !important;
+    justify-self: start !important;
+  }
+
+  /* Center: Theme Toggle Button */
+  .header-actions-row .single-theme-toggle {
+    grid-column: 2 !important;
+    justify-self: center !important;
+    margin: 0 auto !important;
+  }
+
+  /* Left in RTL: Admin Profile Picture & Settings Badge */
+  .header-actions-row .user-profile-badge {
+    grid-column: 3 !important;
+    justify-self: end !important;
+  }
+
+  /* Hide default tabs on mobile when closed */
+  nav.tabs.mobile-nav-closed {
+    display: none !important;
+  }
+
+  /* Sleek vertical card menu on mobile when open */
+  nav.tabs.mobile-nav-open {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    background: var(--card, #ffffff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    border-radius: 14px !important;
+    padding: 8px !important;
+    gap: 6px !important;
+    margin-top: 4px !important;
+    margin-bottom: 18px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.06) !important;
+    box-sizing: border-box !important;
+    animation: mobileNavFadeDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  nav.tabs.mobile-nav-open .tab-button {
+    width: 100% !important;
+    text-align: right !important;
+    padding: 11px 16px !important;
+    border-radius: 10px !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    border: 1px solid transparent !important;
+    box-sizing: border-box !important;
+    transition: all 0.15s ease !important;
+  }
+
+  nav.tabs.mobile-nav-open .tab-button:hover {
+    background: var(--bg, #f1f5f9) !important;
+    color: var(--text, #0f172a) !important;
+  }
+
+  nav.tabs.mobile-nav-open .tab-button.active {
+    background: var(--accent, #0d3b66) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(13, 59, 102, 0.25) !important;
+  }
+
+  [data-theme="dark"] nav.tabs.mobile-nav-open {
+    background: #141417 !important;
+    border-color: #27272a !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7) !important;
+  }
+
+  [data-theme="dark"] nav.tabs.mobile-nav-open .tab-button:not(.active) {
+    color: #e4e4e7 !important;
+  }
+
+  [data-theme="dark"] nav.tabs.mobile-nav-open .tab-button:not(.active):hover {
+    background: #27272a !important;
+    color: #ffffff !important;
+  }
+
+  [data-theme="dark"] nav.tabs.mobile-nav-open .tab-button.active {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}
+
+@keyframes mobileNavFadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .user-profile-badge {
+    padding: 3px 6px 3px 4px !important;
+    gap: 6px !important;
+    max-width: 175px !important;
+  }
+  .user-name {
+    font-size: 0.76rem !important;
+    max-width: 80px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  .user-role-badge {
+    font-size: 0.65rem !important;
+    max-width: 80px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  .user-avatar-circle {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.78rem !important;
+  }
+  .settings-icon-btn {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .mobile-hamburger-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+  .single-theme-toggle {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
   }
 }
 

@@ -24,7 +24,13 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ProfileModal from './components/ProfileModal';
 
-export function MainHeader({ theme, toggleTheme }) {
+export function MainHeader({
+  theme,
+  toggleTheme,
+  isMobileNavOpen = false,
+  toggleMobileNav = () => {},
+  hamburgerBtnRef = null
+}) {
   const { activeMadrasa, activeLogo, uploadLogo, removeLogo } = useMadrasa();
   const { user, profile, role, signOut } = useAuth();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -114,7 +120,34 @@ export function MainHeader({ theme, toggleTheme }) {
         <div className="header-controls-container" style={{ position: 'relative', zIndex: 100, overflow: 'visible' }}>
           <div className="header-actions-row" style={{ position: 'relative', zIndex: 100, overflow: 'visible' }}>
             
-            {/* Dark/Light Mode Toggle Button */}
+            {/* 1. Mobile Hamburger Menu Toggle Button (Right side on mobile in RTL) */}
+            <button
+              ref={hamburgerBtnRef}
+              type="button"
+              className={`mobile-hamburger-btn ${isMobileNavOpen ? 'active' : ''}`}
+              id="mobileHamburgerBtn"
+              onClick={toggleMobileNav}
+              aria-label={isMobileNavOpen ? "مینو بند کریں" : "مینو کھولیں"}
+              aria-expanded={isMobileNavOpen}
+              title={isMobileNavOpen ? "مینو بند کریں" : "مینو کھولیں"}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                {isMobileNavOpen ? (
+                  <>
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </>
+                ) : (
+                  <>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                  </>
+                )}
+              </svg>
+            </button>
+
+            {/* 2. Dark/Light Mode Toggle Button (Center on mobile in RTL) */}
             <button className="single-theme-toggle" id="singleThemeToggleBtn" onClick={toggleTheme} title={theme === 'dark' ? 'لائٹ موڈ' : 'ڈارک موڈ'} aria-label="Toggle Theme">
               <svg className="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="5" fill="currentColor" fillOpacity="0.15"></circle>
@@ -374,6 +407,42 @@ export function MainLayout({ theme, toggleTheme }) {
   const isAuthPage = ['/login', '/forgot-password', '/reset-password'].includes(location.pathname);
   const { pendingSyncCount, madrasaError } = useMadrasa();
   const { role } = useAuth();
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const mobileNavRef = useRef(null);
+  const hamburgerBtnRef = useRef(null);
+
+  // Close mobile nav on route change
+  useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [location.pathname]);
+
+  // Close mobile nav on click outside or Escape key
+  useEffect(() => {
+    if (!isMobileNavOpen) return;
+    const handleClickOutside = (e) => {
+      if (
+        mobileNavRef.current &&
+        !mobileNavRef.current.contains(e.target) &&
+        hamburgerBtnRef.current &&
+        !hamburgerBtnRef.current.contains(e.target)
+      ) {
+        setIsMobileNavOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsMobileNavOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMobileNavOpen]);
 
   if (isAuthPage) {
     return (
@@ -391,24 +460,35 @@ export function MainLayout({ theme, toggleTheme }) {
   return (
     <div className="wrap" dir="rtl">
       <div className="card" style={{ overflow: 'visible' }}>
-        <MainHeader theme={theme} toggleTheme={toggleTheme} />
+        <MainHeader
+          theme={theme}
+          toggleTheme={toggleTheme}
+          isMobileNavOpen={isMobileNavOpen}
+          toggleMobileNav={() => setIsMobileNavOpen(prev => !prev)}
+          hamburgerBtnRef={hamburgerBtnRef}
+        />
 
-        <nav className="tabs" style={{ position: 'relative', zIndex: 1 }}>
+        <nav
+          ref={mobileNavRef}
+          className={`tabs ${isMobileNavOpen ? 'mobile-nav-open' : 'mobile-nav-closed'}`}
+          style={{ position: 'relative', zIndex: 90 }}
+          aria-label="Navigation Tabs"
+        >
           {role === 'super_admin' && (
-            <NavLink to="/super-admin" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>سپر ایڈمن</NavLink>
+            <NavLink to="/super-admin" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>سپر ایڈمن</NavLink>
           )}
-          <NavLink to="/" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>ڈیش بورڈ</NavLink>
-          <NavLink to="/admissions" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>داخلہ جات</NavLink>
-          <NavLink to="/fees" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>فیس ریکارڈ</NavLink>
-          <NavLink to="/entry" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>جائزہ جات</NavLink>
-          <NavLink to="/attendance" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>حاضری</NavLink>
-          <NavLink to="/exams" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>امتحانات</NavLink>
-          <NavLink to="/records" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تعلیمی ریکارڈز</NavLink>
-          <NavLink to="/staff" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اسٹاف</NavLink>
+          <NavLink to="/" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>ڈیش بورڈ</NavLink>
+          <NavLink to="/admissions" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>داخلہ جات</NavLink>
+          <NavLink to="/fees" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>فیس ریکارڈ</NavLink>
+          <NavLink to="/entry" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>جائزہ جات</NavLink>
+          <NavLink to="/attendance" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>حاضری</NavLink>
+          <NavLink to="/exams" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>امتحانات</NavLink>
+          <NavLink to="/records" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تعلیمی ریکارڈز</NavLink>
+          <NavLink to="/staff" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اسٹاف</NavLink>
           {(role === 'admin' || role === 'super_admin') && (
-            <NavLink to="/payroll" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تنخواہ</NavLink>
+            <NavLink to="/payroll" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تنخواہ</NavLink>
           )}
-          <NavLink to="/ai-listen" className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
+          <NavLink to="/ai-listen" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
         </nav>
 
         {madrasaError && (

@@ -742,9 +742,6 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   }
 
   .header-actions-row {
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    justify-content: space-between !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }

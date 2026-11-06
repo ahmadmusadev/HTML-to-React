@@ -159,3 +159,41 @@ describe('MainHeader & Settings Dropdown Menu', () => {
     expect(mockSignOut).toHaveBeenCalled();
   });
 });
+
+describe('Mobile Hamburger Navigation', () => {
+  it('renders mobile hamburger button in MainHeader with accessible labels and triggers toggleMobileNav on click', () => {
+    const mockToggleMobileNav = vi.fn();
+    render(
+      <MainHeader
+        theme="light"
+        toggleTheme={vi.fn()}
+        isMobileNavOpen={false}
+        toggleMobileNav={mockToggleMobileNav}
+      />
+    );
+
+    const hamburgerBtn = document.getElementById('mobileHamburgerBtn');
+    expect(hamburgerBtn).toBeInTheDocument();
+    expect(hamburgerBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(hamburgerBtn).toHaveAttribute('aria-label', 'مینو کھولیں');
+
+    fireEvent.click(hamburgerBtn);
+    expect(mockToggleMobileNav).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders close state when isMobileNavOpen is true', () => {
+    render(
+      <MainHeader
+        theme="light"
+        toggleTheme={vi.fn()}
+        isMobileNavOpen={true}
+        toggleMobileNav={vi.fn()}
+      />
+    );
+
+    const hamburgerBtn = document.getElementById('mobileHamburgerBtn');
+    expect(hamburgerBtn).toHaveClass('active');
+    expect(hamburgerBtn).toHaveAttribute('aria-expanded', 'true');
+    expect(hamburgerBtn).toHaveAttribute('aria-label', 'مینو بند کریں');
+  });
+});
