@@ -252,6 +252,7 @@ export default function Admissions() {
   }, [contextClassesList]);
   const [loading, setLoading] = useState(true);
   const [wizardStep, setWizardStep] = useState(1);
+  const [maxUnlockedStep, setMaxUnlockedStep] = useState(1);
   const [editingStudentId, setEditingStudentId] = useState(null);
 
   // Class Management State
@@ -481,6 +482,7 @@ export default function Admissions() {
     setActiveTab(tab);
     if (tab === 'new') {
       setWizardStep(1);
+      setMaxUnlockedStep(1);
       generateNewAdmissionId(records);
       const today = new Date().toISOString().split('T')[0];
       setFormData(prev => ({ ...prev, admDate: prev.admDate || today }));
@@ -707,14 +709,44 @@ export default function Admissions() {
     return cName.includes(q) || tName.includes(q);
   });
 
-  const wizardNext = () => {
-    if (wizardStep === 1 && !formData.admName.trim()) { alert('براہ کرم طالب علم کا نام درج کریں۔'); return; }
-    setWizardStep(prev => prev + 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollIntoStep = (stepNumber) => {
+    setTimeout(() => {
+      const el = document.getElementById(`step-panel-${stepNumber}`);
+      if (el) {
+        if (typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (typeof window.scrollTo === 'function') {
+          window.scrollTo({ top: el.offsetTop - 85, behavior: 'smooth' });
+        }
+      }
+    }, 60);
   };
+
+  const advanceToStep = (targetStep) => {
+    if (targetStep > 1 && !formData.admName.trim()) {
+      alert('براہ کرم طالب علم کا نام درج کریں۔');
+      return;
+    }
+    setMaxUnlockedStep(prev => Math.max(prev, targetStep));
+    setWizardStep(targetStep);
+    scrollIntoStep(targetStep);
+  };
+
+  const wizardNext = () => {
+    advanceToStep(Math.min(4, wizardStep + 1));
+  };
+
   const wizardBack = () => {
-    setWizardStep(prev => prev - 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const prevStep = Math.max(1, wizardStep - 1);
+    setWizardStep(prevStep);
+    scrollIntoStep(prevStep);
+  };
+
+  const goToStep = (stepNumber) => {
+    if (stepNumber <= maxUnlockedStep) {
+      setWizardStep(stepNumber);
+      scrollIntoStep(stepNumber);
+    }
   };
 
   const saveAdmission = async () => {
@@ -728,12 +760,41 @@ export default function Admissions() {
       setRecords(prev => [...prev, newUiRecord]);
       alert("داخلہ کامیابی سے محفوظ ہو چکا ہے۔");
       setFormData(initialFormData);
+      setWizardStep(1);
+      setMaxUnlockedStep(1);
       handleTabChange('all');
     } catch (err) {
       console.error('Save admission error:', err);
       alert(`داخلہ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
     }
   };
+
+  useEffect(() => {
+    if (activeTab !== 'new') return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const handleScroll = () => {
+      const panels = [1, 2, 3, 4]
+        .filter(s => s <= maxUnlockedStep)
+        .map(s => ({ step: s, el: document.getElementById(`step-panel-${s}`) }))
+        .filter(item => item.el !== null);
+
+      if (!panels.length) return;
+
+      let current = 1;
+      for (const p of panels) {
+        const rect = p.el.getBoundingClientRect();
+        if (rect.top <= 140 && rect.bottom > 140) {
+          current = p.step;
+          break;
+        }
+      }
+      setWizardStep(prev => (prev !== current ? current : prev));
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [activeTab, maxUnlockedStep]);
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
@@ -882,15 +943,22 @@ export default function Admissions() {
             <div className="wizard-steps">
               {[1, 2, 3, 4].map(step => (
                 <React.Fragment key={step}>
-                  <div className={`wizard-step ${wizardStep >= step ? 'active' : ''} ${wizardStep > step ? 'done' : ''}`}><div className="wizard-step-circle">{step}</div></div>
-                  {step < 4 && <div className={`wizard-connector ${wizardStep > step ? 'done' : ''}`}></div>}
+                  <div
+                    className={`wizard-step ${wizardStep === step ? 'active' : (maxUnlockedStep >= step ? 'done' : '')}`}
+                    onClick={() => goToStep(step)}
+                    style={{ cursor: step <= maxUnlockedStep ? 'pointer' : 'default' }}
+                    title={`مرحلہ ${step}`}
+                  >
+                    <div className="wizard-step-circle">{step}</div>
+                  </div>
+                  {step < 4 && <div className={`wizard-connector ${maxUnlockedStep > step ? 'done' : ''}`}></div>}
                 </React.Fragment>
               ))}
             </div>
           </div>
 
-          {wizardStep === 1 && (
-            <div className="wizard-panel active">
+          {maxUnlockedStep >= 1 && (
+            <div id="step-panel-1" className="wizard-panel wizard-step-panel active">
               <div className="form-section-card slide-down">
                 <div className="form-section-header">
                   <div className="form-section-icon icon-blue"></div>
@@ -1020,12 +1088,12 @@ export default function Admissions() {
                   <div><label htmlFor="admAddress">موجودہ رہائشی پتہ</label><input type="text" id="admAddress" value={formData.admAddress} onChange={handleInputChange} /></div>
                 </div>
               </div>
-              <div className="wizard-nav"><div></div><button className="wizard-btn-next" onClick={wizardNext}>اگلا: والد کی معلومات ←</button></div>
+              <div className="wizard-nav"><div></div><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: والد کی معلومات ↓</button></div>
             </div>
           )}
 
-          {wizardStep === 2 && (
-            <div className="wizard-panel active">
+          {maxUnlockedStep >= 2 && (
+            <div id="step-panel-2" className="wizard-panel wizard-step-panel active">
               <div className="form-section-card slide-down">
                 <div className="form-section-header">
                   <div className="form-section-icon icon-green"></div>
@@ -1057,12 +1125,12 @@ export default function Admissions() {
                   </div>
                 </div>
               </div>
-              <div className="wizard-nav"><button className="wizard-btn-back" onClick={wizardBack}>→ واپس: طالب علم</button><button className="wizard-btn-next" onClick={wizardNext}>اگلا: والدہ کی معلومات ←</button></div>
+              <div className="wizard-nav"><button type="button" className="wizard-btn-back wizard-btn-up" onClick={wizardBack}>↑ واپس: طالب علم</button><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: والدہ کی معلومات ↓</button></div>
             </div>
           )}
 
-          {wizardStep === 3 && (
-            <div className="wizard-panel active">
+          {maxUnlockedStep >= 3 && (
+            <div id="step-panel-3" className="wizard-panel wizard-step-panel active">
               <div className="form-section-card slide-down">
                 <div className="form-section-header">
                   <div className="form-section-icon icon-pink"></div>
@@ -1106,11 +1174,11 @@ export default function Admissions() {
                   </div>
                 </div>
               )}
-              <div className="wizard-nav"><button className="wizard-btn-back" onClick={wizardBack}>→ واپس: والد</button><button className="wizard-btn-next" onClick={wizardNext}>اگلا: جائزہ و تکمیل ←</button></div>
+              <div className="wizard-nav"><button type="button" className="wizard-btn-back wizard-btn-up" onClick={wizardBack}>↑ واپس: والد</button><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: جائزہ و تکمیل ↓</button></div>
             </div>
           )}
 
-          {wizardStep === 4 && (() => {
+          {maxUnlockedStep >= 4 && (() => {
             const classInfo = getClassDetails(formData.admClass);
             const dobDisplay = (formData.admDobDay && formData.admDobMonth && formData.admDobYear)
               ? `${formData.admDobDay}/${formData.admDobMonth}/${formData.admDobYear}`
@@ -1119,7 +1187,7 @@ export default function Admissions() {
             const isBoy = formData.admGender === 'لڑکا';
 
             return (
-              <div className="wizard-panel active">
+              <div id="step-panel-4" className="wizard-panel wizard-step-panel active">
                 <div className="form-section-card slide-down adm-review-main-card">
                   <div className="form-section-header" style={{ marginBottom: '18px' }}>
                     <div className="form-section-icon icon-green"></div>
@@ -1195,7 +1263,7 @@ export default function Admissions() {
                       <button
                         type="button"
                         className="adm-review-edit-badge-btn"
-                        onClick={() => setWizardStep(1)}
+                        onClick={() => goToStep(1)}
                         title="کلاس تبدیل کریں"
                       >
                         کلاس تبدیل کریں
@@ -1287,7 +1355,7 @@ export default function Admissions() {
                           <button
                             type="button"
                             className="adm-card-edit-btn"
-                            onClick={() => setWizardStep(2)}
+                            onClick={() => goToStep(2)}
                             title="والد کی معلومات میں ترمیم کریں"
                           >
                             ترمیم کریں
@@ -1346,7 +1414,7 @@ export default function Admissions() {
                           <button
                             type="button"
                             className="adm-card-edit-btn"
-                            onClick={() => setWizardStep(3)}
+                            onClick={() => goToStep(3)}
                             title="والدہ کی معلومات میں ترمیم کریں"
                           >
                             ترمیم کریں
@@ -1396,7 +1464,7 @@ export default function Admissions() {
                             <button
                               type="button"
                               className="adm-card-edit-btn"
-                              onClick={() => setWizardStep(3)}
+                              onClick={() => goToStep(3)}
                               title="سرپرست کی معلومات میں ترمیم کریں"
                             >
                               ترمیم کریں
@@ -1447,8 +1515,8 @@ export default function Admissions() {
 
                 {/* Wizard Bottom Navigation Bar */}
                 <div className="wizard-nav adm-review-nav">
-                  <button type="button" className="wizard-btn-back" onClick={wizardBack}>
-                    → واپس: والدہ
+                  <button type="button" className="wizard-btn-back wizard-btn-up" onClick={wizardBack}>
+                    ↑ واپس: والدہ
                   </button>
                   <button type="button" className="save-admission-btn" onClick={saveAdmission}>
                     داخلہ محفوظ کریں

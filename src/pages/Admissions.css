@@ -1151,8 +1151,19 @@ textarea:focus {
 }
 
 @media (max-width: 600px) {
+  .wizard-progress-wrap {
+    padding: 10px 8px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+  }
+
+  .wizard-step-panel {
+    scroll-margin-top: 75px;
+    margin-bottom: 18px;
+  }
+
   .wizard-connector {
-    width: 30px;
+    width: 28px;
   }
 
   .wizard-step-label {
@@ -1161,20 +1172,32 @@ textarea:focus {
   }
 
   .wizard-step-circle {
-    width: 36px;
-    height: 36px;
-    font-size: 0.95rem;
+    width: 34px;
+    height: 34px;
+    font-size: 0.9rem;
   }
 }
 
 
 /* ========== WIZARD CSS ========== */
 .wizard-progress-wrap {
-  margin-bottom: 28px;
-  padding: 18px 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(8px);
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.wizard-step-panel {
+  scroll-margin-top: 92px;
+  margin-bottom: 24px;
 }
 
 .wizard-steps {
@@ -1779,8 +1802,9 @@ textarea:focus {
 }
 
 [data-theme="dark"] .wizard-progress-wrap {
-  background: transparent;
-  border-color: var(--border);
+  background: #141417 !important;
+  border-color: #27272a !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
 }
 
 /* ==========================================================================
