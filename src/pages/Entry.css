@@ -817,13 +817,14 @@
 
     /* نیچے نیوی گیشن بٹن */
     .wizard-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
       margin-top: 24px;
       padding-top: 18px;
       border-top: 1px solid var(--border);
-      gap: 12px;
+      gap: 20px !important;
+      flex-wrap: wrap;
     }
     .wizard-btn-prev {
       background: #f1f5f9;
@@ -933,13 +934,14 @@
 
     /* نیچے نیوی بار */
     .wizard-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
       margin-top: 22px;
       padding-top: 18px;
-      border-top: 1px solid #f1f5f9;
-      gap: 12px;
+      border-top: 1px solid var(--border);
+      gap: 20px !important;
+      flex-wrap: wrap;
     }
     .wizard-btn-next {
       background: linear-gradient(135deg, var(--accent), var(--accent-light)) !important;

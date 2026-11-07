@@ -749,6 +749,18 @@ export default function Admissions() {
     }
   };
 
+  const handleGuardianToggle = (val) => {
+    setFormData(prev => ({ ...prev, isFatherGuardian: val }));
+    if (val === 'no') {
+      setTimeout(() => {
+        const el = document.getElementById('guardianSectionCard');
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 50);
+    }
+  };
+
   const saveAdmission = async () => {
     if(!formData.admName.trim() || !formData.admRegNo) { alert("براہ کرم طالب علم کا نام درج کریں۔"); return; }
     
@@ -1088,7 +1100,7 @@ export default function Admissions() {
                   <div><label htmlFor="admAddress">موجودہ رہائشی پتہ</label><input type="text" id="admAddress" value={formData.admAddress} onChange={handleInputChange} /></div>
                 </div>
               </div>
-              <div className="wizard-nav"><div></div><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: والد کی معلومات ↓</button></div>
+              <div className="wizard-nav wizard-nav-centered"><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: والد کی معلومات ↓</button></div>
             </div>
           )}
 
@@ -1115,17 +1127,74 @@ export default function Admissions() {
                   <div><label htmlFor="fatherEmail">ای میل</label><input type="text" id="fatherEmail" value={formData.fatherEmail} onChange={handleInputChange} /></div>
                   <div><label htmlFor="fatherIncome">ماہانہ آمدنی</label><input type="text" id="fatherIncome" value={formData.fatherIncome} onChange={handleInputChange} /></div>
                 </div>
-                <div style={{ marginTop: '16px' }}>
-                  <label style={{ color: 'var(--accent)', fontWeight: '700', display: 'block', marginBottom: '8px' }}>کیا والد ہی سرپرست ہیں؟</label>
+                <div className="guardian-toggle-row">
+                  <span className="guardian-toggle-label">کیا والد ہی سرپرست ہیں؟</span>
                   <div className="radio-toggle-group">
-                    <input type="radio" name="isFatherGuardian" id="guardianYes" value="yes" checked={formData.isFatherGuardian === 'yes'} onChange={handleInputChange} />
-                    <label htmlFor="guardianYes">ہاں</label>
-                    <input type="radio" name="isFatherGuardian" id="guardianNo" value="no" checked={formData.isFatherGuardian === 'no'} onChange={handleInputChange} />
-                    <label htmlFor="guardianNo">نہیں</label>
+                    <input
+                      type="radio"
+                      name="isFatherGuardian"
+                      id="guardianYes"
+                      value="yes"
+                      checked={formData.isFatherGuardian === 'yes'}
+                      onChange={() => handleGuardianToggle('yes')}
+                    />
+                    <label
+                      htmlFor="guardianYes"
+                      className={formData.isFatherGuardian === 'yes' ? 'selected' : ''}
+                      onClick={() => handleGuardianToggle('yes')}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      ہاں
+                    </label>
+                    <input
+                      type="radio"
+                      name="isFatherGuardian"
+                      id="guardianNo"
+                      value="no"
+                      checked={formData.isFatherGuardian === 'no'}
+                      onChange={() => handleGuardianToggle('no')}
+                    />
+                    <label
+                      htmlFor="guardianNo"
+                      className={formData.isFatherGuardian === 'no' ? 'selected' : ''}
+                      onClick={() => handleGuardianToggle('no')}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      نہیں
+                    </label>
                   </div>
                 </div>
               </div>
-              <div className="wizard-nav"><button type="button" className="wizard-btn-back wizard-btn-up" onClick={wizardBack}>↑ واپس: طالب علم</button><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: والدہ کی معلومات ↓</button></div>
+
+              {formData.isFatherGuardian === 'no' && (
+                <div id="guardianSectionCard" className="form-section-card slide-down" style={{ marginTop: '16px' }}>
+                  <div className="form-section-header">
+                    <div className="form-section-icon icon-purple"></div>
+                    <div>
+                      <div className="form-section-title">سرپرست کی معلومات</div>
+                      <div className="form-section-subtitle">والد کی عدم موجودگی میں</div>
+                    </div>
+                  </div>
+                  <div className="grid-row">
+                    <div><label htmlFor="guardianName">نام</label><input type="text" id="guardianName" value={formData.guardianName} onChange={handleInputChange} /></div>
+                    <div><label htmlFor="guardianRel">طالب علم سے رشتہ</label><input type="text" id="guardianRel" value={formData.guardianRel} onChange={handleInputChange} /></div>
+                  </div>
+                  <div className="grid-row">
+                    <div><label htmlFor="guardianCnic">شناختی کارڈ نمبر</label><input type="text" id="guardianCnic" value={formData.guardianCnic} onChange={handleInputChange} /></div>
+                    <div><label htmlFor="guardianEdu">تعلیمی قابلیت</label><input type="text" id="guardianEdu" value={formData.guardianEdu} onChange={handleInputChange} /></div>
+                  </div>
+                  <div className="grid-row">
+                    <div><label htmlFor="guardianOcc">پیشہ</label><input type="text" id="guardianOcc" value={formData.guardianOcc} onChange={handleInputChange} /></div>
+                    <div><label htmlFor="guardianIncome">ماہانہ آمدنی</label><input type="text" id="guardianIncome" value={formData.guardianIncome} onChange={handleInputChange} /></div>
+                  </div>
+                  <div className="grid-row">
+                    <div><label htmlFor="guardianMobile">موبائل نمبر</label><input type="text" id="guardianMobile" value={formData.guardianMobile} onChange={handleInputChange} /></div>
+                    <div><label htmlFor="guardianWhatsapp">واٹس ایپ نمبر</label><input type="text" id="guardianWhatsapp" value={formData.guardianWhatsapp} onChange={handleInputChange} /></div>
+                  </div>
+                </div>
+              )}
+
+              <div className="wizard-nav wizard-nav-centered"><button type="button" className="wizard-btn-back wizard-btn-up" onClick={wizardBack}>↑ واپس: طالب علم</button><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: والدہ کی معلومات ↓</button></div>
             </div>
           )}
 
@@ -1150,31 +1219,7 @@ export default function Admissions() {
                 </div>
                 <div className="grid-row"><div><label htmlFor="motherIncome">ماہانہ آمدنی</label><input type="text" id="motherIncome" value={formData.motherIncome} onChange={handleInputChange} /></div></div>
               </div>
-              {formData.isFatherGuardian === 'no' && (
-                <div className="form-section-card">
-                  <div className="form-section-header">
-                    <div className="form-section-icon icon-purple"></div>
-                    <div><div className="form-section-title">سرپرست کی معلومات</div><div className="form-section-subtitle">والد کی عدم موجودگی میں</div></div>
-                  </div>
-                  <div className="grid-row">
-                    <div><label>نام</label><input type="text" id="guardianName" value={formData.guardianName} onChange={handleInputChange} /></div>
-                    <div><label>طالب علم سے رشتہ</label><input type="text" id="guardianRel" value={formData.guardianRel} onChange={handleInputChange} /></div>
-                  </div>
-                  <div className="grid-row">
-                    <div><label>شناختی کارڈ نمبر</label><input type="text" id="guardianCnic" value={formData.guardianCnic} onChange={handleInputChange} /></div>
-                    <div><label>تعلیمی قابلیت</label><input type="text" id="guardianEdu" value={formData.guardianEdu} onChange={handleInputChange} /></div>
-                  </div>
-                  <div className="grid-row">
-                    <div><label>پیشہ</label><input type="text" id="guardianOcc" value={formData.guardianOcc} onChange={handleInputChange} /></div>
-                    <div><label>ماہانہ آمدنی</label><input type="text" id="guardianIncome" value={formData.guardianIncome} onChange={handleInputChange} /></div>
-                  </div>
-                  <div className="grid-row">
-                    <div><label>موبائل نمبر</label><input type="text" id="guardianMobile" value={formData.guardianMobile} onChange={handleInputChange} /></div>
-                    <div><label>واٹس ایپ نمبر</label><input type="text" id="guardianWhatsapp" value={formData.guardianWhatsapp} onChange={handleInputChange} /></div>
-                  </div>
-                </div>
-              )}
-              <div className="wizard-nav"><button type="button" className="wizard-btn-back wizard-btn-up" onClick={wizardBack}>↑ واپس: والد</button><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: جائزہ و تکمیل ↓</button></div>
+              <div className="wizard-nav wizard-nav-centered"><button type="button" className="wizard-btn-back wizard-btn-up" onClick={wizardBack}>↑ واپس: والد</button><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: جائزہ و تکمیل ↓</button></div>
             </div>
           )}
 
@@ -1464,7 +1509,7 @@ export default function Admissions() {
                             <button
                               type="button"
                               className="adm-card-edit-btn"
-                              onClick={() => goToStep(3)}
+                              onClick={() => goToStep(2)}
                               title="سرپرست کی معلومات میں ترمیم کریں"
                             >
                               ترمیم کریں
@@ -1514,7 +1559,7 @@ export default function Admissions() {
                 </div>
 
                 {/* Wizard Bottom Navigation Bar */}
-                <div className="wizard-nav adm-review-nav">
+                <div className="wizard-nav adm-review-nav wizard-nav-centered">
                   <button type="button" className="wizard-btn-back wizard-btn-up" onClick={wizardBack}>
                     ↑ واپس: والدہ
                   </button>

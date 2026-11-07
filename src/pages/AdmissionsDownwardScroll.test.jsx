@@ -138,5 +138,46 @@ describe('Admissions Sticky Stepper & Downward Scrolling Stage Progression', () 
     expect(css).toContain('[data-theme="dark"] .wizard-progress-wrap');
     expect(css).toContain('#141417 !important');
   });
+
+  it('verifies Admissions.css centers wizard navigation buttons with proper gap', () => {
+    const cssPath = path.resolve(__dirname, 'Admissions.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+
+    expect(css).toContain('.wizard-nav');
+    expect(css).toContain('justify-content: center');
+    expect(css).toContain('gap: 20px');
+    expect(css).toContain('[data-theme="dark"] .wizard-nav');
+  });
+
+  it('renders father guardian question and toggle buttons inline centered with dark mode black text', async () => {
+    const { container } = render(<Admissions />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('حفظِ قرآن — سال اول')).not.toBeNull();
+    });
+
+    // Advance to Step 2
+    const nameInput = container.querySelector('#admName');
+    fireEvent.change(nameInput, { target: { id: 'admName', value: 'طلحہ' } });
+    fireEvent.click(screen.getByText(/اگلا: والد کی معلومات/i));
+
+    const toggleRow = container.querySelector('.guardian-toggle-row');
+    expect(toggleRow).not.toBeNull();
+
+    // Verify label and radio toggle group are siblings inside toggleRow
+    const label = toggleRow.querySelector('.guardian-toggle-label');
+    const toggleGroup = toggleRow.querySelector('.radio-toggle-group');
+    expect(label).not.toBeNull();
+    expect(toggleGroup).not.toBeNull();
+    expect(label.textContent).toBe('کیا والد ہی سرپرست ہیں؟');
+
+    // Check CSS rules for dark mode black text
+    const cssPath = path.resolve(__dirname, 'Admissions.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    expect(css).toContain('.guardian-toggle-row');
+    expect(css).toContain('justify-content: center');
+    expect(css).toContain('[data-theme="dark"] .radio-toggle-group input[type="radio"]:checked + label');
+    expect(css).toContain('color: #000000 !important');
+  });
 });
 
