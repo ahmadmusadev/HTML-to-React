@@ -46,7 +46,7 @@ describe('BulkStudentImportExport Component', () => {
 
     fireEvent.click(screen.getByText('طلباء ایکسپورٹ کریں (لسٹ ڈاؤن لوڈ)'));
 
-    expect(screen.getByText('طلباء کی لسٹ ایکسپورٹ کریں (Export Students List)')).toBeInTheDocument();
+    expect(screen.getByText('طلباء کی لسٹ ایکسپورٹ کریں')).toBeInTheDocument();
     expect(screen.getAllByText(/ایکسل فائل/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/ورڈ دستاویز/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/پرنٹ \/ پی ڈی ایف/).length).toBeGreaterThan(0);

@@ -490,7 +490,7 @@ export default function BulkStudentImportExport({
       {activeMode === 'export' && (
         <div className="bulk-io-card">
           <div className="bulk-io-card-header">
-            <h3>طلباء کی لسٹ ایکسپورٹ کریں (Export Students List)</h3>
+            <h3>طلباء کی لسٹ ایکسپورٹ کریں</h3>
             <p>
               کسی ایک کلاس کے تمام طلباء یا پورے مدرسے کے تمام طلباء کی مشترکہ ماسٹر لسٹ کو ایکسل، ورڈ یا پرنٹیبل فارمیٹ میں ڈاؤن لوڈ کریں۔
             </p>
@@ -512,7 +512,7 @@ export default function BulkStudentImportExport({
           {/* Master List Highlight Banner */}
           <div className="bulk-io-master-quick-bar">
             <div className="bulk-io-master-quick-text">
-              <strong>پورے مدرسے کی مشترکہ ماسٹر لسٹ (All Students Master List):</strong>
+              <strong>پورے مدرسے کی مشترکہ ماسٹر لسٹ:</strong>
               <span>
                 تمام کلاسز کے طلباء (کل {activeStudents.length}) کی مکمل لسٹ کلاس نام کے ساتھ ایک ہی فائل میں ڈاؤن لوڈ کریں۔
               </span>
@@ -578,7 +578,7 @@ export default function BulkStudentImportExport({
                 aria-label="کلاسز منتخب کریں"
               >
                 <option value="all">
-                  تمام کلاسز (Master List - کل {activeStudents.length} طلباء)
+                  تمام کلاسز (کل {activeStudents.length} طلباء)
                 </option>
                 {classesList.map((cls) => {
                   const count = activeStudents.filter(
