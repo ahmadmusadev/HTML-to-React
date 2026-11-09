@@ -145,6 +145,40 @@ export const normalizeHeaderString = (str) => {
 };
 
 /**
+ * Detects if a table extracted in LTR order was originally visually an RTL Urdu table
+ * (e.g. rightmost column has roll no, serial no, or student name, while leftmost column has date, fee, signature, etc.)
+ */
+export const shouldReverseToRtl = (headers = []) => {
+  if (!headers || headers.length <= 1) return false;
+  const lastHeader = normalizeHeaderString(headers[headers.length - 1]);
+  const firstHeader = normalizeHeaderString(headers[0]);
+
+  // If last column looks like Roll No, Serial No, or Sr No
+  const rollOrSrKeywords = ['رول', 'نمبر شمار', 'شمار', 'نمبر', 'roll', 'sr', 'serial', 's no', 'id'];
+  const dateOrFeeOrEndKeywords = ['تاریخ', 'وصولی', 'فیس', 'دستخط', 'کیفیت', 'ریمارکس', 'fee', 'date', 'sign'];
+
+  const lastIsStart = rollOrSrKeywords.some((k) => lastHeader.includes(k));
+  const firstIsEnd = dateOrFeeOrEndKeywords.some((k) => firstHeader.includes(k));
+
+  return lastIsStart || firstIsEnd;
+};
+
+/**
+ * Reverses table columns and rows for RTL orientation
+ */
+export const reverseTableColumns = ({ headers = [], rows = [] }) => {
+  const reversedHeaders = [...headers].reverse();
+  const reversedRows = rows.map((row) => {
+    const fullRow = [];
+    for (let i = 0; i < headers.length; i++) {
+      fullRow.push(row[i] !== undefined ? row[i] : '');
+    }
+    return fullRow.reverse();
+  });
+  return { headers: reversedHeaders, rows: reversedRows, totalRows: reversedRows.length };
+};
+
+/**
  * Auto-detects system field mappings from extracted table headers
  */
 export const autoDetectColumnMapping = (headers = []) => {
@@ -262,7 +296,18 @@ export const parseExcelFile = async (fileOrBuffer) => {
     .filter((row) => row.some((cell) => String(cell || '').trim() !== ''))
     .map((row) => row.map((cell) => (cell !== undefined && cell !== null ? String(cell).trim() : '')));
 
-  return { headers, rows, sheetName, totalRows: rows.length };
+  let finalHeaders = headers;
+  let finalRows = rows;
+  let isRtlReversed = false;
+
+  if (shouldReverseToRtl(headers)) {
+    const reversed = reverseTableColumns({ headers, rows });
+    finalHeaders = reversed.headers;
+    finalRows = reversed.rows;
+    isRtlReversed = true;
+  }
+
+  return { headers: finalHeaders, rows: finalRows, sheetName, totalRows: finalRows.length, isRtlReversed };
 };
 
 /**
@@ -307,7 +352,18 @@ export const parseWordFile = async (fileOrBuffer) => {
     }
   }
 
-  return { headers, rows, totalRows: rows.length };
+  let finalHeaders = headers;
+  let finalRows = rows;
+  let isRtlReversed = false;
+
+  if (shouldReverseToRtl(headers)) {
+    const reversed = reverseTableColumns({ headers, rows });
+    finalHeaders = reversed.headers;
+    finalRows = reversed.rows;
+    isRtlReversed = true;
+  }
+
+  return { headers: finalHeaders, rows: finalRows, totalRows: finalRows.length, isRtlReversed };
 };
 
 /**
@@ -374,7 +430,18 @@ export const parsePdfFile = async (fileOrBuffer) => {
   const headers = lines[0];
   const rows = lines.slice(1).filter((r) => r.length > 0);
 
-  return { headers, rows, totalRows: rows.length };
+  let finalHeaders = headers;
+  let finalRows = rows;
+  let isRtlReversed = false;
+
+  if (shouldReverseToRtl(headers)) {
+    const reversed = reverseTableColumns({ headers, rows });
+    finalHeaders = reversed.headers;
+    finalRows = reversed.rows;
+    isRtlReversed = true;
+  }
+
+  return { headers: finalHeaders, rows: finalRows, totalRows: finalRows.length, isRtlReversed };
 };
 
 /**
@@ -535,6 +602,80 @@ export const buildBatchStudentPayloads = ({
     totalCount: payloads.length,
     startRollNo,
     endRollNo: payloads.length > 0 ? currentRollNo - 1 : startRollNo
+  };
+};
+
+/**
+ * Analyzes student payloads for duplicate entries (both in-file and existing in database)
+ */
+export const analyzeDuplicateStudents = ({ payloads = [], existingStudents = [] }) => {
+  const seenInFile = new Map();
+  const fileDuplicates = [];
+  const systemDuplicates = [];
+  const cleanPayloads = [];
+
+  const existingMap = new Map();
+  for (const s of existingStudents) {
+    const name = String(s.name || s.admName || '').trim().toLowerCase();
+    const father = String(s.father_name || s.admFatherName || s.fatherName || '').trim().toLowerCase();
+    const bForm = String(s.b_form_number || s.admBForm || '').trim().replace(/[-]/g, '');
+
+    if (name) {
+      existingMap.set(`${name}:::${father}`, s);
+    }
+    if (bForm) {
+      existingMap.set(`bform:::${bForm}`, s);
+    }
+  }
+
+  for (let i = 0; i < payloads.length; i++) {
+    const p = payloads[i];
+    const name = String(p.name || '').trim().toLowerCase();
+    const father = String(p.father_name || '').trim().toLowerCase();
+    const bForm = String(p.b_form_number || '').trim().replace(/[-]/g, '');
+    const key = `${name}:::${father}`;
+
+    let isDupInFile = false;
+    let isDupInSystem = false;
+    let dupReason = '';
+
+    if (seenInFile.has(key)) {
+      isDupInFile = true;
+      dupReason = 'فائل میں تکرار (In-File Duplicate)';
+      fileDuplicates.push({ ...p, originalIndex: i, reason: dupReason });
+    } else {
+      seenInFile.set(key, i);
+    }
+
+    if (existingMap.has(key)) {
+      isDupInSystem = true;
+      const matched = existingMap.get(key);
+      const reg = matched.roll_number || matched.admRegNo || '';
+      dupReason = `سسٹم میں پہلے سے موجود ہے ${reg ? `(رول نمبر: ${reg})` : ''}`;
+      systemDuplicates.push({ ...p, originalIndex: i, existingStudent: matched, reason: dupReason });
+    } else if (bForm && existingMap.has(`bform:::${bForm}`)) {
+      isDupInSystem = true;
+      const matched = existingMap.get(`bform:::${bForm}`);
+      const reg = matched.roll_number || matched.admRegNo || '';
+      dupReason = `ب فارم پہلے سے درج ہے ${reg ? `(رول نمبر: ${reg})` : ''}`;
+      systemDuplicates.push({ ...p, originalIndex: i, existingStudent: matched, reason: dupReason });
+    }
+
+    if (!isDupInFile) {
+      cleanPayloads.push({
+        ...p,
+        isSystemDuplicate: isDupInSystem,
+        systemDuplicateReason: isDupInSystem ? dupReason : null
+      });
+    }
+  }
+
+  return {
+    totalEvaluated: payloads.length,
+    fileDuplicates,
+    systemDuplicates,
+    hasDuplicates: fileDuplicates.length > 0 || systemDuplicates.length > 0,
+    cleanPayloads
   };
 };
 

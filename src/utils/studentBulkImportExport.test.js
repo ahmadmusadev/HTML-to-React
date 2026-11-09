@@ -7,7 +7,10 @@ import {
   sanitizePhoneNumber,
   buildBatchStudentPayloads,
   parseExcelFile,
-  parseWordFile
+  parseWordFile,
+  shouldReverseToRtl,
+  reverseTableColumns,
+  analyzeDuplicateStudents
 } from './studentBulkImportExport';
 
 describe('studentBulkImportExport Utility', () => {
@@ -250,6 +253,72 @@ describe('studentBulkImportExport Utility', () => {
       expect(parsed.headers).toEqual(['طالب علم کا نام', 'والد کا نام']);
       expect(parsed.rows.length).toBe(1);
       expect(parsed.rows[0]).toEqual(['عثمان غنی', 'عفان']);
+    });
+  });
+
+  describe('RTL Urdu Table Detection and Reversal', () => {
+    it('detects RTL orientation when roll or serial number is on the left-most or right-most edge', () => {
+      // LTR extracted table from Urdu document where right column was Roll No
+      const ltrExtractedHeaders = ['تاریخ وصولی', 'فیس', 'کلاس', 'ولدیت', 'نام طالب علم', 'نمبر شمار', 'رول'];
+      expect(shouldReverseToRtl(ltrExtractedHeaders)).toBe(true);
+
+      // Already correct LTR or standard Urdu RTL parsed with start on index 0
+      const standardHeaders = ['رول', 'نمبر شمار', 'نام طالب علم', 'ولدیت', 'کلاس', 'فیس', 'تاریخ وصولی'];
+      expect(shouldReverseToRtl(standardHeaders)).toBe(false);
+    });
+
+    it('reverses table headers and row cells properly', () => {
+      const headers = ['تاریخ وصولی', 'فیس', 'کلاس', 'ولدیت', 'نام طالب علم', 'نمبر شمار', 'رول'];
+      const rows = [
+        ['', '', 'حافظ تنویر احمد صاحب', 'محمد عامر', 'محمد طلحہ', '1', '178'],
+        ['', '', 'حافظ تنویر احمد صاحب', 'محمد ارشاد', 'محمد اویس', '2', '179']
+      ];
+
+      const reversed = reverseTableColumns({ headers, rows });
+      expect(reversed.headers).toEqual(['رول', 'نمبر شمار', 'نام طالب علم', 'ولدیت', 'کلاس', 'فیس', 'تاریخ وصولی']);
+      expect(reversed.rows[0]).toEqual(['178', '1', 'محمد طلحہ', 'محمد عامر', 'حافظ تنویر احمد صاحب', '', '']);
+      expect(reversed.rows[1]).toEqual(['179', '2', 'محمد اویس', 'محمد ارشاد', 'حافظ تنویر احمد صاحب', '', '']);
+    });
+
+    it('automatically reverses Excel table when visual Urdu RTL is detected', async () => {
+      const ltrExtractedData = [
+        ['تاریخ وصولی', 'فیس', 'کلاس', 'ولدیت', 'نام طالب علم', 'نمبر شمار', 'رول'],
+        ['', '', 'کلاس 1', 'محمد عامر', 'محمد طلحہ', '1', '178']
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ltrExtractedData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'UrduSheet');
+      const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+
+      const parsed = await parseExcelFile(u8);
+      expect(parsed.isRtlReversed).toBe(true);
+      expect(parsed.headers[0]).toBe('رول');
+      expect(parsed.headers[2]).toBe('نام طالب علم');
+      expect(parsed.rows[0][0]).toBe('178');
+      expect(parsed.rows[0][2]).toBe('محمد طلحہ');
+    });
+  });
+
+  describe('analyzeDuplicateStudents', () => {
+    it('identifies in-file duplicates and existing system duplicates', () => {
+      const payloads = [
+        { name: 'محمد طلحہ', father_name: 'محمد عامر', b_form_number: '1234567890123' },
+        { name: 'محمد اویس', father_name: 'محمد ارشاد', b_form_number: '9876543210987' },
+        { name: 'محمد طلحہ', father_name: 'محمد عامر', b_form_number: '1234567890123' }, // duplicate in file
+        { name: 'احمد علی', father_name: 'اصغر علی', b_form_number: '' } // duplicate in existing database
+      ];
+
+      const existingStudents = [
+        { name: 'احمد علی', father_name: 'اصغر علی', roll_number: '42' }
+      ];
+
+      const analysis = analyzeDuplicateStudents({ payloads, existingStudents });
+      expect(analysis.hasDuplicates).toBe(true);
+      expect(analysis.fileDuplicates.length).toBe(1);
+      expect(analysis.fileDuplicates[0].name).toBe('محمد طلحہ');
+      expect(analysis.systemDuplicates.length).toBe(1);
+      expect(analysis.systemDuplicates[0].name).toBe('احمد علی');
+      expect(analysis.cleanPayloads.length).toBe(3);
     });
   });
 });

@@ -8,7 +8,9 @@ import {
   exportStudentsToExcel,
   exportStudentsToWord,
   downloadSampleExcelTemplate,
-  downloadSampleWordTemplate
+  downloadSampleWordTemplate,
+  reverseTableColumns,
+  analyzeDuplicateStudents
 } from '../utils/studentBulkImportExport';
 import { mapSupabaseToUi } from '../pages/Admissions';
 
@@ -39,6 +41,11 @@ export default function BulkStudentImportExport({
   const [parsedData, setParsedData] = useState(null); // { headers, rows, totalRows }
   const [columnMapping, setColumnMapping] = useState({});
   const [mappingError, setMappingError] = useState(null);
+  const [isRtlOrder, setIsRtlOrder] = useState(true);
+
+  // Duplicate Detection State
+  const [duplicateAction, setDuplicateAction] = useState('skip'); // 'skip' or 'allow'
+  const [duplicateAnalysis, setDuplicateAnalysis] = useState(null);
 
   // Sequential Roll No calculation state
   const [startRollNo, setStartRollNo] = useState(1);
@@ -148,6 +155,7 @@ export default function BulkStudentImportExport({
       }
 
       setParsedData(result);
+      setIsRtlOrder(result.isRtlReversed !== false);
       const initialMapping = autoDetectColumnMapping(result.headers);
       setColumnMapping(initialMapping);
 
@@ -165,12 +173,62 @@ export default function BulkStudentImportExport({
     }
   };
 
+  // Toggle RTL / LTR Column Orientation
+  const handleToggleReverseColumns = () => {
+    if (!parsedData || !parsedData.headers) return;
+    const reversed = reverseTableColumns({
+      headers: parsedData.headers,
+      rows: parsedData.rows
+    });
+    setParsedData((prev) => ({
+      ...prev,
+      headers: reversed.headers,
+      rows: reversed.rows
+    }));
+    setIsRtlOrder((prev) => !prev);
+    const newMapping = autoDetectColumnMapping(reversed.headers);
+    setColumnMapping(newMapping);
+  };
+
   // --- IMPORT STEP 2: MAPPING CONFIRMATION ---
   const handleMappingChange = (fieldKey, columnIndex) => {
     setColumnMapping((prev) => ({
       ...prev,
       [fieldKey]: parseInt(columnIndex, 10)
     }));
+  };
+
+  const handleDuplicateActionChange = (policy) => {
+    setDuplicateAction(policy);
+    if (!parsedData || !columnMapping.name) return;
+
+    const nextRoll = calculateNextSequentialRollNumber(records);
+    const { payloads } = buildBatchStudentPayloads({
+      rows: parsedData.rows,
+      headers: parsedData.headers,
+      mapping: columnMapping,
+      targetClassId,
+      startRollNo: nextRoll,
+      madrasaId: activeMadrasaId
+    });
+
+    const dupAnalysis = analyzeDuplicateStudents({
+      payloads,
+      existingStudents: records
+    });
+    setDuplicateAnalysis(dupAnalysis);
+
+    if (policy === 'skip' && dupAnalysis.fileDuplicates.length > 0) {
+      let roll = nextRoll;
+      const cleanWithRolls = dupAnalysis.cleanPayloads.map((p) => {
+        const item = { ...p, roll_number: String(roll).padStart(2, '0') };
+        roll++;
+        return item;
+      });
+      setPreviewPayloads(cleanWithRolls);
+    } else {
+      setPreviewPayloads(payloads);
+    }
   };
 
   const handleProceedToConfirmation = () => {
@@ -198,7 +256,25 @@ export default function BulkStudentImportExport({
       return;
     }
 
-    setPreviewPayloads(payloads);
+    // Duplicate detection check
+    const dupAnalysis = analyzeDuplicateStudents({
+      payloads,
+      existingStudents: records
+    });
+    setDuplicateAnalysis(dupAnalysis);
+
+    if (duplicateAction === 'skip' && dupAnalysis.fileDuplicates.length > 0) {
+      let roll = nextRoll;
+      const cleanWithRolls = dupAnalysis.cleanPayloads.map((p) => {
+        const item = { ...p, roll_number: String(roll).padStart(2, '0') };
+        roll++;
+        return item;
+      });
+      setPreviewPayloads(cleanWithRolls);
+    } else {
+      setPreviewPayloads(payloads);
+    }
+
     setImportStep(3); // Confirmation dialog
   };
 
@@ -308,6 +384,27 @@ export default function BulkStudentImportExport({
               </button>
             </div>
           )}
+
+          {/* Master List Highlight Banner */}
+          <div className="bulk-io-master-quick-bar">
+            <div className="bulk-io-master-quick-text">
+              <strong>پورے مدرسے کی مشترکہ ماسٹر لسٹ (All Students Master List):</strong>
+              <span>
+                تمام کلاسز کے طلباء (کل {records.filter((r) => !r.isWithdrawn).length}) کی مکمل لسٹ کلاس نام کے ساتھ ایک ہی فائل میں ڈاؤن لوڈ کریں۔
+              </span>
+            </div>
+            <button
+              type="button"
+              className="bulk-io-btn primary"
+              disabled={exportLoading}
+              onClick={() => {
+                setExportScope('all');
+                handleExport('excel');
+              }}
+            >
+              مکمل ماسٹر لسٹ (Excel) ڈاؤن لوڈ کریں
+            </button>
+          </div>
 
           <div className="bulk-io-export-form">
             <div className="bulk-io-form-group">
@@ -511,9 +608,70 @@ export default function BulkStudentImportExport({
               <div className="bulk-io-card-header">
                 <h3>مرحلہ 2: کالمز کی جانچ اور میپنگ کی تصدیق</h3>
                 <p>
-                  فائل میں کل <strong>{parsedData.totalRows}</strong> قطاریں پائی گئیں۔ سسٹم نے کالمز کو خودکار پہچان لیا ہے۔ برائے مہربانی تصدیق کریں کہ کون سا کالم کس فیلڈ کے ساتھ جڑا ہے۔
+                  فائل میں کل <strong>{parsedData.totalRows}</strong> قطاریں پائی گئیں۔ سسٹم نے اردو RTL ترتیب کے تحت کالمز کو دائیں سے بائیں شمار کیا ہے۔ برائے مہربانی تصدیق کریں کہ کون سا کالم کس فیلڈ کے ساتھ جڑا ہے۔
                 </p>
               </div>
+
+              {/* RTL / LTR Direction Bar */}
+              <div className="bulk-io-rtl-direction-bar">
+                <div className="bulk-io-rtl-status">
+                  <span className="bulk-io-rtl-label">کالمز کی گنتی و تحریری سمت:</span>
+                  <span className="bulk-io-rtl-pill">
+                    {isRtlOrder ? 'دائیں سے بائیں (RTL - اردو جدول ترتیب)' : 'بائیں سے دائیں (LTR ترتیب)'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="bulk-io-rtl-toggle-btn"
+                  onClick={handleToggleReverseColumns}
+                  title="اگر کالمز کی ترتیب الٹی ہو تو اسے تبدیل کریں"
+                >
+                  کالمز کی ترتیب الٹیں (RTL ⇄ LTR)
+                </button>
+              </div>
+
+              {/* Duplicate Notice Banner (if any) */}
+              {duplicateAnalysis && duplicateAnalysis.hasDuplicates && (
+                <div className="bulk-io-dup-alert">
+                  <div className="bulk-io-dup-alert-header">
+                    <strong>توجہ فرمائیں: لسٹ میں ڈپلیکیٹ طلباء کی نشاندہی ہوئی ہے</strong>
+                  </div>
+                  <div className="bulk-io-dup-alert-body">
+                    {duplicateAnalysis.fileDuplicates.length > 0 && (
+                      <p>
+                        اسی فائل میں <strong>{duplicateAnalysis.fileDuplicates.length}</strong> ریکارڈز مکرر (Duplicate) پائے گئے ہیں۔
+                      </p>
+                    )}
+                    {duplicateAnalysis.systemDuplicates.length > 0 && (
+                      <p>
+                        مدرسے میں پہلے سے موجود <strong>{duplicateAnalysis.systemDuplicates.length}</strong> طلباء کے ساتھ ہم نامی یا ب فارم مماثلت پائی گئی ہے۔
+                      </p>
+                    )}
+                  </div>
+                  <div className="bulk-io-dup-options">
+                    <label className="bulk-io-radio-label">
+                      <input
+                        type="radio"
+                        name="dupPolicy"
+                        value="skip"
+                        checked={duplicateAction === 'skip'}
+                        onChange={() => handleDuplicateActionChange('skip')}
+                      />
+                      <span>(تجویز کردہ) ڈپلیکیٹ طلباء کو خودکار چھوڑ دیں (صرف منفرد طلباء داخل ہوں)</span>
+                    </label>
+                    <label className="bulk-io-radio-label">
+                      <input
+                        type="radio"
+                        name="dupPolicy"
+                        value="allow"
+                        checked={duplicateAction === 'allow'}
+                        onChange={() => handleDuplicateActionChange('allow')}
+                      />
+                      <span>تمام طلباء کو شامل کریں (اگر ہم نام دو مختلف بچے ہوں)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="bulk-io-mapping-grid">
                 {SYSTEM_FIELD_DEFS.map((field) => {
@@ -535,11 +693,21 @@ export default function BulkStudentImportExport({
                           className={`bulk-io-select ${field.required && currentMappedIdx === -1 ? 'error-border' : ''}`}
                         >
                           <option value={-1}>-- شامل نہیں ہے (خالی چھوڑیں) --</option>
-                          {parsedData.headers.map((h, idx) => (
-                            <option key={idx} value={idx}>
-                              کالم {idx + 1}: {h || `(بے نام کالم ${idx + 1})`}
-                            </option>
-                          ))}
+                          {parsedData.headers.map((h, idx) => {
+                            const colNum = idx + 1;
+                            const isFirst = idx === 0;
+                            const isLast = idx === parsedData.headers.length - 1;
+                            const posLabel = isFirst
+                              ? ' (دائیں طرف پہلا کالم)'
+                              : isLast
+                              ? ' (بائیں طرف آخری کالم)'
+                              : '';
+                            return (
+                              <option key={idx} value={idx}>
+                                کالم {colNum}: {h || `(بے نام کالم ${colNum})`}{posLabel}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
                     </div>
@@ -627,6 +795,17 @@ export default function BulkStudentImportExport({
                       <strong>{previewPayloads.length}</strong> طلباء
                     </span>
                   </div>
+
+                  {duplicateAnalysis && (duplicateAnalysis.fileDuplicates.length > 0 || duplicateAnalysis.systemDuplicates.length > 0) && (
+                    <div className="bulk-io-confirm-detail-row">
+                      <span className="bulk-io-detail-key">ڈپلیکیٹ کا تدارک:</span>
+                      <span className="bulk-io-detail-val">
+                        {duplicateAction === 'skip'
+                          ? `${duplicateAnalysis.fileDuplicates.length} ڈپلیکیٹ طلباء کو چھوڑ کر ${previewPayloads.length} منفرد طلباء درج کیے جائیں گے`
+                          : `تمام ${previewPayloads.length} طلباء بشمول ممکنہ ڈپلیکیٹس محفوظ کیے جائیں گے`}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="bulk-io-reg-notice-box">
                     <div className="bulk-io-reg-notice-title">
