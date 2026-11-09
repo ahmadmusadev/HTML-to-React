@@ -995,3 +995,124 @@ export const downloadSampleWordTemplate = async () => {
   document.body.removeChild(link);
   URL.revokeObjectURL(link.href);
 };
+
+/**
+ * Opens a dedicated printable A4 register window for students list (PDF print-ready)
+ */
+export const printStudentsList = ({
+  students = [],
+  classes = [],
+  className = '',
+  madrasaName = 'جامعہ / مدرسہ'
+}) => {
+  const classMap = {};
+  classes.forEach((c) => {
+    classMap[c.id] = c.class_name;
+  });
+
+  const rowsHtml = students
+    .map((s, idx) => {
+      const cName = classMap[s.class_id || s.admClass] || className || '';
+      return `
+      <tr>
+        <td style="text-align: center; padding: 6px 8px; border: 1px solid #333;">${idx + 1}</td>
+        <td style="text-align: center; font-weight: bold; padding: 6px 8px; border: 1px solid #333;">${s.roll_number || s.admRegNo || ''}</td>
+        <td style="padding: 6px 8px; border: 1px solid #333; font-weight: 600;">${s.name || s.admName || ''}</td>
+        <td style="padding: 6px 8px; border: 1px solid #333;">${s.father_name || s.admFatherName || s.fatherName || ''}</td>
+        <td style="text-align: center; padding: 6px 8px; border: 1px solid #333;">${cName}</td>
+        <td style="text-align: center; padding: 6px 8px; border: 1px solid #333;">${s.gender || s.admGender || 'لڑکا'}</td>
+        <td style="direction: ltr; text-align: center; padding: 6px 8px; border: 1px solid #333;">${s.father_mobile || s.fatherMobile || ''}</td>
+        <td style="padding: 6px 8px; border: 1px solid #333;">${s.address || s.admAddress || ''}</td>
+      </tr>
+    `;
+    })
+    .join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ur">
+    <head>
+      <meta charset="utf-8" />
+      <title>${madrasaName} - ${className || 'فہرست طلباء'}</title>
+      <style>
+        body {
+          font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+          margin: 20px;
+          color: #000;
+          direction: rtl;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #000;
+          padding-bottom: 12px;
+        }
+        .header h1 { margin: 0 0 6px 0; font-size: 24px; font-weight: 800; }
+        .header h2 { margin: 0 0 6px 0; font-size: 18px; color: #222; }
+        .header .meta { font-size: 14px; color: #444; }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 13px;
+        }
+        th {
+          background-color: #f1f5f9;
+          font-weight: 700;
+          border: 1px solid #333;
+          padding: 8px;
+          text-align: center;
+        }
+        @media print {
+          @page { size: A4 landscape; margin: 12mm; }
+          body { margin: 0; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>${madrasaName}</h1>
+        <h2>فہرست طلباء - ${className || 'تمام کلاسز'}</h2>
+        <div class="meta">کل طلباء: ${students.length} | تاریخ اجرا: ${new Date().toLocaleDateString('ur-PK')}</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 45px;">نمبر</th>
+            <th style="width: 70px;">رجسٹریشن</th>
+            <th>طالب علم کا نام</th>
+            <th>والد کا نام</th>
+            <th style="width: 110px;">کلاس</th>
+            <th style="width: 60px;">جنس</th>
+            <th style="width: 110px;">موبائل نمبر</th>
+            <th>مکمل پتہ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const printWindow = window.open?.('', '_blank', 'width=1000,height=750');
+      if (printWindow && printWindow.document) {
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+          try {
+            printWindow.print();
+          } catch (_) {}
+        }, 350);
+        return;
+      }
+    } catch (_) {}
+    try {
+      window.print?.();
+    } catch (_) {}
+  }
+};

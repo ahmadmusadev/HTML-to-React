@@ -1,4 +1,4 @@
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useMemo, useEffect } from 'react';
 import {
   SYSTEM_FIELD_DEFS,
   autoDetectColumnMapping,
@@ -7,6 +7,7 @@ import {
   buildBatchStudentPayloads,
   exportStudentsToExcel,
   exportStudentsToWord,
+  printStudentsList,
   downloadSampleExcelTemplate,
   downloadSampleWordTemplate,
   reverseTableColumns,
@@ -29,9 +30,79 @@ export default function BulkStudentImportExport({
   const [activeMode, setActiveMode] = useState('import');
 
   // Export State
-  const [exportScope, setExportScope] = useState(preSelectedClassId || 'all');
+  const [selectedExportClasses, setSelectedExportClasses] = useState(
+    preSelectedClassId ? [preSelectedClassId] : ['all']
+  );
+  const [masterExportFormat, setMasterExportFormat] = useState('excel');
   const [exportLoading, setExportLoading] = useState(false);
   const [exportFeedback, setExportFeedback] = useState(null);
+
+  useEffect(() => {
+    if (preSelectedClassId) {
+      setSelectedExportClasses([preSelectedClassId]);
+    }
+  }, [preSelectedClassId]);
+
+  // Derived Export Datasets
+  const activeStudents = useMemo(() => {
+    return records.filter((r) => !r.isWithdrawn && r.status !== 'left');
+  }, [records]);
+
+  const isAllClassesSelected =
+    selectedExportClasses.includes('all') || selectedExportClasses.length === 0;
+
+  const selectedStudents = useMemo(() => {
+    if (isAllClassesSelected) {
+      return activeStudents;
+    }
+    const idSet = new Set(selectedExportClasses);
+    return activeStudents.filter((r) => idSet.has(r.class_id || r.admClass));
+  }, [activeStudents, selectedExportClasses, isAllClassesSelected]);
+
+  const selectionSummaryText = useMemo(() => {
+    if (isAllClassesSelected) {
+      return 'تمام کلاسز (مکمل ماسٹر لسٹ)';
+    }
+    const names = selectedExportClasses
+      .map((id) => classesList.find((c) => c.id === id)?.class_name)
+      .filter(Boolean);
+    return names.length > 0 ? names.join('، ') : 'کوئی کلاس منتخب نہیں';
+  }, [isAllClassesSelected, selectedExportClasses, classesList]);
+
+  const targetExportTitle = useMemo(() => {
+    if (isAllClassesSelected) {
+      return 'تمام کلاسز (ماسٹر لسٹ)';
+    }
+    if (selectedExportClasses.length === 1) {
+      const cls = classesList.find((c) => c.id === selectedExportClasses[0]);
+      return cls ? cls.class_name : 'منتخب کلاس';
+    }
+    const names = selectedExportClasses
+      .map((id) => classesList.find((c) => c.id === id)?.class_name)
+      .filter(Boolean);
+    return `منتخب کلاسز (${names.join(' - ')})`;
+  }, [isAllClassesSelected, selectedExportClasses, classesList]);
+
+  // Multi-select change handler (supporting Ctrl/Cmd selection)
+  const handleClassSelectChange = (e) => {
+    const options = Array.from(e.target.selectedOptions, (opt) => opt.value);
+    if (options.length === 0) {
+      setSelectedExportClasses(['all']);
+      return;
+    }
+    const hadAll = selectedExportClasses.includes('all');
+    const nowHasAll = options.includes('all');
+
+    if (!hadAll && nowHasAll) {
+      setSelectedExportClasses(['all']);
+    } else if (hadAll && nowHasAll && options.length > 1) {
+      setSelectedExportClasses(options.filter((v) => v !== 'all'));
+    } else if (nowHasAll && options.length === 1) {
+      setSelectedExportClasses(['all']);
+    } else {
+      setSelectedExportClasses(options.filter((v) => v !== 'all'));
+    }
+  };
 
   // Import State
   const [importStep, setImportStep] = useState(1); // 1: Upload, 2: Map, 3: Confirm, 4: Progress/Success
@@ -65,21 +136,10 @@ export default function BulkStudentImportExport({
     setExportLoading(true);
     setExportFeedback(null);
     try {
-      let filteredStudents = records.filter((r) => !r.isWithdrawn && r.status !== 'left');
-      let targetClassName = 'تمام کلاسز (ماسٹر لسٹ)';
-
-      if (exportScope !== 'all') {
-        const cls = classesList.find((c) => c.id === exportScope);
-        targetClassName = cls?.class_name || 'منتخب کلاس';
-        filteredStudents = filteredStudents.filter(
-          (r) => (r.class_id || r.admClass) === exportScope
-        );
-      }
-
-      if (filteredStudents.length === 0) {
+      if (selectedStudents.length === 0) {
         setExportFeedback({
           type: 'warning',
-          message: 'منتخب کردہ کلاس میں کوئی فعال طالب علم موجود نہیں ہے۔'
+          message: 'منتخب کردہ کلاسز میں کوئی فعال طالب علم موجود نہیں ہے۔'
         });
         setExportLoading(false);
         return;
@@ -87,39 +147,103 @@ export default function BulkStudentImportExport({
 
       if (format === 'excel') {
         exportStudentsToExcel({
-          students: filteredStudents,
+          students: selectedStudents,
           classes: classesList,
-          className: targetClassName,
+          className: targetExportTitle,
           madrasaName
         });
         setExportFeedback({
           type: 'success',
-          message: `ایکسل فائل برائے ${targetClassName} کامیابی سے ڈاؤن لوڈ ہو گئی ہے۔`
+          message: `ایکسل فائل برائے ${targetExportTitle} کامیابی سے ڈاؤن لوڈ ہو گئی ہے۔`
         });
       } else if (format === 'word') {
         await exportStudentsToWord({
-          students: filteredStudents,
+          students: selectedStudents,
           classes: classesList,
-          className: targetClassName,
+          className: targetExportTitle,
           madrasaName
         });
         setExportFeedback({
           type: 'success',
-          message: `ورڈ فائل برائے ${targetClassName} کامیابی سے ڈاؤن لوڈ ہو گئی ہے۔`
+          message: `ورڈ فائل برائے ${targetExportTitle} کامیابی سے ڈاؤن لوڈ ہو گئی ہے۔`
         });
       } else if (format === 'pdf') {
-        if (typeof onViewClass === 'function' && exportScope !== 'all') {
-          onViewClass(exportScope);
-        } else {
-          // Native print sheet
-          window.print();
-        }
+        printStudentsList({
+          students: selectedStudents,
+          classes: classesList,
+          className: targetExportTitle,
+          madrasaName
+        });
+        setExportFeedback({
+          type: 'success',
+          message: `پرنٹیبل شیٹ برائے ${targetExportTitle} کامیابی سے تیار ہو گئی ہے۔`
+        });
       }
     } catch (err) {
       console.error('Export error:', err);
       setExportFeedback({
         type: 'error',
         message: err.message || 'ایکسپورٹ کے دوران خرابی پیش آئی۔'
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleMasterExport = async (format) => {
+    setExportLoading(true);
+    setExportFeedback(null);
+    try {
+      if (activeStudents.length === 0) {
+        setExportFeedback({
+          type: 'warning',
+          message: 'مدرسے میں کوئی فعال طالب علم موجود نہیں ہے۔'
+        });
+        setExportLoading(false);
+        return;
+      }
+
+      const masterTitle = 'تمام کلاسز (ماسٹر لسٹ)';
+
+      if (format === 'excel') {
+        exportStudentsToExcel({
+          students: activeStudents,
+          classes: classesList,
+          className: masterTitle,
+          madrasaName
+        });
+        setExportFeedback({
+          type: 'success',
+          message: 'مکمل ماسٹر لسٹ (ایکسل) کامیابی سے ڈاؤن لوڈ ہو گئی ہے۔'
+        });
+      } else if (format === 'word') {
+        await exportStudentsToWord({
+          students: activeStudents,
+          classes: classesList,
+          className: masterTitle,
+          madrasaName
+        });
+        setExportFeedback({
+          type: 'success',
+          message: 'مکمل ماسٹر لسٹ (ورڈ) کامیابی سے ڈاؤن لوڈ ہو گئی ہے۔'
+        });
+      } else if (format === 'pdf') {
+        printStudentsList({
+          students: activeStudents,
+          classes: classesList,
+          className: masterTitle,
+          madrasaName
+        });
+        setExportFeedback({
+          type: 'success',
+          message: 'مکمل ماسٹر لسٹ برائے پرنٹ / پی ڈی ایف کامیابی سے تیار ہو گئی ہے۔'
+        });
+      }
+    } catch (err) {
+      console.error('Master export error:', err);
+      setExportFeedback({
+        type: 'error',
+        message: err.message || 'ماسٹر لسٹ ایکسپورٹ کرنے کے دوران خرابی پیش آئی۔'
       });
     } finally {
       setExportLoading(false);
@@ -390,35 +514,75 @@ export default function BulkStudentImportExport({
             <div className="bulk-io-master-quick-text">
               <strong>پورے مدرسے کی مشترکہ ماسٹر لسٹ (All Students Master List):</strong>
               <span>
-                تمام کلاسز کے طلباء (کل {records.filter((r) => !r.isWithdrawn).length}) کی مکمل لسٹ کلاس نام کے ساتھ ایک ہی فائل میں ڈاؤن لوڈ کریں۔
+                تمام کلاسز کے طلباء (کل {activeStudents.length}) کی مکمل لسٹ کلاس نام کے ساتھ ایک ہی فائل میں ڈاؤن لوڈ کریں۔
               </span>
             </div>
-            <button
-              type="button"
-              className="bulk-io-btn primary"
-              disabled={exportLoading}
-              onClick={() => {
-                setExportScope('all');
-                handleExport('excel');
-              }}
-            >
-              مکمل ماسٹر لسٹ (Excel) ڈاؤن لوڈ کریں
-            </button>
+            <div className="bulk-io-master-download-box">
+              <label htmlFor="master-export-format-select" className="bulk-io-master-heading">
+                مکمل ماسٹر لسٹ ڈاؤن لوڈ کریں:
+              </label>
+              <div className="bulk-io-master-controls">
+                <select
+                  id="master-export-format-select"
+                  value={masterExportFormat}
+                  onChange={(e) => setMasterExportFormat(e.target.value)}
+                  className="bulk-io-select bulk-io-master-select"
+                  aria-label="مکمل ماسٹر لسٹ کا فارمیٹ منتخب کریں"
+                >
+                  <option value="excel">ایکسل فائل (Excel .xlsx)</option>
+                  <option value="word">ورڈ دستاویز (Word .docx)</option>
+                  <option value="pdf">پرنٹ / پی ڈی ایف (Print / PDF)</option>
+                </select>
+                <button
+                  type="button"
+                  className="bulk-io-btn primary bulk-io-master-btn"
+                  disabled={exportLoading}
+                  onClick={() => handleMasterExport(masterExportFormat)}
+                >
+                  {exportLoading ? 'جاری ہے...' : 'ڈاؤن لوڈ کریں'}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="bulk-io-export-form">
             <div className="bulk-io-form-group">
-              <label htmlFor="export-scope-select">کلاس منتخب کریں:</label>
+              <div className="bulk-io-multiselect-header">
+                <label htmlFor="export-scope-select" className="bulk-io-label">
+                  کلاس منتخب کریں:
+                </label>
+                <div className="bulk-io-multiselect-actions">
+                  <button
+                    type="button"
+                    className="bulk-io-pill-btn"
+                    onClick={() => setSelectedExportClasses(['all'])}
+                  >
+                    تمام کلاسز
+                  </button>
+                  <button
+                    type="button"
+                    className="bulk-io-pill-btn"
+                    onClick={() => setSelectedExportClasses([])}
+                  >
+                    انتخاب صاف کریں
+                  </button>
+                </div>
+              </div>
               <select
                 id="export-scope-select"
-                value={exportScope}
-                onChange={(e) => setExportScope(e.target.value)}
-                className="bulk-io-select"
+                multiple
+                size={Math.min(Math.max(classesList.length + 1, 4), 7)}
+                value={selectedExportClasses}
+                onChange={handleClassSelectChange}
+                className="bulk-io-multiselect"
+                aria-label="کلاسز منتخب کریں"
               >
-                <option value="all">تمام کلاسز (Master List - کل {records.filter((r) => !r.isWithdrawn).length} طلباء)</option>
+                <option value="all">
+                  تمام کلاسز (Master List - کل {activeStudents.length} طلباء)
+                </option>
                 {classesList.map((cls) => {
-                  const count = records.filter(
-                    (r) => !r.isWithdrawn && (r.class_id || r.admClass) === cls.id
+                  const count = activeStudents.filter(
+                    (r) => (r.class_id || r.admClass) === cls.id
                   ).length;
                   return (
                     <option key={cls.id} value={cls.id}>
@@ -427,6 +591,14 @@ export default function BulkStudentImportExport({
                   );
                 })}
               </select>
+              <div className="bulk-io-form-hint">
+                کی بورڈ پر <strong>Ctrl</strong> بٹن دبا کر رکھیں اور مطلوبہ کلاسز پر کلک کریں تاکہ ایک سے زائد کلاسز بیک وقت منتخب ہو سکیں۔
+              </div>
+              <div className="bulk-io-selection-summary">
+                <span className="bulk-io-summary-label">منتخب شدہ:</span>
+                <span className="bulk-io-summary-value">{selectionSummaryText}</span>
+                <span className="bulk-io-summary-count">{selectedStudents.length} طلباء</span>
+              </div>
             </div>
 
             <div className="bulk-io-export-formats-grid">

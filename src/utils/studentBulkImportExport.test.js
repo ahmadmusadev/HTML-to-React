@@ -10,7 +10,8 @@ import {
   parseWordFile,
   shouldReverseToRtl,
   reverseTableColumns,
-  analyzeDuplicateStudents
+  analyzeDuplicateStudents,
+  printStudentsList
 } from './studentBulkImportExport';
 
 describe('studentBulkImportExport Utility', () => {
@@ -319,6 +320,26 @@ describe('studentBulkImportExport Utility', () => {
       expect(analysis.systemDuplicates.length).toBe(1);
       expect(analysis.systemDuplicates[0].name).toBe('احمد علی');
       expect(analysis.cleanPayloads.length).toBe(3);
+    });
+  });
+
+  describe('printStudentsList', () => {
+    it('executes safely in test environment without crashing', () => {
+      const students = [
+        { name: 'عثمان غنی', father_name: 'عفان', roll_number: '10', class_id: 'cls-1' }
+      ];
+      const classes = [
+        { id: 'cls-1', class_name: 'حفظ اول' }
+      ];
+
+      expect(() => {
+        printStudentsList({
+          students,
+          classes,
+          className: 'حفظ اول',
+          madrasaName: 'دارالعلوم'
+        });
+      }).not.toThrow();
     });
   });
 });

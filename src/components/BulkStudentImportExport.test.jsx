@@ -47,9 +47,9 @@ describe('BulkStudentImportExport Component', () => {
     fireEvent.click(screen.getByText('طلباء ایکسپورٹ کریں (لسٹ ڈاؤن لوڈ)'));
 
     expect(screen.getByText('طلباء کی لسٹ ایکسپورٹ کریں (Export Students List)')).toBeInTheDocument();
-    expect(screen.getByText(/ایکسل فائل/)).toBeInTheDocument();
-    expect(screen.getByText(/ورڈ دستاویز/)).toBeInTheDocument();
-    expect(screen.getByText(/پرنٹ \/ پی ڈی ایف/)).toBeInTheDocument();
+    expect(screen.getAllByText(/ایکسل فائل/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/ورڈ دستاویز/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/پرنٹ \/ پی ڈی ایف/).length).toBeGreaterThan(0);
     expect(screen.getByText('ایکسل میں ڈاؤن لوڈ کریں')).toBeInTheDocument();
   });
 
@@ -196,6 +196,97 @@ describe('BulkStudentImportExport Component', () => {
       expect(screen.getByText('مبارک ہو! تمام طلباء کامیابی سے شامل کر دیے گئے ہیں۔')).toBeInTheDocument();
       expect(screen.getByText(/تفویض کردہ رجسٹریشن نمبرز:/)).toBeInTheDocument();
     });
+  });
+
+  it('renders the Master List heading and format dropdown with 3 formats and executes master download', async () => {
+    const excelSpy = vi.spyOn(bulkUtils, 'exportStudentsToExcel').mockImplementation(() => {});
+    const wordSpy = vi.spyOn(bulkUtils, 'exportStudentsToWord').mockImplementation(() => Promise.resolve());
+    const printSpy = vi.spyOn(bulkUtils, 'printStudentsList').mockImplementation(() => {});
+
+    render(
+      <BulkStudentImportExport
+        classesList={mockClasses}
+        records={mockRecords}
+        activeMadrasa={mockMadrasa}
+      />
+    );
+
+    fireEvent.click(screen.getByText('طلباء ایکسپورٹ کریں (لسٹ ڈاؤن لوڈ)'));
+
+    // Verify master list heading
+    expect(screen.getByText('مکمل ماسٹر لسٹ ڈاؤن لوڈ کریں:')).toBeInTheDocument();
+
+    const masterSelect = screen.getByLabelText('مکمل ماسٹر لسٹ کا فارمیٹ منتخب کریں');
+    const masterDownloadBtn = screen.getByRole('button', { name: 'ڈاؤن لوڈ کریں' });
+
+    // Download in Excel
+    fireEvent.click(masterDownloadBtn);
+    expect(excelSpy).toHaveBeenCalledTimes(1);
+    expect(excelSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        className: 'تمام کلاسز (ماسٹر لسٹ)',
+        students: expect.arrayContaining([
+          expect.objectContaining({ name: 'محمد زید' }),
+          expect.objectContaining({ name: 'بلال احمد' })
+        ])
+      })
+    );
+
+    await waitFor(() => {
+      expect(masterDownloadBtn).not.toBeDisabled();
+    });
+
+    // Change format to Word
+    fireEvent.change(masterSelect, { target: { value: 'word' } });
+    fireEvent.click(masterDownloadBtn);
+    expect(wordSpy).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(masterDownloadBtn).not.toBeDisabled();
+    });
+
+    // Change format to PDF
+    fireEvent.change(masterSelect, { target: { value: 'pdf' } });
+    fireEvent.click(masterDownloadBtn);
+    expect(printSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports multi-class selection and exports only selected classes', () => {
+    const excelSpy = vi.spyOn(bulkUtils, 'exportStudentsToExcel').mockImplementation(() => {});
+
+    render(
+      <BulkStudentImportExport
+        classesList={mockClasses}
+        records={mockRecords}
+        activeMadrasa={mockMadrasa}
+      />
+    );
+
+    fireEvent.click(screen.getByText('طلباء ایکسپورٹ کریں (لسٹ ڈاؤن لوڈ)'));
+
+    const multiSelect = screen.getByLabelText('کلاسز منتخب کریں');
+    expect(multiSelect.multiple).toBe(true);
+
+    const optionAll = screen.getByRole('option', { name: /تمام کلاسز/ });
+    const optionC2 = screen.getByRole('option', { name: /ناظرہ کلاس/ });
+
+    // In jsdom, update options' selected status
+    optionAll.selected = false;
+    optionC2.selected = true;
+    fireEvent.change(multiSelect);
+
+    // Check summary shows ناظرہ کلاس and 1 student
+    expect(screen.getByText('ناظرہ کلاس')).toBeInTheDocument();
+    expect(screen.getByText('1 طلباء')).toBeInTheDocument();
+
+    // Export in Excel
+    fireEvent.click(screen.getByText('ایکسل میں ڈاؤن لوڈ کریں'));
+    expect(excelSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        className: 'ناظرہ کلاس',
+        students: [expect.objectContaining({ name: 'بلال احمد' })]
+      })
+    );
   });
 });
 
