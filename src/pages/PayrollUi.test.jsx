@@ -67,7 +67,7 @@ describe('Payroll UI & Access Control Tests', () => {
 
       // Verify ProtectedRoute displays unauthorized block
       expect(screen.getByText(/رسائی غیر مجاز/i)).toBeInTheDocument();
-      expect(screen.queryByText('تنخواہ و ترتیبات کا انتظام')).not.toBeInTheDocument();
+      expect(screen.queryByText('تنخواہ و ضوابط کا انتظام')).not.toBeInTheDocument();
     });
 
     it('allows admin role: "تنخواہ" tab is visible in navigation and /payroll loads successfully', async () => {
@@ -115,7 +115,7 @@ describe('Payroll UI & Access Control Tests', () => {
 
       // Header is rendered
       await waitFor(() => {
-        expect(screen.getByText('تنخواہ و ترتیبات کا انتظام')).toBeInTheDocument();
+        expect(screen.getByText('تنخواہ و ضوابط کا انتظام')).toBeInTheDocument();
       });
       expect(screen.getByText('قاری محمد بلال')).toBeInTheDocument();
     });
@@ -177,11 +177,11 @@ describe('Payroll UI & Access Control Tests', () => {
       render(<Payroll />);
 
       // Switch to Settings subtab
-      const settingsTab = screen.getByRole('tab', { name: 'ترتیبات' });
+      const settingsTab = screen.getByRole('tab', { name: 'ضوابط' });
       fireEvent.click(settingsTab);
 
       await waitFor(() => {
-        expect(screen.getByText('ہفتہ وار تعطیلات')).toBeInTheDocument();
+        expect(screen.getByText('ہفتہ وار چھٹیاں')).toBeInTheDocument();
       });
 
       // Check Friday checkbox (index 5)
@@ -205,20 +205,20 @@ describe('Payroll UI & Access Control Tests', () => {
       render(<Payroll />);
 
       // Switch to Holidays subtab
-      const holidaysTab = screen.getByRole('tab', { name: 'تعطیلات' });
+      const holidaysTab = screen.getByRole('tab', { name: 'چھٹیاں' });
       fireEvent.click(holidaysTab);
 
       await waitFor(() => {
-        expect(screen.getByText('نئی تعطیل شامل کریں')).toBeInTheDocument();
+        expect(screen.getByText('نئی چھٹی شامل کریں')).toBeInTheDocument();
       });
 
       const dateInput = screen.getByLabelText('تاریخ');
-      const titleInput = screen.getByLabelText('تعطیل کا عنوان');
+      const titleInput = screen.getByLabelText('چھٹی کا عنوان');
 
       fireEvent.change(dateInput, { target: { value: '2026-08-14' } });
       fireEvent.change(titleInput, { target: { value: 'یوم آزادی' } });
 
-      const submitBtn = screen.getByRole('button', { name: 'تعطیل شامل کریں' });
+      const submitBtn = screen.getByRole('button', { name: 'چھٹی شامل کریں' });
       fireEvent.click(submitBtn);
 
       await waitFor(() => {
@@ -311,11 +311,11 @@ describe('Payroll UI & Access Control Tests', () => {
       payrollApi.fetchHolidays.mockClear();
 
       // Switch to Holidays subtab
-      const holidaysTab = screen.getByRole('tab', { name: 'تعطیلات' });
+      const holidaysTab = screen.getByRole('tab', { name: 'چھٹیاں' });
       fireEvent.click(holidaysTab);
 
       await waitFor(() => {
-        expect(screen.getByText('نئی تعطیل شامل کریں')).toBeInTheDocument();
+        expect(screen.getByText('نئی چھٹی شامل کریں')).toBeInTheDocument();
       });
 
       // Change holiday year filter
@@ -396,11 +396,11 @@ describe('Payroll UI & Access Control Tests', () => {
       });
 
       // Switch to Settings tab
-      const settingsTab = screen.getByRole('tab', { name: 'ترتیبات' });
+      const settingsTab = screen.getByRole('tab', { name: 'ضوابط' });
       fireEvent.click(settingsTab);
 
       await waitFor(() => {
-        expect(screen.getByText('ہفتہ وار تعطیلات')).toBeInTheDocument();
+        expect(screen.getByText('ہفتہ وار چھٹیاں')).toBeInTheDocument();
       });
 
       payrollApi.fetchLeaveOpening.mockClear();
@@ -512,11 +512,11 @@ describe('Payroll UI & Access Control Tests', () => {
       render(<Payroll />);
 
       // Switch to Holidays subtab
-      const holidaysTab = screen.getByRole('tab', { name: 'تعطیلات' });
+      const holidaysTab = screen.getByRole('tab', { name: 'چھٹیاں' });
       fireEvent.click(holidaysTab);
 
       await waitFor(() => {
-        expect(screen.getByText('نئی تعطیل شامل کریں')).toBeInTheDocument();
+        expect(screen.getByText('نئی چھٹی شامل کریں')).toBeInTheDocument();
       });
 
       // Date, Urdu weekday (جمعہ), and Title are present in table
@@ -567,13 +567,13 @@ describe('Payroll UI & Access Control Tests', () => {
       }
 
       // Check Settings tab
-      fireEvent.click(screen.getByRole('tab', { name: 'ترتیبات' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'ضوابط' }));
       for (const str of oldEnglishStrings) {
         expect(container.textContent).not.toContain(str);
       }
 
       // Check Holidays tab
-      fireEvent.click(screen.getByRole('tab', { name: 'تعطیلات' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'چھٹیاں' }));
       for (const str of oldEnglishStrings) {
         expect(container.textContent).not.toContain(str);
       }

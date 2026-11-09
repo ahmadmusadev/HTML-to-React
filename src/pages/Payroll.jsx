@@ -360,7 +360,7 @@ export default function Payroll() {
       setSettings((prev) => ({ ...prev, weekly_off_days: next }));
     } else {
       if (current.length >= 6) {
-        setErrorMsg('کم از کم ایک دن کام کا ہونا لازمی ہے۔ زیادہ سے زیادہ 6 تعطیلات رکھی جا سکتی ہیں۔');
+        setErrorMsg('کم از کم ایک دن کام کا ہونا لازمی ہے۔ زیادہ سے زیادہ 6 چھٹیاں رکھی جا سکتی ہیں۔');
         return;
       }
       const next = [...current, dayInt].sort((a, b) => a - b);
@@ -423,7 +423,7 @@ export default function Payroll() {
         monthly_leave_accrual: Number(updated.monthly_leave_accrual),
         fiscal_year_start_month: newSavedMonth
       });
-      setSuccessMsg('ترتیبات کامیابی سے محفوظ ہو گئی ہیں۔');
+      setSuccessMsg('ضوابط کامیابی سے محفوظ ہو گئے ہیں۔');
     } catch (err) {
       setErrorMsg(toUrduPayrollError(err));
     } finally {
@@ -453,7 +453,7 @@ export default function Payroll() {
       setHolidays((prev) => [...prev, added].sort((a, b) => a.holiday_date.localeCompare(b.holiday_date)));
       setNewHolidayDate('');
       setNewHolidayTitle('');
-      setSuccessMsg('تعطیل کامیابی سے شامل کر دی گئی ہے۔');
+      setSuccessMsg('چھٹی کامیابی سے شامل کر دی گئی ہے۔');
     } catch (err) {
       setErrorMsg(toUrduPayrollError(err, 'holiday'));
     } finally {
@@ -472,7 +472,7 @@ export default function Payroll() {
     try {
       await deleteHoliday(supabase, activeMadrasaId, holidayToDelete.id);
       setHolidays((prev) => prev.filter((h) => h.id !== holidayToDelete.id));
-      setSuccessMsg('تعطیل کامیابی سے حذف کر دی گئی ہے۔');
+      setSuccessMsg('چھٹی کامیابی سے حذف کر دی گئی ہے۔');
       setHolidayToDelete(null);
     } catch (err) {
       setErrorMsg(toUrduPayrollError(err, 'holiday'));
@@ -560,8 +560,8 @@ export default function Payroll() {
     <div className="payroll-container" dir="rtl">
       {/* Header Area */}
       <div className="payroll-header-area">
-        <h1 className="payroll-page-title">تنخواہ و ترتیبات کا انتظام</h1>
-        <p className="payroll-page-desc">اساتذہ کی بنیادی تنخواہ، ہفتہ وار تعطیلات، رعایتی اوقات، اور چھٹیوں کے حساب کا نظام</p>
+        <h1 className="payroll-page-title">تنخواہ و ضوابط کا انتظام</h1>
+        <p className="payroll-page-desc">اساتذہ کی بنیادی تنخواہ، ہفتہ وار اور سالانہ چھٹیاں، رعایتی اوقات، اور حساب کا نظام</p>
       </div>
 
       {/* Madrasa ID Mismatch Info Banner */}
@@ -601,7 +601,7 @@ export default function Payroll() {
           className={`payroll-subtab-btn sub-tab-btn ${activeSubTab === 'settings' ? 'active' : ''}`}
           onClick={() => handleSwitchTab('settings')}
         >
-          ترتیبات
+          ضوابط
         </button>
         <button
           type="button"
@@ -610,7 +610,7 @@ export default function Payroll() {
           className={`payroll-subtab-btn sub-tab-btn ${activeSubTab === 'holidays' ? 'active' : ''}`}
           onClick={() => handleSwitchTab('holidays')}
         >
-          تعطیلات
+          چھٹیاں
         </button>
         <button
           type="button"
@@ -865,7 +865,7 @@ export default function Payroll() {
                 {/* Weekly Off Days Checkboxes */}
                 <div className="payroll-form-group" style={{ marginBottom: '24px' }}>
                   <label className="payroll-form-label">
-                    ہفتہ وار تعطیلات
+                    ہفتہ وار چھٹیاں
                   </label>
                   <span className="payroll-form-hint">
                     جن ایام میں ادارہ بند رہتا ہے انہیں منتخب فرمائیں (کم از کم 1 دن کام کا ہونا ضروری ہے):
@@ -898,7 +898,7 @@ export default function Payroll() {
                     className="payroll-btn-primary"
                     disabled={savingSettings}
                   >
-                    {savingSettings ? 'محفوظ کیا جا رہا ہے...' : 'ترتیبات محفوظ کریں'}
+                    {savingSettings ? 'محفوظ کیا جا رہا ہے...' : 'ضوابط محفوظ کریں'}
                   </button>
                 </div>
               </form>
@@ -906,13 +906,13 @@ export default function Payroll() {
           )}
 
           {/* =========================================================
-              SUB-TAB 3: تعطیلات
+              SUB-TAB 3: چھٹیاں
               ========================================================= */}
           {activeSubTab === 'holidays' && (
             <div className="payroll-tab-panel">
               {/* Add Holiday Form Card */}
               <div className="holiday-form-card">
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 16px 0' }}>نئی تعطیل شامل کریں</h2>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 16px 0' }}>نئی چھٹی شامل کریں</h2>
                 <form onSubmit={handleAddHoliday}>
                   <div className="holiday-form-row">
                     <div className="payroll-form-group" style={{ flex: '1 1 200px' }}>
@@ -930,7 +930,7 @@ export default function Payroll() {
                     </div>
                     <div className="payroll-form-group" style={{ flex: '2 1 300px' }}>
                       <label className="payroll-form-label" htmlFor="newHolidayTitleInput">
-                        تعطیل کا عنوان
+                        چھٹی کا عنوان
                       </label>
                       <input
                         id="newHolidayTitleInput"
@@ -949,7 +949,7 @@ export default function Payroll() {
                       disabled={savingHoliday}
                       style={{ height: '40px', alignSelf: 'flex-end' }}
                     >
-                      {savingHoliday ? 'شامل کیا جا رہا ہے...' : 'تعطیل شامل کریں'}
+                      {savingHoliday ? 'شامل کیا جا رہا ہے...' : 'چھٹی شامل کریں'}
                     </button>
                   </div>
                 </form>
@@ -975,14 +975,14 @@ export default function Payroll() {
                   ))}
                 </select>
                 <span className="payroll-form-hint">
-                  کل تعطیلات: {holidays.length}
+                  کل چھٹیاں: {holidays.length}
                 </span>
               </div>
 
               {/* Holidays Table / Small Local Loading State */}
               {loadingHolidays ? (
                 <div className="payroll-loading-box payroll-loading-box-sm">
-                  <p>تعطیلات لوڈ ہو رہی ہیں...</p>
+                  <p>چھٹیاں لوڈ ہو رہی ہیں...</p>
                 </div>
               ) : (
                 <div className="payroll-table-wrapper table-responsive">
@@ -999,7 +999,7 @@ export default function Payroll() {
                       {holidays.length === 0 ? (
                         <tr>
                           <td colSpan="4" className="payroll-empty-state">
-                            کوئی تعطیل درج نہیں ہے۔
+                            کوئی چھٹی درج نہیں ہے۔
                           </td>
                         </tr>
                       ) : (
@@ -1036,7 +1036,7 @@ export default function Payroll() {
               {holidayToDelete && (
                 <div className="payroll-modal-overlay" role="dialog" aria-modal="true">
                   <div className="payroll-modal-card">
-                    <h2 className="payroll-modal-title">تعطیل حذف کرنے کی تصدیق</h2>
+                    <h2 className="payroll-modal-title">چھٹی حذف کرنے کی تصدیق</h2>
                     <p className="payroll-modal-text">
                       کیا آپ واقعی <strong>{holidayToDelete.title}</strong> مورخہ{' '}
                       <strong>{holidayToDelete.holiday_date}</strong> کو فہرست سے حذف کرنا چاہتے ہیں؟
