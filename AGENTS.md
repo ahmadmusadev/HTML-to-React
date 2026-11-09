@@ -239,3 +239,18 @@ The user-facing interface should use clear, natural, and professional **Urdu** t
 5. If user asks for a small fix, use:
    `fix/<fix-name>`
 6. Do NOT merge without user approval.
+
+
+## Local Testing Rule - MUST FOLLOW
+
+After completing ANY new feature, update, or fix:
+
+1. Run the project locally first.
+2. ALWAYS provide the local host link at the end, for example:
+   `http://localhost:5173` or `http://localhost:3000`
+3. Do NOT ask for deployment until user has checked it locally.
+4. Wait for user confirmation after local check.
+   Only deploy / merge after user says: "OK, deploy it"
+
+Do NOT skip local testing.
+
