@@ -368,7 +368,7 @@ export default function SuperAdmin() {
       {/* Header & Stats */}
       <div className="super-admin-header-card">
         <div className="super-admin-title-area">
-          <h2>سپر ایڈمن کنٹرول پینل</h2>
+          <h2>سپر ایڈمن کنٹرول ڈیش بورڈ</h2>
           <p>تمام رجسٹرڈ مدارس اور منتظمین کی مرکزی نگرانی و نیا اندراج</p>
         </div>
         <div className="super-admin-stats-row">

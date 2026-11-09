@@ -914,7 +914,7 @@ export const downloadSampleExcelTemplate = () => {
   const workbook = XLSX.utils.book_new();
   workbook.Workbook = { Views: [{ RTL: true }] };
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Sample_Students');
-  XLSX.writeFile(workbook, 'نمونہ_فہرست_طلباء_ٹیمپلیٹ.xlsx');
+  XLSX.writeFile(workbook, 'نمونہ_فہرست_طلباء_فارمیٹ.xlsx');
 };
 
 /**
@@ -971,7 +971,7 @@ export const downloadSampleWordTemplate = async () => {
         properties: {},
         children: [
           new Paragraph({
-            text: 'نمونہ برائے بلک اسٹوڈنٹ امپورٹ (ورڈ ٹیمپلیٹ)',
+            text: 'نمونہ برائے بلک اسٹوڈنٹ امپورٹ (ورڈ فارمیٹ)',
             heading: HeadingLevel.HEADING_2,
             alignment: AlignmentType.CENTER,
             bidirectional: true
@@ -1005,7 +1005,7 @@ export const downloadSampleWordTemplate = async () => {
   const blob = await Packer.toBlob(doc);
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = 'نمونہ_فہرست_طلباء_ٹیمپلیٹ.docx';
+  link.download = 'نمونہ_فہرست_طلباء_فارمیٹ.docx';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

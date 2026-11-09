@@ -1427,7 +1427,7 @@ export default function Attendance() {
             حاضری ریکارڈ دیکھیں
           </button>
           <button className="att-clear-btn" onClick={() => setShowHistory(false)}>
-            پینل صاف کریں
+            ریکارڈ بند کریں
           </button>
         </div>
         <div id="attendanceHistoryArea" style={{ marginTop: "14px" }}>

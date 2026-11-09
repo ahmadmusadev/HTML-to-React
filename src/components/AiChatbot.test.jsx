@@ -274,7 +274,7 @@ describe('AiChatbot Component', () => {
       const match = findBestKnowledgeMatch('سپر ایڈمن پینل سے نیا مدرسہ کیسے رجسٹر کریں؟');
       expect(match).not.toBeNull();
       expect(match.id).toBe('super_admin');
-      expect(match.response).toContain('سپر ایڈمن پینل کے استعمال کا طریقہ');
+      expect(match.response).toContain('سپر ایڈمن ڈیش بورڈ کے استعمال کا طریقہ');
     });
 
     it('matches all students overall list query accurately and does not confuse with dashboard', () => {
