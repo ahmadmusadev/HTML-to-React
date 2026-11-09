@@ -20,6 +20,7 @@ describe('BulkStudentImportExport Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('renders import and export mode tabs properly', () => {
@@ -287,6 +288,40 @@ describe('BulkStudentImportExport Component', () => {
         students: [expect.objectContaining({ name: 'بلال احمد' })]
       })
     );
+  });
+
+  it('marks pill buttons active with border indicator when toggled', () => {
+    render(
+      <BulkStudentImportExport
+        classesList={mockClasses}
+        records={mockRecords}
+        activeMadrasa={mockMadrasa}
+      />
+    );
+
+    const exportTabBtn = screen.getByText('طلباء ایکسپورٹ کریں (لسٹ ڈاؤن لوڈ)');
+    fireEvent.click(exportTabBtn);
+
+    // Export tab button has active class and persisted in localStorage
+    expect(exportTabBtn).toHaveClass('active');
+    expect(localStorage.getItem('hifz_bulk_student_active_mode')).toBe('export');
+
+    const allBtn = screen.getByRole('button', { name: 'تمام کلاسز' });
+    const clearBtn = screen.getByRole('button', { name: 'انتخاب صاف کریں' });
+
+    // Initially 'all' is selected
+    expect(allBtn).toHaveClass('active');
+    expect(clearBtn).not.toHaveClass('active');
+
+    // Click 'انتخاب صاف کریں'
+    fireEvent.click(clearBtn);
+    expect(clearBtn).toHaveClass('active');
+    expect(allBtn).not.toHaveClass('active');
+
+    // Click 'تمام کلاسز' again
+    fireEvent.click(allBtn);
+    expect(allBtn).toHaveClass('active');
+    expect(clearBtn).not.toHaveClass('active');
   });
 });
 

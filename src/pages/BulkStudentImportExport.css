@@ -21,7 +21,7 @@
   flex: 1;
   padding: 12px 16px;
   background-color: var(--bg-card, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
+  border: 2px solid var(--border, #e2e8f0);
   border-radius: 8px;
   color: var(--text, #1e293b);
   font-size: 1.05rem;
@@ -31,32 +31,35 @@
   text-align: center;
 }
 
-.bulk-io-tab-btn:hover {
-  border-color: var(--accent, #0284c7);
+.bulk-io-tab-btn:hover:not(.active) {
+  border-color: #cbd5e1;
   background-color: var(--bg-hover, #f8fafc);
 }
 
 .bulk-io-tab-btn.active {
-  background-color: var(--accent, #0284c7);
-  border-color: var(--accent, #0284c7);
-  color: #ffffff;
+  background-color: #ffffff;
+  border: 2px solid var(--accent, #0284c7) !important;
+  color: var(--accent, #0284c7) !important;
+  box-shadow: 0 0 0 1px var(--accent, #0284c7);
 }
 
 [data-theme="dark"] .bulk-io-tab-btn {
   background-color: #18181b;
-  border-color: #27272a;
+  border: 2px solid #27272a;
+  color: #a1a1aa;
+}
+
+[data-theme="dark"] .bulk-io-tab-btn:hover:not(.active) {
+  background-color: #27272a;
+  border-color: #3f3f46;
   color: #f4f4f5;
 }
 
-[data-theme="dark"] .bulk-io-tab-btn:hover {
-  background-color: #27272a;
-  border-color: #3f3f46;
-}
-
 [data-theme="dark"] .bulk-io-tab-btn.active {
-  background-color: #0284c7;
-  border-color: #0284c7;
-  color: #ffffff;
+  background-color: #18181b !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 
 /* Card */
@@ -270,31 +273,46 @@
 
 .bulk-io-pill-btn {
   background-color: #f1f5f9;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 2px solid var(--border, #cbd5e1);
   border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 0.82rem;
+  padding: 4px 12px;
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--text, #1e293b);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.bulk-io-pill-btn:hover {
+.bulk-io-pill-btn:hover:not(.active) {
   background-color: #e2e8f0;
-  border-color: var(--accent, #0284c7);
+  border-color: #94a3b8;
   color: var(--accent, #0284c7);
+}
+
+.bulk-io-pill-btn.active {
+  background-color: #ffffff;
+  border: 2px solid var(--accent, #0284c7) !important;
+  color: var(--accent, #0284c7) !important;
+  box-shadow: 0 0 0 1px var(--accent, #0284c7);
 }
 
 [data-theme="dark"] .bulk-io-pill-btn {
   background-color: #27272a;
-  border-color: #3f3f46;
-  color: #f4f4f5;
+  border: 2px solid #3f3f46;
+  color: #a1a1aa;
 }
 
-[data-theme="dark"] .bulk-io-pill-btn:hover {
+[data-theme="dark"] .bulk-io-pill-btn:hover:not(.active) {
   background-color: #3f3f46;
-  color: #38bdf8;
+  color: #f4f4f5;
+  border-color: #52525b;
+}
+
+[data-theme="dark"] .bulk-io-pill-btn.active {
+  background-color: #18181b !important;
+  border: 2px solid #ffffff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .bulk-io-multiselect {

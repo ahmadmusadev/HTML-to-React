@@ -14,6 +14,7 @@ import {
   analyzeDuplicateStudents
 } from '../utils/studentBulkImportExport';
 import { mapSupabaseToUi } from '../pages/Admissions';
+import '../pages/BulkStudentImportExport.css';
 
 export default function BulkStudentImportExport({
   classesList = [],
@@ -26,8 +27,21 @@ export default function BulkStudentImportExport({
   onViewClass
 }) {
   const fileInputId = useId();
-  // Main mode: 'import' or 'export'
-  const [activeMode, setActiveMode] = useState('import');
+  // Main mode: 'import' or 'export' (persisted in localStorage)
+  const [activeMode, setActiveMode] = useState(() => {
+    try {
+      return localStorage.getItem('hifz_bulk_student_active_mode') || 'import';
+    } catch {
+      return 'import';
+    }
+  });
+
+  const handleModeChange = (mode) => {
+    setActiveMode(mode);
+    try {
+      localStorage.setItem('hifz_bulk_student_active_mode', mode);
+    } catch {}
+  };
 
   // Export State
   const [selectedExportClasses, setSelectedExportClasses] = useState(
@@ -466,7 +480,7 @@ export default function BulkStudentImportExport({
           type="button"
           className={`bulk-io-tab-btn ${activeMode === 'import' ? 'active' : ''}`}
           onClick={() => {
-            setActiveMode('import');
+            handleModeChange('import');
             setExportFeedback(null);
           }}
         >
@@ -476,7 +490,7 @@ export default function BulkStudentImportExport({
           type="button"
           className={`bulk-io-tab-btn ${activeMode === 'export' ? 'active' : ''}`}
           onClick={() => {
-            setActiveMode('export');
+            handleModeChange('export');
             setMappingError(null);
           }}
         >
@@ -554,14 +568,14 @@ export default function BulkStudentImportExport({
                 <div className="bulk-io-multiselect-actions">
                   <button
                     type="button"
-                    className="bulk-io-pill-btn"
+                    className={`bulk-io-pill-btn ${selectedExportClasses.includes('all') ? 'active' : ''}`}
                     onClick={() => setSelectedExportClasses(['all'])}
                   >
                     تمام کلاسز
                   </button>
                   <button
                     type="button"
-                    className="bulk-io-pill-btn"
+                    className={`bulk-io-pill-btn ${selectedExportClasses.length === 0 ? 'active' : ''}`}
                     onClick={() => setSelectedExportClasses([])}
                   >
                     انتخاب صاف کریں
