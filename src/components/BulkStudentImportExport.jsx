@@ -702,21 +702,28 @@ export default function BulkStudentImportExport({
 
               {/* Sample template links */}
               <div className="bulk-io-templates-bar">
-                <span className="bulk-io-template-note">تیار شدہ نمونہ فائل کی ضرورت ہے؟</span>
+                <div className="bulk-io-template-info">
+                  <strong className="bulk-io-template-title">
+                    طلباء کی لسٹ تیار کرنے کے لیے بنا بنایا ٹیمپلیٹ:
+                  </strong>
+                  <span className="bulk-io-template-desc">
+                    یہاں سے ایکسل یا ورڈ فائل ڈاؤن لوڈ کریں، اس میں اپنی کلاس کے طلباء کا ڈیٹا لکھیں اور نیچے اپلوڈ کریں۔
+                  </span>
+                </div>
                 <div className="bulk-io-template-actions">
                   <button
                     type="button"
                     className="bulk-io-template-btn"
                     onClick={downloadSampleExcelTemplate}
                   >
-                    نمونہ ایکسل ٹیمپلیٹ ڈاؤن لوڈ کریں
+                    ایکسل ٹیمپلیٹ ڈاؤن لوڈ
                   </button>
                   <button
                     type="button"
                     className="bulk-io-template-btn"
                     onClick={downloadSampleWordTemplate}
                   >
-                    نمونہ ورڈ ٹیمپلیٹ ڈاؤن لوڈ کریں
+                    ورڈ ٹیمپلیٹ ڈاؤن لوڈ
                   </button>
                 </div>
               </div>

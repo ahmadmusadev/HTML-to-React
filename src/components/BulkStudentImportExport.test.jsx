@@ -99,8 +99,8 @@ describe('BulkStudentImportExport Component', () => {
       />
     );
 
-    const excelSampleBtn = screen.getByText('نمونہ ایکسل ٹیمپلیٹ ڈاؤن لوڈ کریں');
-    const wordSampleBtn = screen.getByText('نمونہ ورڈ ٹیمپلیٹ ڈاؤن لوڈ کریں');
+    const excelSampleBtn = screen.getByText('ایکسل ٹیمپلیٹ ڈاؤن لوڈ');
+    const wordSampleBtn = screen.getByText('ورڈ ٹیمپلیٹ ڈاؤن لوڈ');
 
     fireEvent.click(excelSampleBtn);
     expect(sampleExcelSpy).toHaveBeenCalledTimes(1);
