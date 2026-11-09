@@ -932,6 +932,98 @@ export function MadrasaProvider({ children }) {
     }
   };
 
+  const addBulkStudentsToSupabase = async (studentsArray = [], madrasaId = activeMadrasaId, onProgress = null) => {
+    if (!studentsArray || studentsArray.length === 0) return [];
+    const isRemote = isValidUUID(madrasaId);
+
+    if (isRemote) {
+      try {
+        const chunkSize = 50;
+        const insertedResults = [];
+
+        for (let i = 0; i < studentsArray.length; i += chunkSize) {
+          const chunk = studentsArray.slice(i, i + chunkSize).map((s) => ({
+            ...s,
+            madrasa_id: madrasaId,
+            class_id: isValidUUID(s.class_id) ? s.class_id : null
+          }));
+
+          let { data, error } = await supabase
+            .from('students')
+            .insert(chunk)
+            .select('*, classes(class_name)');
+
+          if (
+            error &&
+            (error.code === '42703' ||
+              String(error.message).includes('name_english') ||
+              String(error.message).includes('father_name_english'))
+          ) {
+            const fallbackChunk = chunk.map((c) => {
+              const cp = { ...c };
+              delete cp.name_english;
+              delete cp.father_name_english;
+              return cp;
+            });
+            const retry = await supabase
+              .from('students')
+              .insert(fallbackChunk)
+              .select('*, classes(class_name)');
+            if (retry.error) throw retry.error;
+            data = (retry.data || []).map((row, idx) => ({
+              ...row,
+              name_english: chunk[idx]?.name_english || null,
+              father_name_english: chunk[idx]?.father_name_english || null
+            }));
+            error = null;
+          } else if (error) {
+            throw error;
+          }
+
+          if (data) {
+            insertedResults.push(...data);
+          }
+
+          if (typeof onProgress === 'function') {
+            onProgress(insertedResults.length, studentsArray.length);
+          }
+        }
+
+        // Sync all inserted records to local storage cache
+        try {
+          const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+          localData.records = [...(localData.records || []), ...insertedResults];
+          saveMadrasaData('hf_records_v1', localData, madrasaId);
+        } catch (syncErr) {
+          console.warn('[MadrasaContext] Failed to sync bulk students to local cache:', syncErr);
+        }
+
+        return insertedResults;
+      } catch (e) {
+        console.error('[MadrasaContext] Supabase bulk add students error:', e.message || e);
+        throw new Error(e.message || FETCH_ERROR_URDU);
+      }
+    } else {
+      // Local storage fallback for offline / mock madrasa
+      const localRecords = studentsArray.map((s, idx) => ({
+        id: `std_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 5)}`,
+        ...s,
+        madrasa_id: madrasaId,
+        created_at: new Date().toISOString()
+      }));
+
+      const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
+      localData.records = [...(localData.records || []), ...localRecords];
+      saveMadrasaData('hf_records_v1', localData, madrasaId);
+
+      if (typeof onProgress === 'function') {
+        onProgress(localRecords.length, localRecords.length);
+      }
+
+      return localRecords;
+    }
+  };
+
   const updateStudentInSupabase = async (id, studentData) => {
     const isRemote = isValidUUID(id);
 
@@ -2845,6 +2937,7 @@ export function MadrasaProvider({ children }) {
       deleteClassFromSupabase,
       deleteStudentFromSupabase,
       addStudentToSupabase,
+      addBulkStudentsToSupabase,
       updateStudentInSupabase,
       withdrawStudentInSupabase,
       fetchHifzHalfYearRecordsFromSupabase,

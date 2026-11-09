@@ -223,3 +223,19 @@ This includes, without limitation:
 The user-facing interface should use clear, natural, and professional **Urdu** throughout. English should not appear in user-facing messages unless it is technically necessary, such as a proper name, standard technical term, or user-provided content.
 
 **Important:** This rule applies to all current and future features and changes. Whenever you add or modify functionality, check that every new user-facing message follows this Urdu-language requirement.
+
+## Branching Rule - MUST FOLLOW
+
+1. NEVER work directly on `main` branch.
+2. For EVERY new feature, create a separate branch first:
+   `feature/<feature-name>`
+   Example: `feature/bulk-import-export`, `feature/fee-system`
+3. Complete the full feature in that branch only.
+   Test it fully before merging.
+4. Merge to `main` ONLY after:
+   - Feature is 100% complete
+   - No old feature is broken
+   - User confirms: "Merge it"
+5. If user asks for a small fix, use:
+   `fix/<fix-name>`
+6. Do NOT merge without user approval.

@@ -3,7 +3,9 @@ import { useMadrasa } from '../context/MadrasaContext';
 import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
 import PrintPortal from '../components/PrintPortal';
+import BulkStudentImportExport from '../components/BulkStudentImportExport';
 import './Admissions.css';
+import './BulkStudentImportExport.css';
 
 export const calculateAge = (dVal, mVal, yVal, admVal) => {
   dVal = parseInt(dVal, 10); mVal = parseInt(mVal, 10); yVal = parseInt(yVal, 10);
@@ -235,10 +237,12 @@ export default function Admissions() {
     deleteStudentFromSupabase,
     fetchStudentsFromSupabase,
     addStudentToSupabase,
+    addBulkStudentsToSupabase,
     updateStudentInSupabase,
     withdrawStudentInSupabase
   } = useMadrasa();
   const [activeTab, setActiveTab] = useState('new');
+  const [bulkIoClassId, setBulkIoClassId] = useState('');
   const [records, setRecords] = useState([]);
   const [classesList, setClassesList] = useState(() => (
     contextClassesList && contextClassesList.length > 0 ? contextClassesList : []
@@ -936,8 +940,8 @@ export default function Admissions() {
   return (
     <div className="tab-content">
       <div className="adm-type-grid no-print">
-        {['new', 'search', 'all', 'classes', 'withdraw', 'withdrawn_list', 'printform'].map((t, idx) => {
-            const labels = ['نیا داخلہ', 'طالب علم تلاش', 'تمام طلباء', 'تمام کلاسز', 'اخراج / روانگی', 'خارج شدہ طلباء', 'پرنٹیبل داخلہ فارم'];
+        {['new', 'search', 'all', 'classes', 'withdraw', 'withdrawn_list', 'printform', 'bulk_io'].map((t, idx) => {
+            const labels = ['نیا داخلہ', 'طالب علم تلاش', 'تمام طلباء', 'تمام کلاسز', 'اخراج / روانگی', 'خارج شدہ طلباء', 'پرنٹیبل داخلہ فارم', 'بلک امپورٹ و ایکسپورٹ'];
             return <button key={t} className={`adm-type-btn ${activeTab === t ? 'active' : ''}`} onClick={() => handleTabChange(t)}>{labels[idx]}</button>;
         })}
       </div>
@@ -1756,6 +1760,18 @@ export default function Admissions() {
 
                       <button
                         type="button"
+                        className="class-action-btn bulk-import-class-btn"
+                        onClick={() => {
+                          setBulkIoClassId(cls.id);
+                          setActiveTab('bulk_io');
+                        }}
+                        title="اس کلاس کے طلباء ایکسل، ورڈ یا پی ڈی ایف سے امپورٹ یا ایکسپورٹ کریں"
+                      >
+                        بلک امپورٹ / ایکسپورٹ
+                      </button>
+
+                      <button
+                        type="button"
                         className="class-action-btn delete-class-btn"
                         onClick={() => handleDeleteClass(cls.id, cls.name || cls.class_name)}
                         title="کلاس کو حذف کریں"
@@ -1777,6 +1793,17 @@ export default function Admissions() {
                               title="اس کلاس کے تمام طلباء کی باضابطہ فہرست پرنٹ کریں"
                             >
                               پرنٹ لسٹ
+                            </button>
+                            <button
+                              type="button"
+                              className="drawer-bulk-btn"
+                              onClick={() => {
+                                setBulkIoClassId(cls.id);
+                                setActiveTab('bulk_io');
+                              }}
+                              title="اس کلاس کے طلباء ایکسل، ورڈ یا پی ڈی ایف سے امپورٹ یا ایکسپورٹ کریں"
+                            >
+                              بلک امپورٹ / ایکسپورٹ
                             </button>
                             <button
                               type="button"
@@ -2134,6 +2161,24 @@ export default function Admissions() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'bulk_io' && (
+        <BulkStudentImportExport
+          classesList={classesList}
+          records={records}
+          onStudentsAdded={(newStudents) => {
+            setRecords((prev) => [...prev, ...newStudents]);
+          }}
+          preSelectedClassId={bulkIoClassId}
+          activeMadrasa={activeMadrasa}
+          activeMadrasaId={activeMadrasaId}
+          addBulkStudentsToSupabase={addBulkStudentsToSupabase}
+          onViewClass={(clsId) => {
+            setExpandedClassId(clsId);
+            setActiveTab('classes');
+          }}
+        />
       )}
       
       {profileModal && (
