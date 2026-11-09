@@ -734,6 +734,8 @@ export const exportStudentsToExcel = ({
   ];
 
   const workbook = XLSX.utils.book_new();
+  // CRITICAL: Set right-to-left view on workbook for native Excel RTL rendering
+  workbook.Workbook = { Views: [{ RTL: true }] };
   const safeSheetName = (className || 'Students_List').substring(0, 31).replace(/[:\\/?*[\]]/g, '_');
   XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
 
@@ -770,7 +772,8 @@ export const exportStudentsToWord = async ({
         children: [
           new Paragraph({
             text: label,
-            alignment: AlignmentType.CENTER
+            alignment: AlignmentType.CENTER,
+            bidirectional: true
           })
         ],
         shading: { fill: 'E2E8F0' }
@@ -801,7 +804,8 @@ export const exportStudentsToWord = async ({
           children: [
             new Paragraph({
               text: text,
-              alignment: AlignmentType.RIGHT
+              alignment: AlignmentType.RIGHT,
+              bidirectional: true
             })
           ]
         })
@@ -818,19 +822,24 @@ export const exportStudentsToWord = async ({
           new Paragraph({
             text: madrasaName,
             heading: HeadingLevel.HEADING_1,
-            alignment: AlignmentType.CENTER
+            alignment: AlignmentType.CENTER,
+            bidirectional: true
           }),
           new Paragraph({
             text: `فہرست طلباء - ${className || 'تمام کلاسز'}`,
             heading: HeadingLevel.HEADING_2,
-            alignment: AlignmentType.CENTER
+            alignment: AlignmentType.CENTER,
+            bidirectional: true
           }),
           new Paragraph({
             text: `تاریخ اجرا: ${new Date().toLocaleDateString('ur-PK')}`,
-            alignment: AlignmentType.CENTER
+            alignment: AlignmentType.CENTER,
+            bidirectional: true
           }),
-          new Paragraph({ text: '' }),
+          new Paragraph({ text: '', bidirectional: true }),
           new Table({
+            visuallyRightToLeft: true,
+            alignment: AlignmentType.CENTER,
             rows: tableRows,
             width: {
               size: 100,
@@ -903,6 +912,7 @@ export const downloadSampleExcelTemplate = () => {
   ];
 
   const workbook = XLSX.utils.book_new();
+  workbook.Workbook = { Views: [{ RTL: true }] };
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Sample_Students');
   XLSX.writeFile(workbook, 'نمونہ_فہرست_طلباء_ٹیمپلیٹ.xlsx');
 };
@@ -927,7 +937,8 @@ export const downloadSampleWordTemplate = async () => {
         children: [
           new Paragraph({
             text: label,
-            alignment: AlignmentType.CENTER
+            alignment: AlignmentType.CENTER,
+            bidirectional: true
           })
         ],
         shading: { fill: 'F1F5F9' }
@@ -945,7 +956,8 @@ export const downloadSampleWordTemplate = async () => {
             children: [
               new Paragraph({
                 text: val,
-                alignment: AlignmentType.RIGHT
+                alignment: AlignmentType.RIGHT,
+                bidirectional: true
               })
             ]
           })
@@ -961,14 +973,18 @@ export const downloadSampleWordTemplate = async () => {
           new Paragraph({
             text: 'نمونہ برائے بلک اسٹوڈنٹ امپورٹ (ورڈ ٹیمپلیٹ)',
             heading: HeadingLevel.HEADING_2,
-            alignment: AlignmentType.CENTER
+            alignment: AlignmentType.CENTER,
+            bidirectional: true
           }),
           new Paragraph({
             text: 'براہ کرم اس ٹیبل میں طلباء کا ڈیٹا درج کریں اور محفوظ کر کے امپورٹ کریں۔',
-            alignment: AlignmentType.CENTER
+            alignment: AlignmentType.CENTER,
+            bidirectional: true
           }),
-          new Paragraph({ text: '' }),
+          new Paragraph({ text: '', bidirectional: true }),
           new Table({
+            visuallyRightToLeft: true,
+            alignment: AlignmentType.CENTER,
             rows: [
               new TableRow({
                 children: tableHeaderCells,
@@ -1040,6 +1056,7 @@ export const printStudentsList = ({
           margin: 20px;
           color: #000;
           direction: rtl;
+          text-align: right;
         }
         .header {
           text-align: center;
@@ -1054,6 +1071,7 @@ export const printStudentsList = ({
           width: 100%;
           border-collapse: collapse;
           font-size: 13px;
+          direction: rtl;
         }
         th {
           background-color: #f1f5f9;

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as XLSX from 'xlsx';
 import {
   autoDetectColumnMapping,
@@ -11,7 +11,9 @@ import {
   shouldReverseToRtl,
   reverseTableColumns,
   analyzeDuplicateStudents,
-  printStudentsList
+  printStudentsList,
+  exportStudentsToExcel,
+  exportStudentsToWord
 } from './studentBulkImportExport';
 
 describe('studentBulkImportExport Utility', () => {
@@ -340,6 +342,50 @@ describe('studentBulkImportExport Utility', () => {
           madrasaName: 'دارالعلوم'
         });
       }).not.toThrow();
+    });
+  });
+
+  describe('RTL Document Export Configuration', () => {
+    it('executes Excel export safely with RTL configuration', () => {
+      const students = [
+        { name: 'محمد زید', father_name: 'عمران', roll_number: '01', class_id: 'cls-1' }
+      ];
+      const classes = [{ id: 'cls-1', class_name: 'حفظ اول' }];
+
+      expect(() => {
+        exportStudentsToExcel({
+          students,
+          classes,
+          className: 'حفظ اول',
+          madrasaName: 'جامعہ دارالعلوم'
+        });
+      }).not.toThrow();
+    });
+
+    it('creates Word document with visuallyRightToLeft table and bidirectional paragraphs', async () => {
+      const students = [
+        { name: 'محمد زید', father_name: 'عمران', roll_number: '01', class_id: 'cls-1' }
+      ];
+      const classes = [{ id: 'cls-1', class_name: 'حفظ اول' }];
+
+      // Mock DOM link download
+      const clickMock = vi.fn();
+      vi.spyOn(document, 'createElement').mockReturnValue({
+        click: clickMock,
+        setAttribute: vi.fn(),
+        style: {}
+      });
+      vi.spyOn(document.body, 'appendChild').mockImplementation(() => {});
+      vi.spyOn(document.body, 'removeChild').mockImplementation(() => {});
+      global.URL.createObjectURL = vi.fn().mockReturnValue('blob:dummy');
+      global.URL.revokeObjectURL = vi.fn();
+
+      await expect(exportStudentsToWord({
+        students,
+        classes,
+        className: 'حفظ اول',
+        madrasaName: 'جامعہ دارالعلوم'
+      })).resolves.not.toThrow();
     });
   });
 });

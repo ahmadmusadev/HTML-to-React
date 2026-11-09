@@ -76,19 +76,28 @@ Whenever UI is modified:
 - Ensure text remains readable at different screen sizes.
 - Avoid excessively small text.
 
-### 6. RTL and Urdu Support
+### 6. RTL and Urdu Support (Strict Right-To-Left Table & File Direction)
 
 This application uses RTL and Urdu content.
 
-Whenever a UI component is created or modified:
+Whenever ANY UI component, table, document, or file import/export is handled:
 
-- Preserve RTL layout behavior.
+- **Mandatory RTL Table & Document Direction for Import & Export**:
+  - In Urdu, all tables, documents, spreadsheets, reports, and printouts MUST strictly read and count columns from **Right to Left (RTL)**, NEVER from Left to Right (LTR).
+  - **File Import Parsing**: Column 1 / the primary identifier (e.g., Serial No `نمبر شمار`, Roll No `رول نمبر`) starts at the RIGHTMOST column of the visual document/table. The system must always parse and count columns in RTL order (or automatically reverse LTR extractions) so that Column 1 is on the right.
+  - **File Export (Excel .xlsx, Word .docx, PDF / Print)**:
+    - Every exported table MUST be configured for Right-to-Left (RTL) reading.
+    - In Excel (.xlsx): The workbook MUST have right-to-left view enabled (`wb.Workbook = { Views: [{ RTL: true }] }`) so that Column A is situated at the far right and columns progress to the left.
+    - In Word (.docx): Tables MUST have `visuallyRightToLeft: true` (`<w:bidiVisual/>`), with all text paragraphs marked `bidirectional: true` and aligned to the right/center, so that Column 1 (`نمبر شمار`) appears on the rightmost edge and columns flow from right to left.
+    - In PDF & Print sheets: HTML document and tables MUST have `dir="rtl"` with right-to-left layout so Column 1 is at the far right.
+- Preserve RTL layout behavior across all pages, components, and modals.
 - Ensure Urdu text aligns correctly.
 - Ensure Arabic/Urdu text does not overlap or break.
 - Preserve appropriate Urdu typography.
 - Check mixed Urdu/English content carefully.
 - Do not introduce unnecessary LTR behavior into RTL interfaces.
 - Ensure inputs, labels, dropdowns, tables, and dialogs behave correctly in RTL.
+- **Mandatory AGENTS.md Adherence**: Every time, the agent MUST clearly read and strictly follow all instructions and standards in `AGENTS.md` before making any changes.
 
 ### 7. Existing Functionality Must Be Preserved
 
