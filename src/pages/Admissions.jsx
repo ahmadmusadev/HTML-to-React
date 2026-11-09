@@ -1940,7 +1940,7 @@ export default function Admissions() {
                 </div>
               </div>
               <div className="withdrawal-form-area">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}><strong style={{ color: 'var(--danger)', fontSize: '1.05rem' }}>تفصیلاتِ اخراج</strong></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}><strong className="withdrawal-section-heading" style={{ fontSize: '1.05rem' }}>تفصیلاتِ اخراج</strong></div>
                 <div className="grid-row"><div><label>تاریخ اخراج</label><input type="date" value={withdrawDate} onChange={e => setWithdrawDate(e.target.value)} /></div></div>
                 <div style={{ marginTop: '12px' }}><label>وجہ اخراج</label><textarea rows="4" placeholder="اخراج کی مکمل تفصیل یا وجہ یہاں درج کریں..." value={withdrawReason} onChange={e => setWithdrawReason(e.target.value)}></textarea></div>
                 <div className="btn-container" style={{ marginTop: '20px' }}><button onClick={processWithdrawal} style={{ background: 'linear-gradient(135deg,#b71c1c,var(--danger))', padding: '13px 40px', borderRadius: '10px' }}>اخراج محفوظ کریں</button></div>
