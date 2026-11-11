@@ -435,6 +435,81 @@
   max-width: 80px;
 }
 
+/* Compact Date Input */
+.para-table-date-input {
+  width: 100%;
+  padding: 4px 4px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 5px;
+  background: var(--card, #ffffff);
+  color: var(--text, #0f172a);
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .para-table-date-input {
+  background: #27272a;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+}
+
+.para-table-date-input:focus {
+  outline: none;
+  border-color: var(--accent, #0d3b66);
+}
+
+/* Compact Number Input */
+.para-table-num-input {
+  width: 100%;
+  padding: 4px 2px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 5px;
+  background: var(--card, #ffffff);
+  color: var(--text, #0f172a);
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .para-table-num-input {
+  background: #27272a;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+}
+
+.para-table-num-input:focus {
+  outline: none;
+  border-color: var(--accent, #0d3b66);
+}
+
+/* Wide Short Report Input */
+.para-table-report-input {
+  width: 100%;
+  min-width: 250px;
+  padding: 6px 10px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  direction: rtl;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 5px;
+  background: var(--card, #ffffff);
+  color: var(--text, #0f172a);
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .para-table-report-input {
+  background: #27272a;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+}
+
+.para-table-report-input:focus {
+  outline: none;
+  border-color: var(--accent, #0d3b66);
+}
+
 /* Five Para Detailed Review Row / Block */
 .para-review-row td {
   background: #f8fafc;

@@ -118,18 +118,20 @@ describe('StudentParaRecords Unit & Architecture Tests', () => {
 });
 
 describe('StudentParaRecords Component UI Integration Tests', () => {
-  it('renders student selection and 30-para table when a student is picked', async () => {
+  it('renders student selection with both registration and name dropdowns, and 30-para table when picked', async () => {
     render(<StudentParaRecords />);
 
     expect(screen.getByText('طالب علم کا انتخاب')).toBeInTheDocument();
+    expect(screen.getByLabelText('رجسٹریشن / رول نمبر سے انتخاب')).toBeInTheDocument();
+    expect(screen.getByLabelText('نام سے طالب علم منتخب کریں')).toBeInTheDocument();
 
     // Wait for students to load into select
     await waitFor(() => {
       expect(screen.getByText('محمد عبد اللہ (101)')).toBeInTheDocument();
     });
 
-    const studentSelect = screen.getByLabelText('طالب علم منتخب کریں');
-    fireEvent.change(studentSelect, { target: { value: 's-1' } });
+    const regSelect = screen.getByLabelText('رجسٹریشن / رول نمبر سے انتخاب');
+    fireEvent.change(regSelect, { target: { value: 's-1' } });
 
     // Table should now be rendered with all 8 headers
     await waitFor(() => {
@@ -156,10 +158,10 @@ describe('StudentParaRecords Component UI Integration Tests', () => {
     render(<StudentParaRecords />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('طالب علم منتخب کریں')).toBeInTheDocument();
+      expect(screen.getByLabelText('نام سے طالب علم منتخب کریں')).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText('طالب علم منتخب کریں'), { target: { value: 's-1' } });
+    fireEvent.change(screen.getByLabelText('نام سے طالب علم منتخب کریں'), { target: { value: 's-1' } });
 
     await waitFor(() => {
       expect(screen.getByLabelText('طالب علم کا داخلہ درمیانِ حفظ میں ہوا ہے (سابقہ مدرسے سے منتقلی)')).toBeInTheDocument();
@@ -207,10 +209,10 @@ describe('StudentParaRecords Component UI Integration Tests', () => {
     render(<StudentParaRecords />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('طالب علم منتخب کریں')).toBeInTheDocument();
+      expect(screen.getByLabelText('نام سے طالب علم منتخب کریں')).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText('طالب علم منتخب کریں'), { target: { value: 's-1' } });
+    fireEvent.change(screen.getByLabelText('نام سے طالب علم منتخب کریں'), { target: { value: 's-1' } });
 
     await waitFor(() => {
       expect(screen.getByText('خودکار سیو:')).toBeInTheDocument();

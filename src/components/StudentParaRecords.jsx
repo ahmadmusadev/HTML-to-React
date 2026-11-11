@@ -26,6 +26,7 @@ export default function StudentParaRecords() {
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
 
   // Mid-Hifz Transfer State
   const [isMidHifz, setIsMidHifz] = useState(false);
@@ -91,15 +92,32 @@ export default function StudentParaRecords() {
     };
   }, [activeMadrasaId]);
 
-  // Filter students by selected class
+  // Filter students by selected class and search query
   const filteredStudents = useMemo(() => {
-    if (!selectedClassId) return studentsList;
     return studentsList.filter(s => {
-      const cId = s.class_id || s.classId;
-      const cName = s.class_name || s.className;
-      return cId === selectedClassId || cName === selectedClassId;
+      // Class filter
+      if (selectedClassId) {
+        const cId = s.class_id || s.classId;
+        const cName = s.class_name || s.className;
+        if (cId !== selectedClassId && cName !== selectedClassId) {
+          return false;
+        }
+      }
+
+      // Search query filter (by name, roll/reg number, or father's name)
+      if (studentSearchQuery.trim()) {
+        const q = studentSearchQuery.trim().toLowerCase();
+        const name = (s.name || s.admName || '').toLowerCase();
+        const roll = String(s.roll_number || s.admRegNo || '').toLowerCase();
+        const father = (s.father_name || s.admFatherName || '').toLowerCase();
+        if (!name.includes(q) && !roll.includes(q) && !father.includes(q)) {
+          return false;
+        }
+      }
+
+      return true;
     });
-  }, [studentsList, selectedClassId]);
+  }, [studentsList, selectedClassId, studentSearchQuery]);
 
   // 2. When a student is selected, fetch their record
   useEffect(() => {
@@ -522,6 +540,7 @@ export default function StudentParaRecords() {
       <div className="para-records-card no-print">
         <h3 className="para-records-card-title">طالب علم کا انتخاب</h3>
         <div className="para-records-grid">
+          {/* 1. Class Dropdown */}
           <div className="para-records-field">
             <label htmlFor="paraClassSelect">کلاس منتخب کریں</label>
             <select
@@ -541,26 +560,84 @@ export default function StudentParaRecords() {
             </select>
           </div>
 
+          {/* 2. Registration / Roll Number Dropdown */}
           <div className="para-records-field">
-            <label htmlFor="paraStudentSelect">طالب علم منتخب کریں</label>
+            <label htmlFor="paraRegSelect">رجسٹریشن / رول نمبر سے انتخاب</label>
+            <select
+              id="paraRegSelect"
+              value={selectedStudentId}
+              onChange={e => setSelectedStudentId(e.target.value)}
+            >
+              <option value="">رجسٹریشن نمبر منتخب کریں...</option>
+              {filteredStudents
+                .filter(s => s.roll_number || s.admRegNo)
+                .sort((a, b) => {
+                  const rA = parseInt(a.roll_number || a.admRegNo, 10);
+                  const rB = parseInt(b.roll_number || b.admRegNo, 10);
+                  if (!isNaN(rA) && !isNaN(rB)) return rA - rB;
+                  return String(a.roll_number || a.admRegNo).localeCompare(String(b.roll_number || b.admRegNo));
+                })
+                .map(s => {
+                  const id = s.id || s.roll_number;
+                  const roll = s.roll_number || s.admRegNo;
+                  const name = s.name || s.admName;
+                  return (
+                    <option key={`reg-${id}`} value={id}>
+                      {roll} — {name}
+                    </option>
+                  );
+                })}
+            </select>
+          </div>
+
+          {/* 3. Student Name Dropdown */}
+          <div className="para-records-field">
+            <label htmlFor="paraStudentSelect">نام سے طالب علم منتخب کریں</label>
             <select
               id="paraStudentSelect"
               value={selectedStudentId}
               onChange={e => setSelectedStudentId(e.target.value)}
             >
-              <option value="">طالب علم کا انتخاب کریں...</option>
-              {filteredStudents.map(s => {
-                const id = s.id || s.roll_number;
-                const name = s.name || s.admName;
-                const roll = s.roll_number || s.admRegNo || '—';
-                return (
-                  <option key={id} value={id}>
-                    {name} ({roll})
-                  </option>
-                );
-              })}
+              <option value="">نام سے انتخاب کریں...</option>
+              {filteredStudents
+                .slice()
+                .sort((a, b) => (a.name || a.admName || '').localeCompare(b.name || b.admName || ''))
+                .map(s => {
+                  const id = s.id || s.roll_number;
+                  const name = s.name || s.admName;
+                  const roll = s.roll_number || s.admRegNo || '—';
+                  return (
+                    <option key={`name-${id}`} value={id}>
+                      {name} ({roll})
+                    </option>
+                  );
+                })}
             </select>
           </div>
+        </div>
+
+        {/* Live Search Box */}
+        <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ flex: 1 }}>
+            <input
+              type="text"
+              className="para-table-input"
+              placeholder="فوری تلاش: بچے کا نام یا رجسٹریشن نمبر لکھیں..."
+              value={studentSearchQuery}
+              onChange={e => setStudentSearchQuery(e.target.value)}
+              style={{ padding: '8px 12px', fontSize: '0.9rem' }}
+            />
+          </div>
+          {studentSearchQuery && (
+            <button
+              type="button"
+              className="para-btn para-btn-secondary"
+              onClick={() => setStudentSearchQuery('')}
+              style={{ padding: '7px 14px', fontSize: '0.85rem' }}
+            >
+              صاف کریں
+            </button>
+          )}
         </div>
 
         {/* Selected Student Details Strip */}
@@ -793,14 +870,14 @@ export default function StudentParaRecords() {
           <table className="para-records-table">
             <thead>
               <tr>
-                <th style={{ width: '60px' }}>نمبر شمار</th>
-                <th style={{ width: '130px' }}>نام پارہ</th>
-                <th style={{ width: '130px' }}>آغاز پارہ</th>
-                <th style={{ width: '130px' }}>اختتام پارہ</th>
-                <th style={{ width: '90px' }}>ایام لگے</th>
-                <th style={{ width: '130px' }}>تاریخ جائزہ</th>
-                <th style={{ width: '140px' }}>نام ممتحن</th>
-                <th>مختصر رپورٹ</th>
+                <th style={{ width: '45px', textAlign: 'center' }}>نمبر شمار</th>
+                <th style={{ width: '85px' }}>نام پارہ</th>
+                <th style={{ width: '105px' }}>آغاز پارہ</th>
+                <th style={{ width: '105px' }}>اختتام پارہ</th>
+                <th style={{ width: '55px', textAlign: 'center' }}>ایام لگے</th>
+                <th style={{ width: '105px' }}>تاریخ جائزہ</th>
+                <th style={{ width: '105px' }}>نام ممتحن</th>
+                <th style={{ minWidth: '260px' }}>مختصر رپورٹ</th>
               </tr>
             </thead>
             <tbody>
@@ -819,13 +896,13 @@ export default function StudentParaRecords() {
                       <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
                         {p.serialNo}
                       </td>
-                      <td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         <b>{p.paraName}</b>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                           پارہ {p.paraNumber}
                           {p.isPriorMadrasa && (
-                            <span className="para-badge para-badge-prior" style={{ marginRight: '6px' }}>
-                              سابقہ مدرسہ
+                            <span className="para-badge para-badge-prior" style={{ marginRight: '4px' }}>
+                              سابقہ
                             </span>
                           )}
                         </div>
@@ -833,7 +910,7 @@ export default function StudentParaRecords() {
                       <td>
                         <input
                           type="date"
-                          className="para-table-input"
+                          className="para-table-date-input"
                           value={p.startDate || ''}
                           onChange={e => handleParaChange(p.serialNo, 'startDate', e.target.value)}
                           onBlur={handleFlushSave}
@@ -842,7 +919,7 @@ export default function StudentParaRecords() {
                       <td>
                         <input
                           type="date"
-                          className="para-table-input"
+                          className="para-table-date-input"
                           value={p.endDate || ''}
                           onChange={e => handleParaChange(p.serialNo, 'endDate', e.target.value)}
                           onBlur={handleFlushSave}
@@ -852,7 +929,7 @@ export default function StudentParaRecords() {
                         <input
                           type="number"
                           min="0"
-                          className="para-table-input para-table-input-num"
+                          className="para-table-num-input"
                           value={p.daysTaken || ''}
                           onChange={e => handleParaChange(p.serialNo, 'daysTaken', e.target.value)}
                           onBlur={handleFlushSave}
@@ -861,7 +938,7 @@ export default function StudentParaRecords() {
                       <td>
                         <input
                           type="date"
-                          className="para-table-input"
+                          className="para-table-date-input"
                           value={p.examDate || ''}
                           onChange={e => handleParaChange(p.serialNo, 'examDate', e.target.value)}
                           onBlur={handleFlushSave}
@@ -871,6 +948,7 @@ export default function StudentParaRecords() {
                         <input
                           type="text"
                           className="para-table-input"
+                          style={{ fontSize: '0.84rem', padding: '4px 6px' }}
                           placeholder="نام ممتحن..."
                           value={p.examinerName || ''}
                           onChange={e => handleParaChange(p.serialNo, 'examinerName', e.target.value)}
@@ -880,8 +958,9 @@ export default function StudentParaRecords() {
                       <td>
                         <input
                           type="text"
-                          className="para-table-input"
-                          placeholder="مثلاً: جید جداً، معیاری..."
+                          list="shortReportPhrases"
+                          className="para-table-report-input"
+                          placeholder="مثلاً: یادداشت بہتر ہے، تجوید میں بہتری ضروری ہے..."
                           value={p.shortReport || ''}
                           onChange={e => handleParaChange(p.serialNo, 'shortReport', e.target.value)}
                           onBlur={handleFlushSave}
@@ -954,6 +1033,17 @@ export default function StudentParaRecords() {
               })}
             </tbody>
           </table>
+
+          {/* Quick Suggestions for Short Report */}
+          <datalist id="shortReportPhrases">
+            <option value="یادداشت بہترین ہے" />
+            <option value="یادداشت بہتر ہے" />
+            <option value="یادداشت پر گرفت کریں" />
+            <option value="تجوید میں بہتری ضروری ہے" />
+            <option value="روانی اور مخارج معیاری ہیں" />
+            <option value="تکرار اور دور پر زیادہ توجہ دیں" />
+            <option value="سابقہ مدرسہ میں مکمل شدہ" />
+          </datalist>
         </div>
       )}
 
