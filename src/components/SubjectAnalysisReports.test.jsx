@@ -310,4 +310,81 @@ describe('Manzil and Tajweed Separate Analytical Reports Integration', () => {
     expect(within(modal).getAllByText('100٪').length).toBeGreaterThanOrEqual(1);
     expect(within(modal).getByText('فیصد کا مجموعہ 100٪ ہے۔')).toBeInTheDocument();
   });
+
+  it('calculates true total sum without clamping to 100 and shows error when marks exceed maximum', async () => {
+    render(<Entry />);
+
+    await waitFor(() => {
+      expect(mockFetchClasses).toHaveBeenCalled();
+    });
+
+    const classSelect = screen.getByRole('combobox', { name: /کلاس منتخب کریں/i });
+    fireEvent.change(classSelect, { target: { value: CLASS_ID } });
+    fireEvent.click(screen.getByText('طلباء لوڈ کریں'));
+
+    await waitFor(() => {
+      expect(screen.getByText('محمد حذیفہ')).toBeInTheDocument();
+    });
+
+    // Inputs for student 0: [attendance (10), manzil (60), tajweed (10), islamiat (10), itmaad (10)]
+    const inputs = screen.getAllByRole('spinbutton');
+    
+    // Enter 10 in attendance (index 0)
+    fireEvent.change(inputs[0], { target: { value: '10' } });
+    // Enter 61 in manzil (> 60 max, index 1)
+    fireEvent.change(inputs[1], { target: { value: '61' } });
+    // Enter 13 in tajweed (> 10 max, index 2)
+    fireEvent.change(inputs[2], { target: { value: '13' } });
+    // Enter 10 in islamiat (index 3)
+    fireEvent.change(inputs[3], { target: { value: '10' } });
+    // Enter 10 in itmaad (index 4)
+    fireEvent.change(inputs[4], { target: { value: '10' } });
+
+    // Verify true sum is displayed in total cell (10 + 61 + 13 + 10 + 10 = 104, NOT clamped to 100)
+    expect(screen.getAllByText('104').length).toBeGreaterThanOrEqual(1);
+    const totalCell = document.querySelector('.me-total-cell.me-total-invalid');
+    expect(totalCell).toBeInTheDocument();
+    expect(totalCell).toHaveTextContent('104');
+
+    // Verify error banner is visible
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText(/کل نمبر.*سے زیادہ ہیں/i)).toBeInTheDocument();
+
+    // Verify inputs have invalid class
+    expect(inputs[1]).toHaveClass('me-invalid');
+    expect(inputs[2]).toHaveClass('me-invalid');
+
+    // Test cursor trapping: pressing Tab on invalid input cancels event
+    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    inputs[1].dispatchEvent(tabEvent);
+    expect(tabEvent.defaultPrevented).toBe(true);
+
+    // Test save blocking: meSaveExam alerts and refuses to save
+    const saveBtn = screen.getByRole('button', { name: /محفوظ کریں/i });
+    fireEvent.click(saveBtn);
+    expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('محفوظ نہیں کیا جا سکتا'));
+    expect(mockSaveMonthlyEvaluation).not.toHaveBeenCalled();
+
+    // Test report blocking: clicking "منزل کی رپورٹ" alerts and refuses to open modal with invalid data
+    const manzilBtn = screen.getByRole('button', { name: 'منزل کی رپورٹ' });
+    fireEvent.click(manzilBtn);
+    expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('رپورٹ نہیں بن سکتی'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    // Correct the marks (61 -> 55, 13 -> 10)
+    fireEvent.change(inputs[1], { target: { value: '55' } });
+    fireEvent.change(inputs[2], { target: { value: '10' } });
+
+    // Verify corrected total (10 + 55 + 10 + 10 + 10 = 95)
+    expect(screen.getByText('95')).toBeInTheDocument();
+    expect(inputs[1]).not.toHaveClass('me-invalid');
+    expect(inputs[2]).not.toHaveClass('me-invalid');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    // Now report opens properly
+    fireEvent.click(manzilBtn);
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
 });
