@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import {
   REVERSE_PARAS_LIST,
@@ -44,6 +44,13 @@ export default function StudentParaRecords() {
   const [loadingData, setLoadingData] = useState(false);
   const [saving, setSaving] = useState(false);
   const [alertMsg, setAlertMsg] = useState(null); // { type: 'success' | 'error' | 'info', text: '' }
+
+  // Auto-Save State & Refs
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
+  const [lastSavedTime, setLastSavedTime] = useState('');
+  const isLoadedRef = useRef(false);
+  const isDirtyRef = useRef(false);
+  const debounceTimerRef = useRef(null);
 
   // 1. Initial Load of Classes & Students
   useEffect(() => {
@@ -109,6 +116,10 @@ export default function StudentParaRecords() {
     const loadStudentRecord = async () => {
       setLoadingData(true);
       setAlertMsg(null);
+      isLoadedRef.current = false;
+      isDirtyRef.current = false;
+      setAutoSaveStatus('idle');
+
       try {
         let record = null;
         if (fetchStudentParaRecordFromSupabase) {
@@ -143,10 +154,26 @@ export default function StudentParaRecords() {
             return found ? { ...tr, ...found } : tr;
           });
           setReviews(mergedReviews);
+
+          if (record.saved_at || record.updated_at) {
+            const d = new Date(record.saved_at || record.updated_at);
+            if (!isNaN(d.getTime())) {
+              setLastSavedTime(d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
+            }
+          }
         } else {
           // Fresh record
           resetForm();
         }
+
+        // Allow React state updates to commit before enabling auto-save listener
+        setTimeout(() => {
+          if (isMounted) {
+            isLoadedRef.current = true;
+            isDirtyRef.current = false;
+            setAutoSaveStatus('saved');
+          }
+        }, 120);
       } catch (err) {
         console.warn('Error loading student para record:', err);
         setAlertMsg({ type: 'error', text: 'طالب علم کا سابقہ ریکارڈ لوڈ کرنے میں خرابی پیش آئی۔' });
@@ -158,6 +185,9 @@ export default function StudentParaRecords() {
     loadStudentRecord();
     return () => {
       isMounted = false;
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
     };
   }, [selectedStudentId, studentsList, activeMadrasaId]);
 
@@ -171,10 +201,15 @@ export default function StudentParaRecords() {
     setReviews(createInitialReviewsArray());
     setCompletionStatus('in_progress');
     setCompletionDate('');
+    isDirtyRef.current = false;
+    setAutoSaveStatus('idle');
   };
 
   // 3. Handle Para Field Changes
   const handleParaChange = (serialNo, field, value) => {
+    isDirtyRef.current = true;
+    setAutoSaveStatus('saving');
+
     setParas(prev => {
       return prev.map(p => {
         if (p.serialNo !== serialNo) return p;
@@ -198,6 +233,9 @@ export default function StudentParaRecords() {
 
   // 4. Handle Review Field Changes
   const handleReviewChange = (slot, field, value) => {
+    isDirtyRef.current = true;
+    setAutoSaveStatus('saving');
+
     setReviews(prev => {
       return prev.map(r => {
         if (r.slot !== slot) return r;
@@ -212,6 +250,9 @@ export default function StudentParaRecords() {
       alert('پہلے منتقلی کی تفصیلات منتخب کریں۔');
       return;
     }
+
+    isDirtyRef.current = true;
+    setAutoSaveStatus('saving');
 
     const startParaNum = Number(startingPara);
     // In reverse order, paras greater than startParaNum were memorized at prior madrasa
@@ -270,11 +311,118 @@ export default function StudentParaRecords() {
     };
   }, [paras]);
 
-  // 7. Save Handler
+  // 7. Auto-Save Effect (Debounced background sync & instant local cache)
+  useEffect(() => {
+    if (!selectedStudentId || !isLoadedRef.current || !isDirtyRef.current) {
+      return;
+    }
+
+    // 1. Instant Local Storage Sync so no single change is lost
+    try {
+      const localStore = loadMadrasaData ? (loadMadrasaData('hf_student_para_records_v1', activeMadrasaId) || {}) : {};
+      localStore[selectedStudentId] = {
+        student_id: selectedStudentId,
+        is_mid_hifz: isMidHifz,
+        starting_para: Number(startingPara),
+        prior_madrasa_name: priorMadrasaName.trim(),
+        prior_paras_count: Number(priorParasCount) || 0,
+        prior_paras_note: priorParasNote.trim(),
+        paras: paras,
+        reviews: reviews,
+        completion_status: stats.isFullyCompleted ? 'completed' : completionStatus,
+        completion_date: completionDate || (stats.isFullyCompleted ? new Date().toISOString().split('T')[0] : null),
+        saved_at: new Date().toISOString()
+      };
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`hf_student_para_records_v1_madrasa_${activeMadrasaId}`, JSON.stringify(localStore));
+      }
+    } catch (e) {}
+
+    // 2. Debounced Remote Supabase Upsert
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        const payload = {
+          student_id: selectedStudentId,
+          is_mid_hifz: isMidHifz,
+          starting_para: Number(startingPara),
+          prior_madrasa_name: priorMadrasaName.trim(),
+          prior_paras_count: Number(priorParasCount) || 0,
+          prior_paras_note: priorParasNote.trim(),
+          paras: paras,
+          reviews: reviews,
+          completion_status: stats.isFullyCompleted ? 'completed' : completionStatus,
+          completion_date: completionDate || (stats.isFullyCompleted ? new Date().toISOString().split('T')[0] : null)
+        };
+
+        if (saveStudentParaRecordToSupabase) {
+          await saveStudentParaRecordToSupabase(payload, activeMadrasaId);
+        }
+
+        isDirtyRef.current = false;
+        setAutoSaveStatus('saved');
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        setLastSavedTime(timeStr);
+      } catch (err) {
+        console.warn('Auto-save background sync error:', err);
+        setAutoSaveStatus('error');
+      }
+    }, 750);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [paras, reviews, isMidHifz, startingPara, priorMadrasaName, priorParasCount, priorParasNote, completionStatus, completionDate, selectedStudentId, activeMadrasaId, stats.isFullyCompleted]);
+
+  // Immediate Save on Blur or Field Completion
+  const handleFlushSave = async () => {
+    if (!selectedStudentId || !isDirtyRef.current) return;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    try {
+      setAutoSaveStatus('saving');
+      const payload = {
+        student_id: selectedStudentId,
+        is_mid_hifz: isMidHifz,
+        starting_para: Number(startingPara),
+        prior_madrasa_name: priorMadrasaName.trim(),
+        prior_paras_count: Number(priorParasCount) || 0,
+        prior_paras_note: priorParasNote.trim(),
+        paras: paras,
+        reviews: reviews,
+        completion_status: stats.isFullyCompleted ? 'completed' : completionStatus,
+        completion_date: completionDate || (stats.isFullyCompleted ? new Date().toISOString().split('T')[0] : null)
+      };
+      if (saveStudentParaRecordToSupabase) {
+        await saveStudentParaRecordToSupabase(payload, activeMadrasaId);
+      }
+      isDirtyRef.current = false;
+      setAutoSaveStatus('saved');
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      setLastSavedTime(timeStr);
+    } catch (err) {
+      console.warn('Immediate save on blur error:', err);
+      setAutoSaveStatus('error');
+    }
+  };
+
+  // 8. Manual Save Handler
   const handleSave = async () => {
     if (!selectedStudentId) {
       setAlertMsg({ type: 'error', text: 'برائے مہربانی پہلے طالب علم منتخب کریں۔' });
       return;
+    }
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
     setSaving(true);
@@ -297,9 +445,16 @@ export default function StudentParaRecords() {
         await saveStudentParaRecordToSupabase(recordPayload, activeMadrasaId);
       }
 
+      isDirtyRef.current = false;
+      setAutoSaveStatus('saved');
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      setLastSavedTime(timeStr);
+
       setAlertMsg({ type: 'success', text: 'طالب علم کا پارہ بہ پارہ ریکارڈ کامیابی کے ساتھ محفوظ ہو گیا ہے۔' });
     } catch (err) {
       console.error('Error saving student para record:', err);
+      setAutoSaveStatus('error');
       setAlertMsg({ type: 'error', text: 'ریکارڈ محفوظ کرنے میں خرابی: ' + (err.message || err) });
     } finally {
       setSaving(false);
@@ -438,12 +593,24 @@ export default function StudentParaRecords() {
       {/* Mid-Hifz Transfer / Prior Madrasa Card */}
       {selectedStudent && (
         <div className="para-records-card no-print">
-          <div className="para-records-checkbox-row" onClick={() => setIsMidHifz(!isMidHifz)}>
+          <div
+            className="para-records-checkbox-row"
+            onClick={() => {
+              const nextVal = !isMidHifz;
+              setIsMidHifz(nextVal);
+              isDirtyRef.current = true;
+              setAutoSaveStatus('saving');
+            }}
+          >
             <input
               type="checkbox"
               id="isMidHifzCheckbox"
               checked={isMidHifz}
-              onChange={e => setIsMidHifz(e.target.checked)}
+              onChange={e => {
+                setIsMidHifz(e.target.checked);
+                isDirtyRef.current = true;
+                setAutoSaveStatus('saving');
+              }}
               onClick={e => e.stopPropagation()}
             />
             <label htmlFor="isMidHifzCheckbox">
@@ -461,7 +628,12 @@ export default function StudentParaRecords() {
                     id="priorMadrasaNameInput"
                     placeholder="مثلاً: جامعہ دارالعلوم..."
                     value={priorMadrasaName}
-                    onChange={e => setPriorMadrasaName(e.target.value)}
+                    onChange={e => {
+                      setPriorMadrasaName(e.target.value);
+                      isDirtyRef.current = true;
+                      setAutoSaveStatus('saving');
+                    }}
+                    onBlur={handleFlushSave}
                   />
                 </div>
 
@@ -474,7 +646,12 @@ export default function StudentParaRecords() {
                     max="29"
                     placeholder="تعداد پارے"
                     value={priorParasCount || ''}
-                    onChange={e => setPriorParasCount(e.target.value)}
+                    onChange={e => {
+                      setPriorParasCount(e.target.value);
+                      isDirtyRef.current = true;
+                      setAutoSaveStatus('saving');
+                    }}
+                    onBlur={handleFlushSave}
                   />
                 </div>
 
@@ -483,7 +660,12 @@ export default function StudentParaRecords() {
                   <select
                     id="startingParaSelect"
                     value={startingPara}
-                    onChange={e => setStartingPara(Number(e.target.value))}
+                    onChange={e => {
+                      setStartingPara(Number(e.target.value));
+                      isDirtyRef.current = true;
+                      setAutoSaveStatus('saving');
+                    }}
+                    onBlur={handleFlushSave}
                   >
                     {REVERSE_PARAS_LIST.map(p => (
                       <option key={p.paraNumber} value={p.paraNumber}>
@@ -501,7 +683,12 @@ export default function StudentParaRecords() {
                   id="priorParasNoteInput"
                   placeholder="سابقہ مدرسے سے منتقلی کی تفصیلات یا تصدیق..."
                   value={priorParasNote}
-                  onChange={e => setPriorParasNote(e.target.value)}
+                  onChange={e => {
+                    setPriorParasNote(e.target.value);
+                    isDirtyRef.current = true;
+                    setAutoSaveStatus('saving');
+                  }}
+                  onBlur={handleFlushSave}
                 />
               </div>
 
@@ -557,6 +744,38 @@ export default function StudentParaRecords() {
       {isMidHifz && stats.isFullyCompleted && (
         <div className="para-records-alert para-records-alert-success">
           <b>تکمیلِ حفظِ قرآنِ کریم وضاحتی سند:</b> طالب علم نے ابتدائی {priorParasCount || '—'} پارے سابقہ مدرسہ ({priorMadrasaName || 'سابقہ مدرسہ'}) میں مکمل کیے اور بقیہ پارے اس مدرسے میں بحسن و خوبی مکمل کیے۔
+        </div>
+      )}
+
+      {/* Auto-Save Status Ambient Bar */}
+      {selectedStudent && (
+        <div className="para-records-autosave-bar no-print">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontWeight: '600', color: 'var(--text)' }}>خودکار سیو:</span>
+            {autoSaveStatus === 'saving' && (
+              <span className="auto-save-pill auto-save-saving">
+                تبدیلیاں خودکار محفوظ کی جا رہی ہیں...
+              </span>
+            )}
+            {autoSaveStatus === 'saved' && (
+              <span className="auto-save-pill auto-save-saved">
+                تمام تبدیلیاں خودکار محفوظ ہیں {lastSavedTime ? `(آخری بار: ${lastSavedTime})` : ''}
+              </span>
+            )}
+            {autoSaveStatus === 'error' && (
+              <span className="auto-save-pill auto-save-error">
+                لوکل محفوظ ہے، سرور پر سیو کی کوشش جاری ہے...
+              </span>
+            )}
+            {autoSaveStatus === 'idle' && (
+              <span className="auto-save-pill auto-save-saved">
+                تمام تبدیلیاں محفوظ ہیں
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
+            تاریخ یا کسی بھی خانے میں چھوٹی سے چھوٹی تبدیلی خود بخود محفوظ ہو جاتی ہے۔
+          </div>
         </div>
       )}
 
@@ -617,6 +836,7 @@ export default function StudentParaRecords() {
                           className="para-table-input"
                           value={p.startDate || ''}
                           onChange={e => handleParaChange(p.serialNo, 'startDate', e.target.value)}
+                          onBlur={handleFlushSave}
                         />
                       </td>
                       <td>
@@ -625,6 +845,7 @@ export default function StudentParaRecords() {
                           className="para-table-input"
                           value={p.endDate || ''}
                           onChange={e => handleParaChange(p.serialNo, 'endDate', e.target.value)}
+                          onBlur={handleFlushSave}
                         />
                       </td>
                       <td>
@@ -634,6 +855,7 @@ export default function StudentParaRecords() {
                           className="para-table-input para-table-input-num"
                           value={p.daysTaken || ''}
                           onChange={e => handleParaChange(p.serialNo, 'daysTaken', e.target.value)}
+                          onBlur={handleFlushSave}
                         />
                       </td>
                       <td>
@@ -642,6 +864,7 @@ export default function StudentParaRecords() {
                           className="para-table-input"
                           value={p.examDate || ''}
                           onChange={e => handleParaChange(p.serialNo, 'examDate', e.target.value)}
+                          onBlur={handleFlushSave}
                         />
                       </td>
                       <td>
@@ -651,6 +874,7 @@ export default function StudentParaRecords() {
                           placeholder="نام ممتحن..."
                           value={p.examinerName || ''}
                           onChange={e => handleParaChange(p.serialNo, 'examinerName', e.target.value)}
+                          onBlur={handleFlushSave}
                         />
                       </td>
                       <td>
@@ -660,6 +884,7 @@ export default function StudentParaRecords() {
                           placeholder="مثلاً: جید جداً، معیاری..."
                           value={p.shortReport || ''}
                           onChange={e => handleParaChange(p.serialNo, 'shortReport', e.target.value)}
+                          onBlur={handleFlushSave}
                         />
                       </td>
                     </tr>
@@ -678,6 +903,7 @@ export default function StudentParaRecords() {
                                     type="date"
                                     value={reviewData?.reviewDate || ''}
                                     onChange={e => handleReviewChange(reviewSlot.slot, 'reviewDate', e.target.value)}
+                                    onBlur={handleFlushSave}
                                   />
                                 </label>
                                 <label>
@@ -687,6 +913,7 @@ export default function StudentParaRecords() {
                                     placeholder="نام ممتحن..."
                                     value={reviewData?.examinerName || ''}
                                     onChange={e => handleReviewChange(reviewSlot.slot, 'examinerName', e.target.value)}
+                                    onBlur={handleFlushSave}
                                   />
                                 </label>
                               </div>
@@ -704,6 +931,7 @@ export default function StudentParaRecords() {
                                 placeholder="طالب علم کی تجوید، لہجہ، یادداشت اور تفصیلی کیفیت یہاں دو سطور میں تحریر کریں..."
                                 value={reviewData?.detailedNotes || ''}
                                 onChange={e => handleReviewChange(reviewSlot.slot, 'detailedNotes', e.target.value)}
+                                onBlur={handleFlushSave}
                               />
                               {/* Print View: Two Ruled Lines */}
                               <div className="print-ruled-lines">
@@ -777,3 +1005,4 @@ export default function StudentParaRecords() {
     </div>
   );
 }
+

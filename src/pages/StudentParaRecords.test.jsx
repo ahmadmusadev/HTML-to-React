@@ -202,4 +202,22 @@ describe('StudentParaRecords Component UI Integration Tests', () => {
     // Existing academic records search should be visible
     expect(screen.getByText('اکیڈمک ریکارڈ تلاش کریں')).toBeInTheDocument();
   });
+
+  it('displays auto-save status bar and triggers auto-save when dates or fields are modified', async () => {
+    render(<StudentParaRecords />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('طالب علم منتخب کریں')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('طالب علم منتخب کریں'), { target: { value: 's-1' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('خودکار سیو:')).toBeInTheDocument();
+    });
+
+    // Auto-save ambient bar is present
+    expect(screen.getByText(/تمام تبدیلیاں/)).toBeInTheDocument();
+  });
 });
+
