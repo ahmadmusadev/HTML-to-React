@@ -5,6 +5,7 @@ import { getCurrentAcademicYearStart, formatAcademicYear, getAcademicYearOptions
 import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
+import SubjectAnalysisModal from '../components/SubjectAnalysisModal';
 import './Entry.css';
 
 // Constants from edit.html
@@ -195,6 +196,7 @@ export const calculateWorkingDays = (year, monthIndex) => {
 
 export default function Entry() {
   const {
+    activeMadrasa,
     activeMadrasaId,
     loadMadrasaData,
     saveMadrasaData,
@@ -223,6 +225,26 @@ export default function Entry() {
   ));
   const [monthlyExams, setMonthlyExams] = useState([]);
   const [monthlyLiteracyList, setMonthlyLiteracyList] = useState([]);
+
+  // Manzil & Tajweed Analytical Report Modal State
+  const [analysisModalConfig, setAnalysisModalConfig] = useState({
+    isOpen: false,
+    subjectKey: 'manzil'
+  });
+
+  const openAnalysisModal = (subjectKey) => {
+    setAnalysisModalConfig({
+      isOpen: true,
+      subjectKey
+    });
+  };
+
+  const closeAnalysisModal = () => {
+    setAnalysisModalConfig(prev => ({
+      ...prev,
+      isOpen: false
+    }));
+  };
 
   // Keep classes synchronized with central MadrasaContext
   useEffect(() => {
@@ -1358,6 +1380,22 @@ export default function Entry() {
                     </tbody>
                   </table>
                 </div>
+                <div className="me-report-actions-bar">
+                  <button
+                    type="button"
+                    className="me-report-btn"
+                    onClick={() => openAnalysisModal('manzil')}
+                  >
+                    منزل کی رپورٹ
+                  </button>
+                  <button
+                    type="button"
+                    className="me-report-btn"
+                    onClick={() => openAnalysisModal('tajweed')}
+                  >
+                    تجوید کی رپورٹ
+                  </button>
+                </div>
                 <div className="me-save-bar" style={{ marginTop: "18px" }}>
                   <button className="me-save-btn" onClick={meSaveExam} disabled={isSavingExam}>
                     {isSavingExam ? 'محفوظ ہو رہا ہے...' : `${meStudents.clsName} — ${meMonth} ${formatAcademicYear(meYear)} محفوظ کریں`}
@@ -2187,6 +2225,18 @@ export default function Entry() {
           </div>
         </div>
       )}
+
+      {/* Manzil & Tajweed Analytical Mizan Report Modal */}
+      <SubjectAnalysisModal
+        isOpen={analysisModalConfig.isOpen}
+        onClose={closeAnalysisModal}
+        subjectKey={analysisModalConfig.subjectKey}
+        students={meStudents?.data || []}
+        className={meStudents?.clsName || ''}
+        month={meMonth}
+        year={meYear}
+        madrasaName={activeMadrasa?.name || 'جامعہ حفظ القرآن الکریم'}
+      />
 
     </div>
   );
