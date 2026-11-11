@@ -123,4 +123,33 @@ describe('Entry.jsx Dynamic Classes and Student Loading', () => {
       });
     });
   });
+
+  it('renders "ماہانہ ہدف" column in "پارہ تقسیم — سالانہ حقائق پارے" table after "کل پارے"', async () => {
+    render(<Entry />);
+
+    // Switch to Hifz tab
+    const hifzTabBtn = screen.getByRole('button', { name: /ششماہی و سالانہ خواندگی/i });
+    fireEvent.click(hifzTabBtn);
+
+    // Verify table heading
+    expect(screen.getByText('پارہ تقسیم — سالانہ حقائق پارے')).toBeInTheDocument();
+
+    // Verify column headers exist in correct sequence
+    const ths = screen.getAllByRole('columnheader');
+    const thTexts = ths.map(th => th.textContent.trim());
+    expect(thTexts).toEqual([
+      'سال',
+      'پارے',
+      'کل پارے',
+      'ماہانہ ہدف',
+      'سالانہ کل صفحات',
+      'ششماہی ہدف صفحات'
+    ]);
+
+    // Verify row contents for all 4 years
+    expect(screen.getByText('5 صفحات - پاؤ')).toBeInTheDocument();
+    expect(screen.getByText('10 صفحات - ادھا پارہ')).toBeInTheDocument();
+    expect(screen.getByText('15 صفحات - تین پاؤ')).toBeInTheDocument();
+    expect(screen.getByText('20 صفحات - ایک پارہ')).toBeInTheDocument();
+  });
 });

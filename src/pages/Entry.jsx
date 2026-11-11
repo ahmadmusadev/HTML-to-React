@@ -134,6 +134,35 @@ export function calculateSuggestedPages(startPara, startPage, endPara, endPage) 
 export const PAGES_PER_PAO = 5;
 export const PAGES_PER_JUZ = 20;
 
+export const formatMonthlyHifzTarget = (monthlyPages) => {
+  const paoCount = Math.round(monthlyPages / PAGES_PER_PAO);
+  let miqdar = '';
+  if (paoCount === 1) {
+    miqdar = 'پاؤ';
+  } else if (paoCount === 2) {
+    miqdar = 'ادھا پارہ';
+  } else if (paoCount === 3) {
+    miqdar = 'تین پاؤ';
+  } else if (paoCount === 4) {
+    miqdar = 'ایک پارہ';
+  } else if (paoCount > 4) {
+    const paras = Math.floor(paoCount / 4);
+    const remPao = paoCount % 4;
+    if (remPao === 0) {
+      miqdar = `${paras} پارے`;
+    } else if (remPao === 1) {
+      miqdar = `${paras} پارے، پاؤ`;
+    } else if (remPao === 2) {
+      miqdar = `${paras} پارے، ادھا پارہ`;
+    } else {
+      miqdar = `${paras} پارے، تین پاؤ`;
+    }
+  } else {
+    miqdar = '0';
+  }
+  return `${monthlyPages} صفحات - ${miqdar}`;
+};
+
 // Correct yearTargets matching original edit.html
 export const yearTargets = {
   1: [30, 29, 28],
@@ -1777,6 +1806,7 @@ export default function Entry() {
                       <th>سال</th>
                       <th>پارے</th>
                       <th>کل پارے</th>
+                      <th>ماہانہ ہدف</th>
                       <th>سالانہ کل صفحات</th>
                       <th>ششماہی ہدف صفحات</th>
                     </tr>
@@ -1785,13 +1815,16 @@ export default function Entry() {
                     {[1, 2, 3, 4].map(y => {
                         const arr = yearTargets[y] || [];
                         const total = arr.length * PAGES_PER_JUZ;
+                        const halfYearPages = total / 2;
+                        const monthlyPages = halfYearPages / 6;
                         return (
                           <tr key={y} className={Number(selectYear) === y ? 'selected-target-row' : ''}>
                             <td>سال {y}</td>
                             <td style={{ fontSize: "0.9rem" }}>{arr.join(', ')}</td>
                             <td>{arr.length}</td>
+                            <td style={{ fontWeight: 600 }}>{formatMonthlyHifzTarget(monthlyPages)}</td>
                             <td>{total}</td>
-                            <td>{total / 2}</td>
+                            <td>{halfYearPages}</td>
                           </tr>
                         );
                     })}
