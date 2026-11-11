@@ -226,6 +226,9 @@ export default function Entry() {
   const [monthlyExams, setMonthlyExams] = useState([]);
   const [monthlyLiteracyList, setMonthlyLiteracyList] = useState([]);
 
+  // Monthly Evaluation input validation error state
+  const [meInputError, setMeInputError] = useState(null);
+
   // Manzil & Tajweed Analytical Report Modal State
   const [analysisModalConfig, setAnalysisModalConfig] = useState({
     isOpen: false,
@@ -233,6 +236,23 @@ export default function Entry() {
   });
 
   const openAnalysisModal = (subjectKey) => {
+    // Check if any student has invalid marks for this subject
+    const colDef = ME_COLS.find(c => c.key === subjectKey);
+    const max = colDef ? colDef.max : (subjectKey === 'manzil' ? 60 : 10);
+    for (let i = 0; i < (meStudents?.data || []).length; i++) {
+      const item = meStudents.data[i];
+      const val = Number(item[subjectKey]);
+      if (item[subjectKey] !== '' && item[subjectKey] !== null && item[subjectKey] !== undefined && (val > max || val < 0)) {
+        alert(`رپورٹ نہیں بن سکتی: طالب علم "${item.student?.name || `نمبر ${i+1}`}" کے ${colDef?.label || subjectKey} کے نمبرات (${val}) کل نمبر (${max}) سے زیادہ ہیں۔ براہ کرم پہلے درست اندراج فرمائیں۔`);
+        const targetInput = document.querySelector(`input[data-row="${i}"][data-col="${subjectKey}"]`);
+        if (targetInput) {
+          targetInput.focus();
+          targetInput.select();
+        }
+        return;
+      }
+    }
+
     setAnalysisModalConfig({
       isOpen: true,
       subjectKey
@@ -349,7 +369,14 @@ export default function Entry() {
     setMonthlyExams(newMonthlyExams);
   };
 
-  const meGrade = (pct) => {
+  const meGrade = (pct, rowItem) => {
+    if (rowItem) {
+      const hasInvalid = ME_COLS.some(c => c.max && rowItem[c.key] !== '' && rowItem[c.key] !== null && rowItem[c.key] !== undefined && (Number(rowItem[c.key]) > c.max || Number(rowItem[c.key]) < 0));
+      if (hasInvalid || (rowItem.total !== undefined && rowItem.total > ME_MAX_TOTAL)) {
+        return { g: 'غلط', cls: 'me-total-invalid', color: '#dc2626' };
+      }
+    }
+    if (pct > 100) return { g: 'غلط', cls: 'me-total-invalid', color: '#dc2626' };
     if (pct >= 90) return { g: 'A+', cls: 'me-total-a', color: '#15803d' };
     if (pct >= 75) return { g: 'A', cls: 'me-total-a', color: '#15803d' };
     if (pct >= 60) return { g: 'B', cls: 'me-total-b', color: '#1d4ed8' };
@@ -442,11 +469,11 @@ export default function Entry() {
         item.attendance = calculateAttendanceMarks(absCount);
       }
       
-      // Compute total
-      item.total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Math.min(Number(item[c.key] || 0), c.max), 0);
+      // Compute total (actual sum of marks entered)
+      item.total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Number(item[c.key] || 0), 0);
       const pct = ME_MAX_TOTAL > 0 ? (item.total / ME_MAX_TOTAL) * 100 : 0;
       item.pct = +pct.toFixed(1);
-      item.gradeObj = meGrade(pct);
+      item.gradeObj = meGrade(pct, item);
       
       return item;
     });
@@ -469,10 +496,10 @@ export default function Entry() {
       const marks = calculateAttendanceMarks(absCount);
       const newItem = { ...item, attendance: marks };
 
-      newItem.total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Math.min(Number(newItem[c.key] || 0), c.max), 0);
+      newItem.total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Number(newItem[c.key] || 0), 0);
       const pct = ME_MAX_TOTAL > 0 ? (newItem.total / ME_MAX_TOTAL) * 100 : 0;
       newItem.pct = +pct.toFixed(1);
-      newItem.gradeObj = meGrade(pct);
+      newItem.gradeObj = meGrade(pct, newItem);
       return newItem;
     });
 
@@ -484,18 +511,120 @@ export default function Entry() {
     list[index][key] = value;
     
     if (!isSub) {
-      list[index].total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Math.min(Number(list[index][c.key] || 0), c.max), 0);
+      list[index].total = ME_COLS.filter(c => c.max).reduce((sum, c) => sum + Number(list[index][c.key] || 0), 0);
       const pct = ME_MAX_TOTAL > 0 ? (list[index].total / ME_MAX_TOTAL) * 100 : 0;
       list[index].pct = +pct.toFixed(1);
-      list[index].gradeObj = meGrade(pct);
+      list[index].gradeObj = meGrade(pct, list[index]);
     }
+
+    const colDef = ME_COLS.find(c => c.key === key);
+    if (colDef && colDef.max) {
+      const num = Number(value);
+      if (value === '' || (num <= colDef.max && num >= 0)) {
+        if (meInputError && meInputError.rowIdx === index && meInputError.colKey === key) {
+          setMeInputError(null);
+        }
+      } else {
+        const msg = `غلط اندراج: طالب علم "${list[index]?.student?.name || ''}" کے ${colDef.label} کے نمبرات (${value}) کل نمبر (${colDef.max}) سے زیادہ ہیں۔ جب تک اسے درست نہ کیا جائے آگے نہیں بڑھا جا سکتا۔`;
+        setMeInputError({ rowIdx: index, colKey: key, message: msg });
+      }
+    }
+
     setMeStudents({ ...meStudents, data: list });
+  };
+
+  const handleInputKeyDown = (e, rowIdx, col) => {
+    if (['Tab', 'Enter', 'ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key)) {
+      const val = e.target.value;
+      if (val !== '' && !isNaN(val)) {
+        const num = Number(val);
+        if (num > col.max || num < 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          const msg = `غلط اندراج: طالب علم "${meStudents?.data?.[rowIdx]?.student?.name || ''}" کے ${col.label} کے نمبرات (${val}) کل نمبر (${col.max}) سے زیادہ ہیں۔ جب تک اسے درست نہ کیا جائے آگے نہیں بڑھا جا سکتا۔`;
+          setMeInputError({ rowIdx, colKey: col.key, message: msg });
+          e.target.focus();
+          e.target.select();
+          return false;
+        }
+      }
+    }
+  };
+
+  const handleInputBlur = (e, rowIdx, col) => {
+    const val = e.target.value;
+    if (val !== '' && !isNaN(val)) {
+      const num = Number(val);
+      if (num > col.max || num < 0) {
+        const msg = `غلط اندراج: طالب علم "${meStudents?.data?.[rowIdx]?.student?.name || ''}" کے ${col.label} کے نمبرات (${val}) کل نمبر (${col.max}) سے زیادہ ہیں۔ جب تک اسے درست نہ کیا جائے آگے نہیں بڑھا جا سکتا۔`;
+        setMeInputError({ rowIdx, colKey: col.key, message: msg });
+        const target = e.target;
+        setTimeout(() => {
+          if (target && document.body.contains(target)) {
+            target.focus();
+            target.select();
+          }
+        }, 10);
+        return;
+      }
+    }
+    if (meInputError && meInputError.rowIdx === rowIdx && meInputError.colKey === col.key) {
+      setMeInputError(null);
+    }
+  };
+
+  const handleInputFocus = (e, rowIdx, col) => {
+    if (meStudents?.data) {
+      for (let r = 0; r < meStudents.data.length; r++) {
+        const item = meStudents.data[r];
+        for (const c of ME_COLS) {
+          if (c.max && item[c.key] !== '' && item[c.key] !== null && item[c.key] !== undefined) {
+            const num = Number(item[c.key]);
+            if (num > c.max || num < 0) {
+              if (r !== rowIdx || c.key !== col.key) {
+                e.preventDefault();
+                e.target.blur();
+                const invalidInput = document.querySelector(`input[data-row="${r}"][data-col="${c.key}"]`);
+                if (invalidInput) {
+                  setTimeout(() => {
+                    invalidInput.focus();
+                    invalidInput.select();
+                  }, 10);
+                }
+                const msg = `غلط اندراج: طالب علم "${item.student?.name || ''}" کے ${c.label} کے نمبرات (${num}) کل نمبر (${c.max}) سے زیادہ ہیں۔ جب تک اسے درست نہ کیا جائے کسی اور خانے میں نہیں جایا جا سکتا۔`;
+                setMeInputError({ rowIdx: r, colKey: c.key, message: msg });
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
   };
 
   const [isSavingExam, setIsSavingExam] = useState(false);
 
   const meSaveExam = async () => {
     if (!meStudents || meStudents === 'empty') { alert('کوئی طالب علم نہیں۔'); return; }
+    
+    // Strict Validation: ensure all entered marks are <= max and >= 0
+    for (let i = 0; i < meStudents.data.length; i++) {
+      const item = meStudents.data[i];
+      for (const c of ME_COLS) {
+        if (c.max && item[c.key] !== '' && item[c.key] !== null && item[c.key] !== undefined) {
+          const val = Number(item[c.key]);
+          if (val > c.max || val < 0) {
+            alert(`محفوظ نہیں کیا جا سکتا: طالب علم "${item.student?.name || `نمبر ${i+1}`}" کے "${c.label}" کے نمبرات (${val}) کل نمبر (${c.max}) سے زیادہ ہیں۔ براہ کرم پہلے اسے درست فرمائیں۔`);
+            const targetInput = document.querySelector(`input[data-row="${i}"][data-col="${c.key}"]`);
+            if (targetInput) {
+              targetInput.focus();
+              targetInput.select();
+            }
+            return;
+          }
+        }
+      }
+    }
     
     setIsSavingExam(true);
     try {
@@ -1346,6 +1475,25 @@ export default function Entry() {
                     حاضری نمبرات ریفریش کریں
                   </button>
                 </div>
+                {meInputError && (
+                  <div className="me-validation-error-banner" role="alert">
+                    <span>{meInputError.message}</span>
+                    <button
+                      type="button"
+                      className="btn-link"
+                      style={{ color: "inherit", fontWeight: "800", cursor: "pointer", background: "none", border: "none", textDecoration: "underline", fontFamily: "inherit" }}
+                      onClick={() => {
+                        const targetInput = document.querySelector(`input[data-row="${meInputError.rowIdx}"][data-col="${meInputError.colKey}"]`);
+                        if (targetInput) {
+                          targetInput.focus();
+                          targetInput.select();
+                        }
+                      }}
+                    >
+                      درست کریں
+                    </button>
+                  </div>
+                )}
                 <div className="me-table-wrap">
                   <table className="me-table">
                     <thead>
@@ -1365,16 +1513,49 @@ export default function Entry() {
                         <tr key={item.student.admRegNo || idx}>
                           <td><span className="me-reg">{item.student.admRegNo || '-'}</span></td>
                           <td className="me-td-info"><span className="me-name">{item.student.name || '-'}</span></td>
-                          {ME_COLS.map(c => (
-                            <td key={c.key}>
-                                {c.sub ? (
-                                    <input type="text" className="me-input" style={{ width: "70px" }} value={item[c.key]} placeholder={c.label.charAt(0)} onChange={e => meCalcRow(idx, c.key, e.target.value, true)} />
-                                ) : (
-                                    <input type="number" className={`me-input ${Number(item[c.key]||0) > c.max ? 'me-invalid' : ''}`} min="0" max={c.max} value={item[c.key]} placeholder="0" onChange={e => meCalcRow(idx, c.key, e.target.value, false)} />
-                                )}
-                            </td>
-                          ))}
-                          <td><span className={`me-total-cell ${item.gradeObj.cls}`} title={`${item.pct.toFixed(1)}% — ${item.gradeObj.g}`}>{item.total}</span></td>
+                          {ME_COLS.map(c => {
+                            const isInvalid = c.max && item[c.key] !== '' && item[c.key] !== null && item[c.key] !== undefined && (Number(item[c.key]) > c.max || Number(item[c.key]) < 0);
+                            return (
+                              <td key={c.key}>
+                                  {c.sub ? (
+                                      <input
+                                        type="text"
+                                        className="me-input"
+                                        style={{ width: "70px" }}
+                                        value={item[c.key]}
+                                        placeholder={c.label.charAt(0)}
+                                        data-row={idx}
+                                        data-col={c.key}
+                                        onChange={e => meCalcRow(idx, c.key, e.target.value, true)}
+                                      />
+                                  ) : (
+                                      <input
+                                        type="number"
+                                        className={`me-input ${isInvalid ? 'me-invalid' : ''}`}
+                                        min="0"
+                                        max={c.max}
+                                        value={item[c.key]}
+                                        placeholder="0"
+                                        data-row={idx}
+                                        data-col={c.key}
+                                        onChange={e => meCalcRow(idx, c.key, e.target.value, false)}
+                                        onKeyDown={e => handleInputKeyDown(e, idx, c)}
+                                        onBlur={e => handleInputBlur(e, idx, c)}
+                                        onFocus={e => handleInputFocus(e, idx, c)}
+                                        title={isInvalid ? `غلط اندراج: ${c.label} کے نمبرات ${c.max} سے زیادہ نہیں ہو سکتے` : `${c.label} (کل: ${c.max})`}
+                                      />
+                                  )}
+                              </td>
+                            );
+                          })}
+                          <td>
+                            <span
+                              className={`me-total-cell ${item.gradeObj.cls}`}
+                              title={item.total > ME_MAX_TOTAL ? `مجموعہ 100 سے زیادہ ہے (${item.total}) — غلط اندراج` : `${item.pct.toFixed(1)}% — ${item.gradeObj.g}`}
+                            >
+                              {item.total}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
