@@ -1,0 +1,793 @@
+/* ==========================================================================
+   StudentParaRecords.css — پارہ بہ پارہ تکمیلِ حفظ و تفصیلی جائزہ
+   Strict RTL, Light & Dark Theme Support, Clean Print Stylesheet, No Emojis
+   ========================================================================== */
+
+.para-records-container {
+  width: 100%;
+  margin: 0 auto;
+  direction: rtl;
+  color: var(--text, #1e293b);
+  box-sizing: border-box;
+}
+
+/* Header & Intro */
+.para-records-header {
+  margin-bottom: 20px;
+  text-align: right;
+}
+
+.para-records-header h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+  margin: 0 0 6px 0;
+}
+
+.para-records-header p {
+  font-size: 0.95rem;
+  color: var(--muted, #64748b);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Alerts */
+.para-records-alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.para-records-alert-success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.para-records-alert-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.para-records-alert-info {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+/* Dark mode alerts */
+[data-theme="dark"] .para-records-alert-success {
+  background: #064e3b;
+  color: #d1fae5;
+  border-color: #059669;
+}
+
+[data-theme="dark"] .para-records-alert-error {
+  background: #7f1d1d;
+  color: #fee2e2;
+  border-color: #dc2626;
+}
+
+[data-theme="dark"] .para-records-alert-info {
+  background: #1e3a8a;
+  color: #dbeafe;
+  border-color: #2563eb;
+}
+
+/* Card Blocks */
+.para-records-card {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .para-records-card {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+.para-records-card-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text, #0f172a);
+  margin: 0 0 14px 0;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  padding-bottom: 8px;
+}
+
+[data-theme="dark"] .para-records-card-title {
+  color: #f4f4f5;
+  border-bottom-color: #27272a;
+}
+
+/* Form Controls & Grids */
+.para-records-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.para-records-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: right;
+}
+
+.para-records-field label {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text, #334155);
+}
+
+[data-theme="dark"] .para-records-field label {
+  color: #d4d4d8;
+}
+
+.para-records-field input,
+.para-records-field select,
+.para-records-field textarea {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  direction: rtl;
+  background: var(--card, #ffffff);
+  color: var(--text, #0f172a);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+[data-theme="dark"] .para-records-field input,
+[data-theme="dark"] .para-records-field select,
+[data-theme="dark"] .para-records-field textarea {
+  background: #27272a;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+}
+
+.para-records-field input:focus,
+.para-records-field select:focus,
+.para-records-field textarea:focus {
+  outline: none;
+  border-color: var(--accent, #0d3b66);
+}
+
+/* Checkbox field */
+.para-records-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg, #f8fafc);
+  border: 1px dashed var(--border, #cbd5e1);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+[data-theme="dark"] .para-records-checkbox-row {
+  background: #202023;
+  border-color: #3f3f46;
+}
+
+.para-records-checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent, #0d3b66);
+}
+
+.para-records-checkbox-row label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text, #0f172a);
+}
+
+[data-theme="dark"] .para-records-checkbox-row label {
+  color: #f4f4f5;
+}
+
+/* Student Info Strip */
+.para-records-student-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: var(--bg, #f1f5f9);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 12px;
+}
+
+[data-theme="dark"] .para-records-student-strip {
+  background: #202023;
+  border-color: #27272a;
+}
+
+.para-records-student-item {
+  display: flex;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.para-records-student-label {
+  color: var(--muted, #64748b);
+  font-weight: 500;
+}
+
+.para-records-student-val {
+  color: var(--text, #0f172a);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .para-records-student-val {
+  color: #fafafa;
+}
+
+/* Stats Summary Row */
+.para-records-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.para-records-stat-box {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+[data-theme="dark"] .para-records-stat-box {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+.para-records-stat-num {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent, #0d3b66);
+  margin-bottom: 4px;
+}
+
+[data-theme="dark"] .para-records-stat-num {
+  color: #60a5fa;
+}
+
+.para-records-stat-label {
+  font-size: 0.82rem;
+  color: var(--muted, #64748b);
+}
+
+[data-theme="dark"] .para-records-stat-label {
+  color: #a1a1aa;
+}
+
+/* Table Styles */
+.para-records-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--card, #ffffff);
+  margin-bottom: 24px;
+}
+
+[data-theme="dark"] .para-records-table-wrap {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+.para-records-table {
+  width: 100%;
+  border-collapse: collapse;
+  direction: rtl;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.para-records-table th {
+  background: var(--bg, #f1f5f9);
+  color: var(--text, #0f172a);
+  padding: 10px 12px;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border, #cbd5e1);
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .para-records-table th {
+  background: #27272a;
+  color: #f4f4f5;
+  border-bottom-color: #3f3f46;
+}
+
+.para-records-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  vertical-align: middle;
+}
+
+[data-theme="dark"] .para-records-table td {
+  border-bottom-color: #27272a;
+}
+
+.para-records-table tr:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="dark"] .para-records-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.para-records-table tr.prior-madrasa-row {
+  background: #f8fafc;
+}
+
+[data-theme="dark"] .para-records-table tr.prior-madrasa-row {
+  background: #202023;
+}
+
+/* Table Inputs */
+.para-table-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 5px;
+  background: var(--card, #ffffff);
+  color: var(--text, #0f172a);
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .para-table-input {
+  background: #27272a;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+}
+
+.para-table-input:focus {
+  outline: none;
+  border-color: var(--accent, #0d3b66);
+}
+
+.para-table-input-num {
+  text-align: center;
+  max-width: 80px;
+}
+
+/* Five Para Detailed Review Row / Block */
+.para-review-row td {
+  background: #f8fafc;
+  border-top: 2px solid var(--border, #cbd5e1);
+  border-bottom: 2px solid var(--border, #cbd5e1);
+  padding: 14px 16px;
+}
+
+[data-theme="dark"] .para-review-row td {
+  background: #202024;
+  border-top-color: #3f3f46;
+  border-bottom-color: #3f3f46;
+}
+
+.para-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.para-review-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.para-review-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent, #0d3b66);
+  margin: 0;
+}
+
+[data-theme="dark"] .para-review-title {
+  color: #60a5fa;
+}
+
+.para-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.para-review-meta label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-theme="dark"] .para-review-meta label {
+  color: #a1a1aa;
+}
+
+.para-review-meta input {
+  padding: 5px 8px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 4px;
+  background: var(--card, #ffffff);
+  color: var(--text, #0f172a);
+}
+
+[data-theme="dark"] .para-review-meta input {
+  background: #27272a;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+}
+
+/* 2-Line Ruled Notes Input */
+.para-review-notes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.para-review-notes-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text, #334155);
+}
+
+[data-theme="dark"] .para-review-notes-label {
+  color: #d4d4d8;
+}
+
+.para-review-textarea {
+  width: 100%;
+  min-height: 64px;
+  line-height: 30px;
+  padding: 4px 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  direction: rtl;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 6px;
+  background: var(--card, #ffffff);
+  color: var(--text, #0f172a);
+  resize: vertical;
+  background-attachment: local;
+  background-image: linear-gradient(to bottom, transparent 28px, var(--border, #e2e8f0) 29px, transparent 30px);
+  background-size: 100% 30px;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .para-review-textarea {
+  background: #27272a;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+  background-image: linear-gradient(to bottom, transparent 28px, #3f3f46 29px, transparent 30px);
+}
+
+.para-review-textarea:focus {
+  outline: none;
+  border-color: var(--accent, #0d3b66);
+}
+
+/* Action Bar */
+.para-records-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-start;
+  margin-top: 20px;
+  margin-bottom: 30px;
+}
+
+.para-btn {
+  padding: 9px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.para-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.para-btn-primary {
+  background: var(--accent, #0d3b66);
+  color: #ffffff;
+}
+
+.para-btn-primary:hover:not(:disabled) {
+  background: #092c4d;
+}
+
+.para-btn-success {
+  background: var(--success, #1a6b3c);
+  color: #ffffff;
+}
+
+.para-btn-success:hover:not(:disabled) {
+  background: #134e2c;
+}
+
+.para-btn-secondary {
+  background: var(--bg, #e2e8f0);
+  color: var(--text, #1e293b);
+  border: 1px solid var(--border, #cbd5e1);
+}
+
+[data-theme="dark"] .para-btn-secondary {
+  background: #27272a;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+}
+
+.para-btn-secondary:hover:not(:disabled) {
+  background: #cbd5e1;
+}
+
+[data-theme="dark"] .para-btn-secondary:hover:not(:disabled) {
+  background: #3f3f46;
+}
+
+/* Badge */
+.para-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.para-badge-prior {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+[data-theme="dark"] .para-badge-prior {
+  background: #78350f;
+  color: #fef3c7;
+  border-color: #92400e;
+}
+
+/* Sub-tabs in Records */
+.records-subtabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--border, #e2e8f0);
+  margin-bottom: 20px;
+  direction: rtl;
+}
+
+[data-theme="dark"] .records-subtabs {
+  border-bottom-color: #27272a;
+}
+
+.records-subtab-btn {
+  padding: 10px 18px;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--muted, #64748b);
+  cursor: pointer;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+}
+
+.records-subtab-btn:hover {
+  color: var(--text, #0f172a);
+}
+
+[data-theme="dark"] .records-subtab-btn:hover {
+  color: #f4f4f5;
+}
+
+.records-subtab-btn.active {
+  color: var(--accent, #0d3b66);
+  border-bottom-color: var(--accent, #0d3b66);
+}
+
+[data-theme="dark"] .records-subtab-btn.active {
+  color: #60a5fa;
+  border-bottom-color: #60a5fa;
+}
+
+/* ==========================================================================
+   PRINT STYLESHEET (@media print)
+   ========================================================================== */
+@media print {
+  /* Hide interactive controls and chrome */
+  .no-print,
+  .records-subtabs,
+  .para-records-actions,
+  .para-records-checkbox-row,
+  .para-btn,
+  .para-records-field select,
+  .para-records-field input[type="text"],
+  nav,
+  header,
+  footer,
+  aside,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 9.5pt !important;
+  }
+
+  .para-records-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Printable Header */
+  .print-only-header {
+    display: block !important;
+    text-align: center;
+    border-bottom: 2px solid #000000;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+
+  .print-madrasa-name {
+    font-size: 16pt;
+    font-weight: bold;
+    margin: 0 0 4px 0;
+  }
+
+  .print-document-title {
+    font-size: 13pt;
+    font-weight: bold;
+    margin: 0 0 4px 0;
+  }
+
+  .print-student-info-box {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid #000000;
+    padding: 8px;
+    margin-bottom: 12px;
+    font-size: 9pt;
+    background: #ffffff !important;
+  }
+
+  .print-student-info-item {
+    display: flex;
+    gap: 4px;
+  }
+
+  /* Print Table */
+  .para-records-table-wrap {
+    border: 1px solid #000000 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .para-records-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .para-records-table th {
+    background: #f0f0f0 !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    padding: 5px 6px !important;
+    font-size: 8.5pt !important;
+  }
+
+  .para-records-table td {
+    border: 1px solid #000000 !important;
+    padding: 4px 6px !important;
+    font-size: 8.5pt !important;
+  }
+
+  .para-table-input {
+    border: none !important;
+    background: transparent !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    font-size: 8.5pt !important;
+  }
+
+  /* Print 5-Para Review Row */
+  .para-review-row td {
+    background: #fafafa !important;
+    border: 1px solid #000000 !important;
+    padding: 8px 10px !important;
+  }
+
+  .para-review-title {
+    font-size: 10pt !important;
+    font-weight: bold !important;
+    color: #000000 !important;
+  }
+
+  .para-review-textarea {
+    display: none !important;
+  }
+
+  .print-ruled-lines {
+    display: block !important;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .print-ruled-line {
+    border-bottom: 1px dotted #444444;
+    min-height: 22px;
+    line-height: 22px;
+    font-size: 9pt;
+    color: #000000;
+    padding: 0 4px;
+  }
+
+  /* Printable Signatures Footer */
+  .print-signatures-footer {
+    display: flex !important;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px dashed #666666;
+  }
+
+  .print-signature-block {
+    text-align: center;
+    width: 28%;
+    font-size: 9pt;
+  }
+
+  .print-signature-line {
+    border-bottom: 1px solid #000000;
+    margin-top: 40px;
+    margin-bottom: 4px;
+  }
+}
+
+/* Hide print-only elements in screen view */
+@media screen {
+  .print-only-header,
+  .print-ruled-lines,
+  .print-signatures-footer {
+    display: none !important;
+  }
+}
