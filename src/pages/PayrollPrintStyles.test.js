@@ -126,4 +126,26 @@ describe('PayrollPrintStyles - AGENTS.md Print & Report Printing Rules Verificat
     expect(payrollPrintCss).toMatch(/\.payroll-slip-container\s*\{[^}]*page:\s*payroll-slip/);
     expect(payrollPrintCss).toMatch(/\.payroll-report-container\s*\{[^}]*page:\s*payroll-report/);
   });
+
+  it('asserts print.css contains scoped print isolation rules for payroll printing (Stage 6f)', () => {
+    // Must contain scoped selector for print isolation
+    expect(printCss).toContain('body.printing-payroll #print-portal-root');
+    expect(printCss).toContain('body.printing-payroll #print-portal-root *');
+
+    // Must force transparent background and black color with !important
+    expect(printCss).toContain('background: transparent !important');
+    expect(printCss).toContain('color: #000000 !important');
+
+    // Must reset table width and min-width to 0 with !important
+    expect(printCss).toContain('width: 100% !important');
+    expect(printCss).toContain('min-width: 0 !important');
+    expect(printCss).toContain('display: table !important');
+    expect(printCss).toContain('border-color: #bdbdbd !important');
+
+    // Must still contain the original global @page A5 landscape and named payroll pages
+    expect(printCss).toContain('@page {');
+    expect(printCss).toContain('size: A5 landscape;');
+    expect(printCss).toContain('@page payroll-slip');
+    expect(printCss).toContain('@page payroll-report');
+  });
 });

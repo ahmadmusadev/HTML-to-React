@@ -138,8 +138,9 @@
   background: #ffffff !important;
   color: #000000 !important;
   font-family: 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaleeq Urdu', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  padding: 12px;
+  padding: 0;
   margin: 0 auto;
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -147,9 +148,9 @@
 .payroll-slip-container {
   page: payroll-slip;
   width: 100%;
-  max-width: 720px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 12px;
+  padding: 0;
   box-sizing: border-box;
   page-break-inside: avoid;
   break-inside: avoid;
@@ -200,14 +201,24 @@
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.payroll-slip-columns-grid > * {
+  flex: 1 1 0%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .payroll-slip-box {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
   border: 1px solid #bdbdbd;
   margin-bottom: 10px;
   page-break-inside: avoid;
   break-inside: avoid;
+  box-sizing: border-box;
 }
 
 .payroll-slip-box-title {
@@ -221,6 +232,7 @@
 
 .payroll-slip-mini-table {
   width: 100%;
+  min-width: 0;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -233,6 +245,7 @@
 
 .payroll-slip-table {
   width: 100%;
+  min-width: 0;
   border-collapse: collapse;
   font-size: 12px;
 }

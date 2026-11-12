@@ -209,5 +209,50 @@
   }
 }
 
+@media print {
+  /* --- Print Isolation for Payroll Printing per Stage 6f --- */
+  body.printing-payroll #print-portal-root,
+  body.printing-payroll #print-portal-root * {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+
+  body.printing-payroll #print-portal-root table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    display: table !important;
+  }
+
+  body.printing-payroll #print-portal-root thead {
+    display: table-header-group !important;
+  }
+
+  body.printing-payroll #print-portal-root tbody {
+    display: table-row-group !important;
+  }
+
+  body.printing-payroll #print-portal-root tfoot {
+    display: table-footer-group !important;
+  }
+
+  body.printing-payroll #print-portal-root tr {
+    display: table-row !important;
+  }
+
+  body.printing-payroll #print-portal-root th,
+  body.printing-payroll #print-portal-root td {
+    display: table-cell !important;
+    border-color: #bdbdbd !important;
+  }
+}
+
+
 
 
