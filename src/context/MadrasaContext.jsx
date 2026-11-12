@@ -1310,6 +1310,106 @@ export function MadrasaProvider({ children }) {
     }
   };
 
+  // --- Student Para Completion Records (پارہ بہ پارہ تکمیلِ حفظ) ---
+  const fetchStudentParaRecordFromSupabase = async (studentId, madrasaId = activeMadrasaId) => {
+    if (!studentId) return null;
+    const isRemote = isValidUUID(madrasaId) && isValidUUID(studentId);
+
+    if (isRemote) {
+      try {
+        const { data, error } = await supabase
+          .from('student_para_records')
+          .select('*')
+          .eq('madrasa_id', madrasaId)
+          .eq('student_id', studentId)
+          .maybeSingle();
+
+        if (error) {
+          console.warn('[MadrasaContext] Error fetching student para record from Supabase:', error.message);
+        } else if (data) {
+          try {
+            const localStore = loadMadrasaData('hf_student_para_records_v1', madrasaId) || {};
+            localStore[studentId] = data;
+            saveMadrasaData('hf_student_para_records_v1', localStore, madrasaId);
+          } catch (cErr) {}
+          return data;
+        }
+      } catch (e) {
+        console.warn('[MadrasaContext] Exception in fetchStudentParaRecordFromSupabase:', e);
+      }
+    }
+
+    // Local fallback
+    const localStore = loadMadrasaData('hf_student_para_records_v1', madrasaId) || {};
+    return localStore[studentId] || null;
+  };
+
+  const saveStudentParaRecordToSupabase = async (recordData, madrasaId = activeMadrasaId) => {
+    if (!recordData || !recordData.student_id) {
+      throw new Error('طالب علم کا انتخاب لازمی ہے۔');
+    }
+    const studentId = recordData.student_id;
+    const isRemote = isValidUUID(madrasaId) && isValidUUID(studentId);
+
+    const payload = {
+      madrasa_id: madrasaId,
+      student_id: studentId,
+      is_mid_hifz: !!recordData.is_mid_hifz,
+      starting_para: Number(recordData.starting_para || 30),
+      prior_madrasa_name: recordData.prior_madrasa_name || '',
+      prior_paras_count: Number(recordData.prior_paras_count || 0),
+      prior_paras_note: recordData.prior_paras_note || '',
+      paras: Array.isArray(recordData.paras) ? recordData.paras : [],
+      reviews: Array.isArray(recordData.reviews) ? recordData.reviews : [],
+      completion_status: recordData.completion_status || 'in_progress',
+      completion_date: recordData.completion_date || null,
+      saved_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (isRemote) {
+      try {
+        const { data, error } = await supabase
+          .from('student_para_records')
+          .upsert(payload, { onConflict: 'madrasa_id,student_id' })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('[MadrasaContext] Supabase upsert student_para_records error:', error);
+          if (isNetworkError(error)) {
+            enqueueWrite({
+              table: 'student_para_records',
+              operation: 'upsert',
+              payload,
+              onConflict: 'madrasa_id,student_id',
+              madrasaId
+            });
+          } else {
+            throw error;
+          }
+        }
+
+        const savedResult = data || payload;
+        const localStore = loadMadrasaData('hf_student_para_records_v1', madrasaId) || {};
+        localStore[studentId] = savedResult;
+        saveMadrasaData('hf_student_para_records_v1', localStore, madrasaId);
+        return savedResult;
+      } catch (e) {
+        console.error('[MadrasaContext] Error saving student para record:', e);
+        const localStore = loadMadrasaData('hf_student_para_records_v1', madrasaId) || {};
+        localStore[studentId] = payload;
+        saveMadrasaData('hf_student_para_records_v1', localStore, madrasaId);
+        throw new Error(e.message || 'ریکارڈ محفوظ کرنے میں خرابی پیش آئی۔');
+      }
+    } else {
+      const localStore = loadMadrasaData('hf_student_para_records_v1', madrasaId) || {};
+      localStore[studentId] = payload;
+      saveMadrasaData('hf_student_para_records_v1', localStore, madrasaId);
+      return payload;
+    }
+  };
+
   // --- Monthly Evaluations (ماہانہ جائزہ) ---
   const fetchMonthlyEvaluationsFromSupabase = async (filters = {}, madrasaId = activeMadrasaId) => {
     if (!isValidUUID(madrasaId)) {
@@ -2967,6 +3067,8 @@ export function MadrasaProvider({ children }) {
       deleteMonthlyLiteracyFromSupabase,
       syncMonthlyLiteracyToHifzRecords,
       syncDailyAttendanceToHifzRecords,
+      fetchStudentParaRecordFromSupabase,
+      saveStudentParaRecordToSupabase,
       isMadrasaDisabled: activeMadrasa?.status === 'disabled'
     }}>
       {children}

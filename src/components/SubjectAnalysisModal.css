@@ -1,0 +1,1038 @@
+/* SubjectAnalysisModal.css - Clean, Professional RTL Styles for Manzil and Tajweed Reports */
+
+.subject-analysis-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+  overflow-y: auto;
+  direction: rtl;
+}
+
+.subject-analysis-modal {
+  background-color: var(--card, #ffffff);
+  color: var(--accent, #0f172a);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 960px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  direction: rtl;
+  overflow: hidden;
+  font-family: 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Naskh Arabic', serif;
+}
+
+/* Modal Header */
+.subject-analysis-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background-color: var(--card, #ffffff);
+  flex-shrink: 0;
+}
+
+.subject-analysis-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subject-analysis-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--accent, #0f172a);
+  line-height: 1.4;
+}
+
+.subject-analysis-subtitle {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted, #64748b);
+  line-height: 1.4;
+}
+
+.subject-analysis-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.subject-analysis-btn {
+  padding: 7px 16px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.subject-analysis-btn-primary {
+  background: linear-gradient(135deg, #0d3b66, #1e40af);
+  color: #ffffff !important;
+  border-color: #0d3b66;
+}
+
+.subject-analysis-btn-primary:hover {
+  background: linear-gradient(135deg, #092c4f, #1e3a8a);
+}
+
+.subject-analysis-btn-secondary {
+  background: var(--card, #ffffff);
+  color: var(--accent, #0f172a);
+  border-color: var(--border, #cbd5e1);
+}
+
+.subject-analysis-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Modal Body / Scrollable Content */
+.subject-analysis-body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1 1 auto;
+}
+
+/* ========================================================= */
+/* Meta Information Bar (Single Line with Vertical Dividers) */
+/* ========================================================= */
+.subject-analysis-meta-scroll {
+  width: 100%;
+  overflow-x: auto;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.subject-analysis-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 720px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  direction: rtl;
+}
+
+.subject-analysis-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+  padding: 2px 8px;
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.subject-analysis-meta-label {
+  font-size: 0.78rem;
+  color: var(--muted, #64748b);
+  font-weight: 700;
+}
+
+.subject-analysis-meta-val {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--accent, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subject-analysis-meta-divider {
+  width: 1px;
+  min-width: 1px;
+  height: 32px;
+  background-color: var(--border, #cbd5e1);
+  align-self: center;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ========================================================= */
+/* Category Summary Matrix (Connected Seamless Grid)         */
+/* ========================================================= */
+.subject-analysis-summary-scroll {
+  width: 100%;
+  flex-shrink: 0;
+  min-height: 146px;
+  overflow-x: auto;
+  padding: 2px 0 4px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.subject-analysis-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(75px, 0.9fr) repeat(4, minmax(100px, 1.15fr)) minmax(90px, 1fr);
+  gap: 0;
+  width: 100%;
+  min-width: 580px;
+  box-sizing: border-box;
+  direction: rtl;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.subject-analysis-summary-box {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 144px;
+  height: 144px;
+  border: none;
+  border-left: 1px solid var(--border, #cbd5e1);
+  border-radius: 0;
+  background: #ffffff;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  transition: filter 0.15s ease;
+}
+
+.subject-analysis-summary-box:last-child {
+  border-left: none;
+}
+
+.subject-analysis-summary-box:hover {
+  filter: brightness(0.97);
+}
+
+/* Box Internal Rows & Dividing Lines */
+.summary-box-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.summary-box-row.row-cat {
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.summary-box-row.row-count {
+  height: 54px;
+  min-height: 54px;
+  max-height: 54px;
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.summary-box-row.row-pct {
+  height: 42px;
+  min-height: 42px;
+  max-height: 42px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.summary-box-divider {
+  height: 1px;
+  min-height: 1px;
+  max-height: 1px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  background-color: var(--border, #cbd5e1);
+  border: none;
+}
+
+.summary-box-text {
+  display: block;
+  width: 100%;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.summary-box-text.count-val {
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.summary-box-text.pct-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+/* Light Theme Color Variants per Box */
+/* 1. Labels Box (First Column) */
+.subject-analysis-summary-box.box-labels {
+  background: #f8fafc;
+}
+
+.subject-analysis-summary-box.box-labels .summary-box-divider {
+  background-color: #cbd5e1;
+}
+
+.subject-analysis-summary-box.box-labels .summary-box-text {
+  color: #1e293b;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+/* 2. Category 1: 90% or above (Green) */
+.subject-analysis-summary-box.box-cat1 {
+  background: #f0fdf4;
+}
+
+.subject-analysis-summary-box.box-cat1 .summary-box-divider {
+  background-color: #bbf7d0;
+}
+
+.subject-analysis-summary-box.box-cat1 .row-cat .summary-box-text {
+  color: #15803d;
+}
+
+.subject-analysis-summary-box.box-cat1 .row-count .count-val {
+  color: #14532d;
+}
+
+.subject-analysis-summary-box.box-cat1 .row-pct .pct-val {
+  color: #166534;
+}
+
+/* 3. Category 2: 85% to 89% (Blue) */
+.subject-analysis-summary-box.box-cat2 {
+  background: #eff6ff;
+}
+
+.subject-analysis-summary-box.box-cat2 .summary-box-divider {
+  background-color: #bfdbfe;
+}
+
+.subject-analysis-summary-box.box-cat2 .row-cat .summary-box-text {
+  color: #1d4ed8;
+}
+
+.subject-analysis-summary-box.box-cat2 .row-count .count-val {
+  color: #1e3a8a;
+}
+
+.subject-analysis-summary-box.box-cat2 .row-pct .pct-val {
+  color: #1e40af;
+}
+
+/* 4. Category 3: 75% to 84% (Amber) */
+.subject-analysis-summary-box.box-cat3 {
+  background: #fffbeb;
+}
+
+.subject-analysis-summary-box.box-cat3 .summary-box-divider {
+  background-color: #fde68a;
+}
+
+.subject-analysis-summary-box.box-cat3 .row-cat .summary-box-text {
+  color: #b45309;
+}
+
+.subject-analysis-summary-box.box-cat3 .row-count .count-val {
+  color: #78350f;
+}
+
+.subject-analysis-summary-box.box-cat3 .row-pct .pct-val {
+  color: #92400e;
+}
+
+/* 5. Category 4: 74% or below (Slate) */
+.subject-analysis-summary-box.box-cat4 {
+  background: #f8fafc;
+}
+
+.subject-analysis-summary-box.box-cat4 .summary-box-divider {
+  background-color: #e2e8f0;
+}
+
+.subject-analysis-summary-box.box-cat4 .row-cat .summary-box-text {
+  color: #475569;
+}
+
+.subject-analysis-summary-box.box-cat4 .row-count .count-val {
+  color: #0f172a;
+}
+
+.subject-analysis-summary-box.box-cat4 .row-pct .pct-val {
+  color: #334155;
+}
+
+/* 6. Total Box: کل میزان (Sky) */
+.subject-analysis-summary-box.box-total {
+  background: #f0f9ff;
+}
+
+.subject-analysis-summary-box.box-total .summary-box-divider {
+  background-color: #bae6fd;
+}
+
+.subject-analysis-summary-box.box-total .row-cat .summary-box-text {
+  color: #0369a1;
+}
+
+.subject-analysis-summary-box.box-total .row-count .count-val {
+  color: #0c4a6e;
+}
+
+.subject-analysis-summary-box.box-total .row-pct .pct-val {
+  color: #0284c7;
+}
+
+/* Summary Footer & Chips */
+.subject-analysis-summary-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.subject-analysis-validity-note {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #166534;
+}
+
+.subject-analysis-footer-chips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.subject-analysis-footer-chip {
+  padding: 4px 10px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent, #0f172a);
+}
+
+/* Detailed Student Table */
+.subject-analysis-students-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.subject-analysis-section-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--accent, #0f172a);
+}
+
+.subject-analysis-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+}
+
+.subject-analysis-student-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  text-align: center;
+  background: #ffffff;
+  direction: rtl;
+}
+
+.subject-analysis-student-table th,
+.subject-analysis-student-table td {
+  border: 1px solid var(--border, #e2e8f0);
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+.subject-analysis-student-table th {
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.subject-analysis-student-table td {
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.subject-analysis-student-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.subject-analysis-student-table tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.subject-analysis-student-table td.student-name-cell {
+  text-align: right;
+  font-weight: 700;
+  padding-right: 14px;
+}
+
+/* Category Badges */
+.mizan-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mizan-badge.badge-cat1 {
+  background: #dcfce7;
+  color: #14532d;
+  border: 1px solid #86efac;
+}
+
+.mizan-badge.badge-cat2 {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border: 1px solid #93c5fd;
+}
+
+.mizan-badge.badge-cat3 {
+  background: #fef3c7;
+  color: #78350f;
+  border: 1px solid #fde68a;
+}
+
+.mizan-badge.badge-cat4 {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.mizan-badge.badge-absent {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* ========================================================= */
+/* Dark Mode Overrides (High Contrast, Rich Aesthetics)     */
+/* ========================================================= */
+[data-theme="dark"] .subject-analysis-modal {
+  background-color: var(--card, #1a1a1a);
+  color: #f4f4f5;
+  border-color: var(--border, #333333);
+}
+
+[data-theme="dark"] .subject-analysis-header {
+  background-color: var(--card, #1a1a1a);
+  border-color: var(--border, #333333);
+}
+
+[data-theme="dark"] .subject-analysis-title {
+  color: #f4f4f5;
+}
+
+[data-theme="dark"] .subject-analysis-subtitle {
+  color: #a1a1aa;
+}
+
+[data-theme="dark"] .subject-analysis-btn-secondary {
+  background: #262626;
+  color: #f4f4f5;
+  border-color: #3f3f46;
+}
+
+[data-theme="dark"] .subject-analysis-btn-secondary:hover {
+  background: #333333;
+  border-color: #52525b;
+}
+
+/* Dark Mode Meta Bar */
+[data-theme="dark"] .subject-analysis-meta-bar {
+  background: #20242d;
+  border-color: #3f4756;
+}
+
+[data-theme="dark"] .subject-analysis-meta-label {
+  color: #a1a1aa;
+}
+
+[data-theme="dark"] .subject-analysis-meta-val {
+  color: #f4f4f5;
+}
+
+[data-theme="dark"] .subject-analysis-meta-divider {
+  background-color: #3f4756;
+}
+
+/* Dark Mode Summary Connected Grid */
+[data-theme="dark"] .subject-analysis-summary-grid {
+  border-color: #3f4756;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box {
+  border-left-color: #3f4756;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box:last-child {
+  border-left: none;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box:hover {
+  filter: brightness(1.15);
+}
+
+/* Labels Box Dark Mode */
+[data-theme="dark"] .subject-analysis-summary-box.box-labels {
+  background: #20242d;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-labels .summary-box-divider {
+  background-color: #374151;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-labels .summary-box-text {
+  color: #f3f4f6;
+}
+
+/* Cat 1 Dark Mode */
+[data-theme="dark"] .subject-analysis-summary-box.box-cat1 {
+  background: rgba(16, 185, 129, 0.16);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat1 .summary-box-divider {
+  background-color: rgba(16, 185, 129, 0.35);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat1 .row-cat .summary-box-text {
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat1 .row-count .count-val {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat1 .row-pct .pct-val {
+  color: #a7f3d0;
+}
+
+/* Cat 2 Dark Mode */
+[data-theme="dark"] .subject-analysis-summary-box.box-cat2 {
+  background: rgba(59, 130, 246, 0.16);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat2 .summary-box-divider {
+  background-color: rgba(59, 130, 246, 0.35);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat2 .row-cat .summary-box-text {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat2 .row-count .count-val {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat2 .row-pct .pct-val {
+  color: #bfdbfe;
+}
+
+/* Cat 3 Dark Mode */
+[data-theme="dark"] .subject-analysis-summary-box.box-cat3 {
+  background: rgba(245, 158, 11, 0.16);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat3 .summary-box-divider {
+  background-color: rgba(245, 158, 11, 0.35);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat3 .row-cat .summary-box-text {
+  color: #fde68a;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat3 .row-count .count-val {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat3 .row-pct .pct-val {
+  color: #fcd34d;
+}
+
+/* Cat 4 Dark Mode */
+[data-theme="dark"] .subject-analysis-summary-box.box-cat4 {
+  background: rgba(100, 116, 139, 0.18);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat4 .summary-box-divider {
+  background-color: rgba(100, 116, 139, 0.35);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat4 .row-cat .summary-box-text {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat4 .row-count .count-val {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-cat4 .row-pct .pct-val {
+  color: #94a3b8;
+}
+
+/* Total Dark Mode */
+[data-theme="dark"] .subject-analysis-summary-box.box-total {
+  background: rgba(14, 165, 233, 0.16);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-total .summary-box-divider {
+  background-color: rgba(14, 165, 233, 0.35);
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-total .row-cat .summary-box-text {
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-total .row-count .count-val {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .subject-analysis-summary-box.box-total .row-pct .pct-val {
+  color: #38bdf8;
+}
+
+/* Footer Dark Mode */
+[data-theme="dark"] .subject-analysis-summary-footer {
+  background: #20242d;
+  border-color: #333333;
+}
+
+[data-theme="dark"] .subject-analysis-validity-note {
+  color: #4ade80;
+}
+
+[data-theme="dark"] .subject-analysis-footer-chip {
+  background: #262626;
+  border-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+/* Student Table Dark Mode */
+[data-theme="dark"] .subject-analysis-section-title {
+  color: #f4f4f5;
+}
+
+[data-theme="dark"] .subject-analysis-table-wrap {
+  border-color: #333333;
+}
+
+[data-theme="dark"] .subject-analysis-student-table {
+  background: #1a1a1a;
+}
+
+[data-theme="dark"] .subject-analysis-student-table th,
+[data-theme="dark"] .subject-analysis-student-table td {
+  border-color: #333333;
+}
+
+[data-theme="dark"] .subject-analysis-student-table th {
+  background: #262626;
+  color: #e4e4e7;
+}
+
+[data-theme="dark"] .subject-analysis-student-table td {
+  color: #f4f4f5;
+}
+
+[data-theme="dark"] .subject-analysis-student-table tbody tr:nth-child(even) {
+  background: #202020;
+}
+
+[data-theme="dark"] .subject-analysis-student-table tbody tr:hover {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .mizan-badge.badge-cat1 {
+  background: #064e3b;
+  color: #6ee7b7;
+  border-color: #047857;
+}
+
+[data-theme="dark"] .mizan-badge.badge-cat2 {
+  background: #1e3a8a;
+  color: #bfdbfe;
+  border-color: #2563eb;
+}
+
+[data-theme="dark"] .mizan-badge.badge-cat3 {
+  background: #78350f;
+  color: #fde68a;
+  border-color: #b45309;
+}
+
+[data-theme="dark"] .mizan-badge.badge-cat4 {
+  background: #334155;
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+[data-theme="dark"] .mizan-badge.badge-absent {
+  background: #7f1d1d;
+  color: #fca5a5;
+  border-color: #991b1b;
+}
+
+/* Mobile & Tablet Responsiveness */
+@media (max-width: 768px) {
+  .subject-analysis-modal {
+    max-height: 96vh;
+    border-radius: 8px;
+  }
+
+  .subject-analysis-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .subject-analysis-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .subject-analysis-body {
+    padding: 14px 12px;
+    gap: 14px;
+  }
+
+  .subject-analysis-summary-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ========================================================= */
+/* Print-Ready Sheet Layout (A4 Portrait, Strict RTL)        */
+/* ========================================================= */
+.subject-analysis-print-sheet {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm 10mm 10mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 12pt;
+    direction: rtl !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.printing-subject-analysis #root,
+  body.printing-subject-analysis .tab-content,
+  body.printing-subject-analysis .wrap,
+  body.printing-subject-analysis .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  body.printing-subject-analysis #print-portal-root {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  .subject-analysis-print-sheet {
+    display: block !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    direction: rtl !important;
+    font-family: 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Naskh Arabic', serif !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .subject-print-header {
+    text-align: center;
+    border-bottom: 2px solid #000000;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+
+  .subject-print-inst-name {
+    font-size: 18pt;
+    font-weight: 900;
+    margin: 0 0 4px 0;
+    color: #000000;
+  }
+
+  .subject-print-doc-title {
+    font-size: 14pt;
+    font-weight: 800;
+    margin: 0 0 2px 0;
+    color: #000000;
+  }
+
+  .subject-print-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    border: 1px solid #000000;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    background: #f8fafc !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .subject-print-meta-item {
+    font-size: 9.5pt;
+    color: #000000;
+  }
+
+  .subject-print-meta-item b {
+    font-weight: 800;
+  }
+
+  .subject-print-mizan-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+    page-break-inside: avoid;
+  }
+
+  .subject-print-mizan-table th,
+  .subject-print-mizan-table td {
+    border: 1px solid #000000 !important;
+    padding: 5px 4px;
+    text-align: center;
+    font-size: 10pt;
+    vertical-align: middle;
+  }
+
+  .subject-print-mizan-table thead tr.main-head th {
+    background: #111111 !important;
+    color: #ffffff !important;
+    font-weight: 800;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .subject-print-mizan-table thead tr.sub-head th {
+    background: #eeeeee !important;
+    color: #000000 !important;
+    font-weight: 700;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .subject-print-mizan-table tbody tr.values-row td {
+    font-weight: 800;
+    font-size: 11pt;
+  }
+
+  .subject-print-mizan-table tfoot tr.grand-row td {
+    background: #f0f0f0 !important;
+    font-weight: 800;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .subject-print-student-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18px;
+  }
+
+  .subject-print-student-table th,
+  .subject-print-student-table td {
+    border: 1px solid #000000 !important;
+    padding: 4px 6px;
+    text-align: center;
+    font-size: 9.5pt;
+    vertical-align: middle;
+  }
+
+  .subject-print-student-table thead th {
+    background: #eeeeee !important;
+    color: #000000 !important;
+    font-weight: 800;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .subject-print-student-table tbody tr {
+    page-break-inside: avoid;
+  }
+
+  .subject-print-student-table td.print-student-name {
+    text-align: right;
+    font-weight: 700;
+    padding-right: 10px;
+  }
+
+  .subject-print-signatures {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 10px;
+    page-break-inside: avoid;
+  }
+
+  .subject-print-sig-col {
+    text-align: center;
+    width: 28%;
+    border-top: 1px solid #000000;
+    padding-top: 4px;
+    font-size: 10pt;
+    font-weight: 700;
+  }
+}

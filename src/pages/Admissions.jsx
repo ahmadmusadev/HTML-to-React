@@ -122,6 +122,7 @@ export const mapSupabaseToUi = (row) => {
     fatherName: fatherNameVal,
     fatherNameEnglish: fatherEng,
     admFatherNameEnglish: fatherEng,
+    admDepartment: row.department || row.section || '',
     admClass: row.class_id || '',
     admGender: row.gender || 'لڑکا',
     admDobFull: row.date_of_birth || '',
@@ -131,6 +132,9 @@ export const mapSupabaseToUi = (row) => {
     admAge: computedAge,
     admBForm: row.b_form_number || '',
     admAddress: row.address || '',
+    admPrevMadrasa: row.previous_madrasa || '',
+    admPrevEducation: row.previous_education || '',
+    admPrevLeavingReason: row.previous_leaving_reason || '',
     fatherCnic: row.father_cnic || '',
     fatherEdu: row.father_education || '',
     fatherOcc: row.father_occupation || '',
@@ -187,11 +191,15 @@ export const mapUiToSupabase = (data) => {
     name_english: name_english || null,
     father_name: father_name,
     father_name_english: father_name_english || null,
+    department: data.admDepartment || data.department || null,
     class_id: data.admClass || data.class_id || null,
     gender: data.admGender || 'لڑکا',
     date_of_birth: date_of_birth,
     b_form_number: data.admBForm || null,
     address: data.admAddress || null,
+    previous_madrasa: (data.admPrevMadrasa || data.previous_madrasa || '').trim() || null,
+    previous_education: (data.admPrevEducation || data.previous_education || '').trim() || null,
+    previous_leaving_reason: (data.admPrevLeavingReason || data.previous_leaving_reason || '').trim() || null,
     father_cnic: data.fatherCnic || null,
     father_education: data.fatherEdu || null,
     father_occupation: data.fatherOcc || null,
@@ -315,8 +323,9 @@ export default function Admissions() {
   const [editStudentClassId, setEditStudentClassId] = useState('');
 
   const initialFormData = {
-    admRegNo: '', admDate: '', admName: '', admNameEnglish: '', admFatherName: '', admFatherNameEnglish: '', admClass: '', admGender: 'لڑکا',
+    admRegNo: '', admDate: '', admName: '', admNameEnglish: '', admFatherName: '', admFatherNameEnglish: '', admDepartment: '', admClass: '', admGender: 'لڑکا',
     admDobDay: '', admDobMonth: '', admDobYear: '', admAge: '', admBForm: '', admAddress: '',
+    admPrevMadrasa: '', admPrevEducation: '', admPrevLeavingReason: '',
     fatherName: '', fatherCnic: '', fatherEdu: '', fatherOcc: '', fatherMobile: '', fatherWhatsapp: '', fatherEmail: '', fatherIncome: '', isFatherGuardian: 'yes',
     motherName: '', motherCnic: '', motherEdu: '', motherOcc: '', motherMobile: '', motherWhatsapp: '', motherIncome: '',
     guardianName: '', guardianRel: '', guardianCnic: '', guardianEdu: '', guardianOcc: '', guardianIncome: '', guardianMobile: '', guardianWhatsapp: ''
@@ -1016,10 +1025,24 @@ export default function Admissions() {
                     />
                   </div>
                 </div>
-                <div className="grid-row">  
+                <div className="grid-row adm-dept-class-gender-row">  
+                  <div>
+                    <label htmlFor="admDepartment">شعبہ</label>
+                    <select
+                      id="admDepartment"
+                      name="admDepartment"
+                      value={formData.admDepartment || ''}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">شعبہ منتخب کریں...</option>
+                      <option value="قاعدہ">قاعدہ</option>
+                      <option value="ناظرہ">ناظرہ</option>
+                      <option value="حفظ">حفظ</option>
+                    </select>
+                  </div>
                   <div>
                     <label htmlFor="admClass">کلاس</label>
-                    <select id="admClass" value={formData.admClass} onChange={handleInputChange}>
+                    <select id="admClass" name="admClass" value={formData.admClass} onChange={handleInputChange}>
                       <option value="">کلاس منتخب کریں...</option>
                       {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>)}
                     </select>
@@ -1049,6 +1072,11 @@ export default function Admissions() {
                           borderColor: formData.admGender === 'لڑکا' ? 'var(--accent)' : 'var(--border)',
                           borderRadius: '8px',
                           cursor: 'pointer',
+                          minHeight: '44px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxSizing: 'border-box',
                           ...(formData.admGender === 'لڑکا'
                             ? { background: 'var(--accent)', color: 'white', fontWeight: '700' }
                             : { background: 'var(--surface)', color: 'var(--text)' })
@@ -1078,6 +1106,11 @@ export default function Admissions() {
                           borderColor: formData.admGender === 'لڑکی' ? 'var(--accent)' : 'var(--border)',
                           borderRadius: '8px',
                           cursor: 'pointer',
+                          minHeight: '44px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxSizing: 'border-box',
                           ...(formData.admGender === 'لڑکی'
                             ? { background: 'var(--accent)', color: 'white', fontWeight: '700' }
                             : { background: 'var(--surface)', color: 'var(--text)' })
@@ -1102,6 +1135,43 @@ export default function Admissions() {
                 <div className="grid-row">
                   <div><label htmlFor="admBForm">ب فارم نمبر</label><input type="text" id="admBForm" placeholder="00000-0000000-0" value={formData.admBForm} onChange={handleInputChange} /></div>
                   <div><label htmlFor="admAddress">موجودہ رہائشی پتہ</label><input type="text" id="admAddress" value={formData.admAddress} onChange={handleInputChange} /></div>
+                </div>
+                <div className="grid-row">
+                  <div>
+                    <label htmlFor="admPrevMadrasa">سابقہ مدرسہ / ادارہ کا نام</label>
+                    <input
+                      type="text"
+                      id="admPrevMadrasa"
+                      name="admPrevMadrasa"
+                      placeholder="سابقہ مدرسہ یا اسکول کا نام درج کریں..."
+                      value={formData.admPrevMadrasa}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="admPrevEducation">سابقہ تعلیم اور دورانیہ</label>
+                    <input
+                      type="text"
+                      id="admPrevEducation"
+                      name="admPrevEducation"
+                      placeholder="کیا پڑھا اور کتنا عرصہ (مثلاً: 5 پارے - 1 سال)..."
+                      value={formData.admPrevEducation}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+                <div className="grid-row" style={{ gridTemplateColumns: '1fr' }}>
+                  <div>
+                    <label htmlFor="admPrevLeavingReason">سابقہ ادارہ چھوڑنے کی وجہ</label>
+                    <input
+                      type="text"
+                      id="admPrevLeavingReason"
+                      name="admPrevLeavingReason"
+                      placeholder="سابقہ ادارہ چھوڑنے کی وجہ (مثلاً: نقل مکانی، رہائش کی تبدیلی، فاصلہ وغیرہ)..."
+                      value={formData.admPrevLeavingReason}
+                      onChange={handleInputChange}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="wizard-nav wizard-nav-centered"><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: والد کی معلومات ↓</button></div>
@@ -1362,6 +1432,12 @@ export default function Admissions() {
                             <span className="review-field-label">رجسٹریشن نمبر</span>
                             <span className="review-field-val">{formData.admRegNo || '—'}</span>
                           </div>
+                          {formData.admDepartment && (
+                            <div className="review-field-row">
+                              <span className="review-field-label">شعبہ</span>
+                              <span className="review-field-val highlight">{formData.admDepartment}</span>
+                            </div>
+                          )}
                           <div className="review-field-row">
                             <span className="review-field-label">کلاس اور استاد</span>
                             <span className="review-field-val highlight">
@@ -1388,6 +1464,24 @@ export default function Admissions() {
                             <span className="review-field-label">رہائشی پتہ</span>
                             <span className="review-field-val">{formData.admAddress || '—'}</span>
                           </div>
+                          {formData.admPrevMadrasa && (
+                            <div className="review-field-row">
+                              <span className="review-field-label">سابقہ مدرسہ / ادارہ</span>
+                              <span className="review-field-val">{formData.admPrevMadrasa}</span>
+                            </div>
+                          )}
+                          {formData.admPrevEducation && (
+                            <div className="review-field-row">
+                              <span className="review-field-label">سابقہ تعلیم اور دورانیہ</span>
+                              <span className="review-field-val">{formData.admPrevEducation}</span>
+                            </div>
+                          )}
+                          {formData.admPrevLeavingReason && (
+                            <div className="review-field-row">
+                              <span className="review-field-label">سابقہ ادارہ چھوڑنے کی وجہ</span>
+                              <span className="review-field-val">{formData.admPrevLeavingReason}</span>
+                            </div>
+                          )}
                           <div className="review-field-row">
                             <span className="review-field-label">تاریخ داخلہ</span>
                             <span className="review-field-val">{formData.admDate || '—'}</span>
@@ -2041,8 +2135,8 @@ export default function Admissions() {
                         <td colSpan="3" className="a4-value">{selectedPrintStudent?.admFatherName || ''}</td>
                       </tr>
                       <tr>
-                        <td className="a4-label">کلاس</td>
-                        <td className="a4-value">{getClassName(selectedPrintStudent?.admClass)}</td>
+                        <td className="a4-label">کلاس / شعبہ</td>
+                        <td className="a4-value">{[getClassName(selectedPrintStudent?.admClass), selectedPrintStudent?.admDepartment].filter(Boolean).join(' — ') || ''}</td>
                         <td className="a4-label">تاریخ پیدائش</td>
                         <td className="a4-value">{selectedPrintStudent?.admDOB || selectedPrintStudent?.admDobFull || (selectedPrintStudent ? '' : '____ / ____ / ______')}</td>
                       </tr>
@@ -2069,6 +2163,22 @@ export default function Admissions() {
                         <td className="a4-label">رہائشی پتہ</td>
                         <td colSpan="3" className="a4-value">{selectedPrintStudent?.admAddress || ''}</td>
                       </tr>
+                      {(selectedPrintStudent?.admPrevMadrasa || selectedPrintStudent?.admPrevEducation) && (
+                        <>
+                          <tr>
+                            <td className="a4-label">سابقہ ادارہ</td>
+                            <td className="a4-value">{selectedPrintStudent?.admPrevMadrasa || '—'}</td>
+                            <td className="a4-label">سابقہ تعلیم و دورانیہ</td>
+                            <td className="a4-value">{selectedPrintStudent?.admPrevEducation || '—'}</td>
+                          </tr>
+                          {selectedPrintStudent?.admPrevLeavingReason && (
+                            <tr>
+                              <td className="a4-label">چھوڑنے کی وجہ</td>
+                              <td colSpan="3" className="a4-value">{selectedPrintStudent?.admPrevLeavingReason}</td>
+                            </tr>
+                          )}
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -2218,13 +2328,25 @@ export default function Admissions() {
                </div>
                <div className="grid-row">
                   <div>
+                    <label>شعبہ</label>
+                    <select name="admDepartment" value={profileModal.admDepartment || ''} onChange={handleProfileChange}>
+                        <option value="">شعبہ منتخب کریں...</option>
+                        <option value="قاعدہ">قاعدہ</option>
+                        <option value="ناظرہ">ناظرہ</option>
+                        <option value="حفظ">حفظ</option>
+                    </select>
+                  </div>
+                  <div>
                     <label>کلاس</label>
                     <select name="admClass" value={profileModal.admClass || ''} onChange={handleProfileChange}>
                         <option value="">کلاس چنیں...</option>
                         {classesList.map(c => <option key={c.id} value={c.id}>{c.name || c.className || c.id}</option>)}
                     </select>
                   </div>
+               </div>
+               <div className="grid-row">
                   <div><label>تاریخ پیدائش (مکمل)</label><input type="text" name="admDobFull" value={profileModal.admDobFull || ''} onChange={handleProfileChange} /></div>
+                  <div><label>صنف</label><select name="admGender" value={profileModal.admGender || ''} onChange={handleProfileChange}><option value="لڑکا">لڑکا</option><option value="لڑکی">لڑکی</option></select></div>
                </div>
                <div className="grid-row">
                   <div><label>تاریخ داخلہ</label><input type="date" name="admDate" value={profileModal.admDate || ''} onChange={handleProfileChange} /></div>
@@ -2232,7 +2354,22 @@ export default function Admissions() {
                </div>
                <div className="grid-row">
                   <div><label>رہائشی پتہ</label><input type="text" name="admAddress" value={profileModal.admAddress || ''} onChange={handleProfileChange} /></div>
-                  <div><label>صنف</label><select name="admGender" value={profileModal.admGender || ''} onChange={handleProfileChange}><option value="لڑکا">لڑکا</option><option value="لڑکی">لڑکی</option></select></div>
+               </div>
+               <div className="grid-row">
+                  <div>
+                    <label>سابقہ مدرسہ / ادارہ کا نام</label>
+                    <input type="text" name="admPrevMadrasa" value={profileModal.admPrevMadrasa || ''} onChange={handleProfileChange} />
+                  </div>
+                  <div>
+                    <label>سابقہ تعلیم اور دورانیہ</label>
+                    <input type="text" name="admPrevEducation" value={profileModal.admPrevEducation || ''} onChange={handleProfileChange} />
+                  </div>
+               </div>
+               <div className="grid-row">
+                  <div>
+                    <label>سابقہ ادارہ چھوڑنے کی وجہ</label>
+                    <input type="text" name="admPrevLeavingReason" value={profileModal.admPrevLeavingReason || ''} onChange={handleProfileChange} />
+                  </div>
                </div>
 
                <h3 style={{ marginTop: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>والد کی معلومات</h3>

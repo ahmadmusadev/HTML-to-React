@@ -1,0 +1,405 @@
+/* ==========================================================================
+   PayrollPrint.css - Printable Salary Slip & Monthly Payroll Report
+   Strict Black & White in Print / Accessible Light & Dark Mode on Screen
+   NO emojis or decorative icons. Urdu RTL layout.
+   ========================================================================== */
+
+/* --- On-Screen Banner & Toast (Overlay) --- */
+.payroll-print-screen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 16px;
+}
+
+.payroll-print-banner {
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  direction: rtl;
+  text-align: right;
+}
+
+[data-theme="dark"] .payroll-print-banner {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.payroll-print-banner-error {
+  border-right: 4px solid #ef4444;
+}
+
+[data-theme="dark"] .payroll-print-banner-error {
+  border-right: 4px solid #f87171;
+}
+
+.payroll-print-banner-warning {
+  border-right: 4px solid #f59e0b;
+}
+
+[data-theme="dark"] .payroll-print-banner-warning {
+  border-right: 4px solid #fbbf24;
+}
+
+.payroll-print-banner-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.payroll-print-banner-desc {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+[data-theme="dark"] .payroll-print-banner-desc {
+  color: #94a3b8;
+}
+
+.payroll-print-banner-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.payroll-print-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  background-color: #0f172a;
+  color: #f8fafc;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  z-index: 99998;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  direction: rtl;
+}
+
+[data-theme="dark"] .payroll-print-toast {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
+}
+
+/* --- Printable Document Container --- */
+.payroll-print-document {
+  direction: rtl;
+  background: #ffffff !important;
+  color: #000000 !important;
+  font-family: system-ui, -apple-system, sans-serif, 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq';
+  padding: 12px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* --- Salary Slip Styles --- */
+.payroll-slip-container {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px;
+  box-sizing: border-box;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.payroll-slip-header {
+  text-align: center;
+  border-bottom: 2px solid #000000;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.payroll-slip-madrasa {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.payroll-slip-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.payroll-slip-subtitle {
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.payroll-slip-meta-grid {
+  display: flex;
+  justify-content: space-between;
+  border: 1px solid #000000;
+  padding: 6px 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.payroll-slip-meta-item {
+  display: flex;
+  gap: 8px;
+}
+
+.payroll-slip-meta-label {
+  font-weight: 700;
+}
+
+.payroll-slip-columns-grid {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.payroll-slip-box {
+  flex: 1;
+  border: 1px solid #000000;
+  margin-bottom: 10px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.payroll-slip-box-title {
+  font-size: 13px;
+  font-weight: 700;
+  background: #f1f5f9;
+  border-bottom: 1px solid #000000;
+  padding: 4px 8px;
+  text-align: right;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.payroll-slip-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.payroll-slip-mini-table td {
+  padding: 3px 6px;
+  border: 1px solid #cbd5e1;
+  text-align: right;
+}
+
+.payroll-slip-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.payroll-slip-table th {
+  border: 1px solid #000000;
+  background: #f1f5f9;
+  padding: 4px 6px;
+  text-align: right;
+  font-size: 12px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.payroll-slip-table td {
+  border: 1px solid #cbd5e1;
+  padding: 4px 6px;
+  text-align: right;
+}
+
+.payroll-slip-row-total td {
+  border-top: 2px solid #000000;
+  font-weight: 700;
+}
+
+.payroll-slip-net-card {
+  border: 2px solid #000000;
+  background: #f8fafc;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.payroll-slip-net-label {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.payroll-slip-net-value {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.payroll-slip-clamped-notice {
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px dashed #000000;
+  background: #f8fafc;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.payroll-slip-footer-info {
+  font-size: 12px;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.payroll-slip-payment-line {
+  margin-bottom: 4px;
+}
+
+.payroll-slip-notes {
+  border-top: 1px dashed #94a3b8;
+  padding-top: 4px;
+}
+
+.payroll-slip-signatures {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 8px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.payroll-slip-sig-block {
+  text-align: center;
+  width: 180px;
+}
+
+.payroll-slip-sig-line {
+  border-bottom: 1px solid #000000;
+  margin-bottom: 6px;
+  height: 24px;
+}
+
+.payroll-slip-sig-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* --- Monthly Payroll Report Styles --- */
+.payroll-report-container {
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.payroll-report-header {
+  text-align: center;
+  border-bottom: 2px solid #000000;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.payroll-report-madrasa {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.payroll-report-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.payroll-report-month {
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.payroll-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  page-break-inside: auto;
+}
+
+.payroll-report-table thead {
+  display: table-header-group;
+}
+
+.payroll-report-table tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.payroll-report-table th {
+  border: 1px solid #000000;
+  background: #f1f5f9;
+  padding: 5px 4px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.payroll-report-table td {
+  border: 1px solid #000000;
+  padding: 4px;
+  text-align: right;
+  font-size: 11px;
+}
+
+.payroll-report-net-cell {
+  font-weight: 700;
+}
+
+.payroll-report-totals-row td {
+  border-top: 2px solid #000000;
+  font-weight: 800;
+  background: #f8fafc;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.payroll-report-signatures {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 36px;
+  padding-top: 8px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.payroll-report-sig-block {
+  text-align: center;
+  width: 200px;
+}
+
+.payroll-report-sig-line {
+  border-bottom: 1px solid #000000;
+  margin-bottom: 6px;
+  height: 28px;
+}
+
+.payroll-report-sig-label {
+  font-size: 12px;
+  font-weight: 700;
+}

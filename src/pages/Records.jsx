@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import { isValidUUID } from '../lib/supabaseClient';
+import StudentParaRecords from '../components/StudentParaRecords';
 
 export const mapSupabaseToUi = (row, studentLookup = {}) => {
   if (!row) return null;
@@ -89,6 +90,7 @@ export default function Records() {
   } = useMadrasa();
 
   const [records, setRecords] = useState([]);
+  const [subTab, setSubTab] = useState('paraRecords'); // 'paraRecords' | 'academicRecords'
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -203,143 +205,167 @@ export default function Records() {
 
   return (
     <div className="tab-content" id="tab-records">
-      <h2>اکیڈمک ریکارڈ تلاش کریں</h2>
-
-      {fetchError && (
-        <div style={{ background: '#fff3cd', color: '#856404', padding: '10px 15px', borderRadius: '8px', marginBottom: '15px' }}>
-          {fetchError}
-        </div>
-      )}
-
-      <div className="search-container">
-        <input 
-          type="text" 
-          id="studentSearch"  
-          placeholder="بچے کا نام لکھ کر تلاش کریں..." 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <button onClick={handleClearSearch}>واضح کریں</button>
+      {/* Subtabs for Records Navigation */}
+      <div className="records-subtabs no-print">
+        <button
+          type="button"
+          className={`records-subtab-btn ${subTab === 'paraRecords' ? 'active' : ''}`}
+          onClick={() => setSubTab('paraRecords')}
+        >
+          پارہ بہ پارہ تکمیلِ حفظ (30 پارے ریکارڈ)
+        </button>
+        <button
+          type="button"
+          className={`records-subtab-btn ${subTab === 'academicRecords' ? 'active' : ''}`}
+          onClick={() => setSubTab('academicRecords')}
+        >
+          ششماہی تعلیمی ریکارڈز و خلاصہ
+        </button>
       </div>
 
-      <div id="recordsArea">
-        {loading ? (
-          <div style={{ textAlign: 'center', color: '#666', padding: '30px' }}>
-            ریکارڈز لوڈ ہو رہے ہیں...
+      {subTab === 'paraRecords' ? (
+        <StudentParaRecords />
+      ) : (
+        <>
+          <h2>اکیڈمک ریکارڈ تلاش کریں</h2>
+
+          {fetchError && (
+            <div style={{ background: '#fff3cd', color: '#856404', padding: '10px 15px', borderRadius: '8px', marginBottom: '15px' }}>
+              {fetchError}
+            </div>
+          )}
+
+          <div className="search-container">
+            <input 
+              type="text" 
+              id="studentSearch"  
+              placeholder="بچے کا نام لکھ کر تلاش کریں..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button onClick={handleClearSearch}>واضح کریں</button>
           </div>
-        ) : filteredRecords.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
-            {searchTerm ? `"${searchQuery}" کے نام سے کوئی ریکارڈ نہیں ملا۔` : 'کوئی محفوظ شدہ ریکارڈ موجود نہیں۔'}
-          </div>
-        ) : (
-          <div className="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>نام</th>
-                  <th>سال/ششماہی</th>
-                  <th>صفحات/پاؤ/پارہ</th>
-                  <th>تعلیمی %</th>
-                  <th>حاضری (A+L/W)</th>
-                  <th>حاضری %</th>
-                  <th style={{ minWidth: '180px' }}>ماہانہ تفصیل (خواندگی)</th>
-                  <th>وقت</th>
-                  <th>عمل</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRecords.map((r, i) => {
-                  const monthlyText = Object.keys(r.monthlyAcademicDetails || {})
-                    .map(m => `${r.monthlyAcademicDetails[m]}`)
-                    .join(' / ');
 
-                  const d = r.ts ? new Date(r.ts) : new Date();
-                  const timeStr = !isNaN(d.getTime())
-                    ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-                    : '-';
-                  const dateStr = !isNaN(d.getTime())
-                    ? d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
-                    : '-';
-
-                  const attWork = r.attendance ? r.attendance.working : '-';
-                  const attAbsent = r.attendance ? (r.attendance.absent || 0) : 0;
-                  const attLeave = r.attendance ? (r.attendance.leave || 0) : 0;
-                  const attTotalOff = attAbsent + attLeave;
-                  const attPct = r.attendance && r.attendance.pct != null ? r.attendance.pct + '%' : '-';
-
-                  return (
-                    <tr key={(r.id || '') + (r.ts || '') + (r.name || '') + i}>
-                      <td>{r.name}</td>
-                      <td>سال {r.year}<br /><span style={{ fontSize: '0.8rem' }}>ششماہی {r.halfYear}</span></td>
-                      <td><b>{r.pages}</b> <span style={{ fontSize: '0.8rem' }}>({r.pao} پاؤ / {r.juz} پارہ)</span></td>
-                      <td style={{ fontWeight: 'bold', color: r.pct >= 75 ? 'var(--accent)' : 'var(--danger)' }}>{r.pct}%</td>
-                      <td>{attTotalOff} / {attWork}</td>
-                      <td style={{ fontWeight: 'bold' }}>{attPct}</td>
-                      <td style={{ fontSize: '0.8rem', direction: 'ltr', textAlign: 'right' }}>{monthlyText || '—'}</td>
-                      <td style={{ fontSize: '0.75rem' }}>{timeStr}<br />{dateStr}</td>
-                      <td>
-                        <button 
-                          onClick={() => deleteRecord(r)} 
-                          style={{ padding: '5px 10px', fontSize: '0.8rem', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                        >
-                          حذف
-                        </button>
-                      </td>
+          <div id="recordsArea">
+            {loading ? (
+              <div style={{ textAlign: 'center', color: '#666', padding: '30px' }}>
+                ریکارڈز لوڈ ہو رہے ہیں...
+              </div>
+            ) : filteredRecords.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
+                {searchTerm ? `"${searchQuery}" کے نام سے کوئی ریکارڈ نہیں ملا۔` : 'کوئی محفوظ شدہ ریکارڈ موجود نہیں۔'}
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>نام</th>
+                      <th>سال/ششماہی</th>
+                      <th>صفحات/پاؤ/پارہ</th>
+                      <th>تعلیمی %</th>
+                      <th>حاضری (A+L/W)</th>
+                      <th>حاضری %</th>
+                      <th style={{ minWidth: '180px' }}>ماہانہ تفصیل (خواندگی)</th>
+                      <th>وقت</th>
+                      <th>عمل</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                  </thead>
+                  <tbody>
+                    {filteredRecords.map((r, i) => {
+                      const monthlyText = Object.keys(r.monthlyAcademicDetails || {})
+                        .map(m => `${r.monthlyAcademicDetails[m]}`)
+                        .join(' / ');
 
-      <div id="summaryArea">
-        {academicRecords.length > 0 && (
-          <div className="card result" style={{ marginTop: '25px' }}>
-            <h2>سالانہ حاضری کا خلاصہ</h2>
-            <div className="table-responsive summary-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>نام</th>
-                    <th>سال</th>
-                    <th>ششماہی کی تعداد</th>
-                    <th>کل ایام کار</th>
-                    <th>کل غیر حاضری + رخصت</th>
-                    <th>کل حاضر ایام</th>
-                    <th>سالانہ حاضری %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.keys(annualData).sort().map(name => {
-                    return Object.keys(annualData[name]).sort().map(year => {
-                      const data = annualData[name][year];
-                      if (data.count === 0) return null;
+                      const d = r.ts ? new Date(r.ts) : new Date();
+                      const timeStr = !isNaN(d.getTime())
+                        ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                        : '-';
+                      const dateStr = !isNaN(d.getTime())
+                        ? d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
+                        : '-';
 
-                      const title = data.count === 2 ? `سال ${year} (مکمل)` : `سال ${year} (نامکمل)`;
-                      const attPct = data.totalWorking ? ((data.totalPresent / data.totalWorking) * 100).toFixed(2) : 0;
-                      const rowStyle = data.count === 2 ? { fontWeight: 'bold', background: '#f0f9f2' } : { background: '#fff' };
+                      const attWork = r.attendance ? r.attendance.working : '-';
+                      const attAbsent = r.attendance ? (r.attendance.absent || 0) : 0;
+                      const attLeave = r.attendance ? (r.attendance.leave || 0) : 0;
+                      const attTotalOff = attAbsent + attLeave;
+                      const attPct = r.attendance && r.attendance.pct != null ? r.attendance.pct + '%' : '-';
 
                       return (
-                        <tr key={`${name}-${year}`} style={rowStyle}>
-                          <td>{name}</td>
-                          <td>{title}</td>
-                          <td>{data.count}</td>
-                          <td>{data.totalWorking}</td>
-                          <td>{data.totalAbsent + data.totalLeave}</td>
-                          <td>{data.totalPresent}</td>
-                          <td style={{ fontWeight: 'bold', color: attPct >= 80 ? 'var(--accent)' : 'var(--danger)' }}>{attPct}%</td>
+                        <tr key={(r.id || '') + (r.ts || '') + (r.name || '') + i}>
+                          <td>{r.name}</td>
+                          <td>سال {r.year}<br /><span style={{ fontSize: '0.8rem' }}>ششماہی {r.halfYear}</span></td>
+                          <td><b>{r.pages}</b> <span style={{ fontSize: '0.8rem' }}>({r.pao} پاؤ / {r.juz} پارہ)</span></td>
+                          <td style={{ fontWeight: 'bold', color: r.pct >= 75 ? 'var(--accent)' : 'var(--danger)' }}>{r.pct}%</td>
+                          <td>{attTotalOff} / {attWork}</td>
+                          <td style={{ fontWeight: 'bold' }}>{attPct}</td>
+                          <td style={{ fontSize: '0.8rem', direction: 'ltr', textAlign: 'right' }}>{monthlyText || '—'}</td>
+                          <td style={{ fontSize: '0.75rem' }}>{timeStr}<br />{dateStr}</td>
+                          <td>
+                            <button 
+                              onClick={() => deleteRecord(r)} 
+                              style={{ padding: '5px 10px', fontSize: '0.8rem', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                            >
+                              حذف
+                            </button>
+                          </td>
                         </tr>
                       );
-                    });
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+
+          <div id="summaryArea">
+            {academicRecords.length > 0 && (
+              <div className="card result" style={{ marginTop: '25px' }}>
+                <h2>سالانہ حاضری کا خلاصہ</h2>
+                <div className="table-responsive summary-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>نام</th>
+                        <th>سال</th>
+                        <th>ششماہی کی تعداد</th>
+                        <th>کل ایام کار</th>
+                        <th>کل غیر حاضری + رخصت</th>
+                        <th>کل حاضر ایام</th>
+                        <th>سالانہ حاضری %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.keys(annualData).sort().map(name => {
+                        return Object.keys(annualData[name]).sort().map(year => {
+                          const data = annualData[name][year];
+                          if (data.count === 0) return null;
+
+                          const title = data.count === 2 ? `سال ${year} (مکمل)` : `سال ${year} (نامکمل)`;
+                          const attPct = data.totalWorking ? ((data.totalPresent / data.totalWorking) * 100).toFixed(2) : 0;
+                          const rowStyle = data.count === 2 ? { fontWeight: 'bold', background: '#f0f9f2' } : { background: '#fff' };
+
+                          return (
+                            <tr key={`${name}-${year}`} style={rowStyle}>
+                              <td>{name}</td>
+                              <td>{title}</td>
+                              <td>{data.count}</td>
+                              <td>{data.totalWorking}</td>
+                              <td>{data.totalAbsent + data.totalLeave}</td>
+                              <td>{data.totalPresent}</td>
+                              <td style={{ fontWeight: 'bold', color: attPct >= 80 ? 'var(--accent)' : 'var(--danger)' }}>{attPct}%</td>
+                            </tr>
+                          );
+                        });
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

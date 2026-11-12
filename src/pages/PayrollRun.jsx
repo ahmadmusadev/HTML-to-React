@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useMadrasa } from '../context/MadrasaContext';
+import PayrollPrint from './PayrollPrint';
 import { supabase, isValidUUID } from '../lib/supabaseClient';
 import {
   fetchStaffSalaries,
@@ -72,6 +74,17 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
   const [allRuns, setAllRuns] = useState([]);
   const [currentRun, setCurrentRun] = useState(null);
   const [runItems, setRunItems] = useState([]);
+  const [printTarget, setPrintTarget] = useState(null);
+  const { activeMadrasa } = useMadrasa();
+  const handleOpenPrint = async (target) => {
+    try {
+      const fresh = await fetchRunItems(supabase, activeMadrasaId, currentRun.id);
+      setRunItems(fresh || []);
+      setPrintTarget(target);
+    } catch (err) {
+      setErrorMsg(toUrduRunError(err));
+    }
+  };
 
   // Adjustments & Notes state (per staff_id)
   const [adjustments, setAdjustments] = useState({});
@@ -738,6 +751,9 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
               مسودہ موجود نہیں
             </span>
           )}
+          {currentRun?.status === 'finalized' && (
+            <button type="button" className="payroll-run-btn-secondary payroll-run-btn-sm" onClick={() => handleOpenPrint({ type: 'report' })}>ماہانہ رپورٹ</button>
+          )}
         </div>
       </div>
 
@@ -959,6 +975,9 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                           >
                             تفصیل
                           </button>
+                          {currentRun.status === 'finalized' && (
+                            <button type="button" className="payroll-run-btn-secondary payroll-run-btn-sm" onClick={() => handleOpenPrint({ type: 'slip', staffId: item.staff_id })}>سلپ</button>
+                          )}
                         </td>
 
                         {/* Payment Status (Finalized only) */}
@@ -1364,6 +1383,17 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
             </div>
           </div>
         </div>
+      )}
+
+      {printTarget && (
+        <PayrollPrint
+          run={currentRun}
+          rows={runItems}
+          staffList={staffList}
+          madrasaName={activeMadrasa?.name || ''}
+          target={printTarget}
+          onClose={() => setPrintTarget(null)}
+        />
       )}
     </div>
   );

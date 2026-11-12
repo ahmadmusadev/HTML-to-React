@@ -29,6 +29,7 @@ dist-ssr
 
 # Scratch scripts
 scratch/
+*.xlsx
 
 # Supabase
 .temp/

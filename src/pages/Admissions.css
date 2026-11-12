@@ -1775,6 +1775,26 @@ textarea:focus {
 }
 
 
+/* شعبہ، کلاس اور صنف ایک ہی قطار میں */
+.adm-dept-class-gender-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.adm-dept-class-gender-row .gender-toggle-wrap {
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .adm-dept-class-gender-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
 /* صنف ٹوگل */
 .gender-toggle-wrap {
   display: flex;

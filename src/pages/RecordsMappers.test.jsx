@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mapSupabaseToUi, mapUiToSupabase } from './Records';
-import { yearTargets, scoreThresholds, PAGES_PER_PAO, PAGES_PER_JUZ, calculateWorkingDays } from './Entry';
+import { yearTargets, scoreThresholds, PAGES_PER_PAO, PAGES_PER_JUZ, calculateWorkingDays, formatMonthlyHifzTarget } from './Entry';
 
 describe('Records Supabase Mappers & Hifz Calculations', () => {
   it('mapSupabaseToUi correctly transforms a Supabase hifz_half_year_records row with joined students data', () => {
@@ -162,5 +162,41 @@ describe('Records Supabase Mappers & Hifz Calculations', () => {
     const aprilDays = calculateWorkingDays(2025, 3);
     expect(aprilDays).toBeGreaterThan(0);
     expect(aprilDays).toBeLessThanOrEqual(30);
+  });
+
+  describe('formatMonthlyHifzTarget', () => {
+    it('formats 5 pages (1 pao) as "5 صفحات - پاؤ"', () => {
+      expect(formatMonthlyHifzTarget(5)).toBe('5 صفحات - پاؤ');
+    });
+
+    it('formats 10 pages (2 pao) as "10 صفحات - ادھا پارہ"', () => {
+      expect(formatMonthlyHifzTarget(10)).toBe('10 صفحات - ادھا پارہ');
+    });
+
+    it('formats 15 pages (3 pao) as "15 صفحات - تین پاؤ"', () => {
+      expect(formatMonthlyHifzTarget(15)).toBe('15 صفحات - تین پاؤ');
+    });
+
+    it('formats 20 pages (4 pao) as "20 صفحات - ایک پارہ"', () => {
+      expect(formatMonthlyHifzTarget(20)).toBe('20 صفحات - ایک پارہ');
+    });
+
+    it('accurately verifies monthly targets for all 4 Hifz years based on six-month targets', () => {
+      // Year 1: 3 paras = 60 pages / year -> 30 pages / six-months -> 5 pages / month
+      const y1Monthly = (3 * PAGES_PER_JUZ / 2) / 6;
+      expect(formatMonthlyHifzTarget(y1Monthly)).toBe('5 صفحات - پاؤ');
+
+      // Year 2: 6 paras = 120 pages / year -> 60 pages / six-months -> 10 pages / month
+      const y2Monthly = (6 * PAGES_PER_JUZ / 2) / 6;
+      expect(formatMonthlyHifzTarget(y2Monthly)).toBe('10 صفحات - ادھا پارہ');
+
+      // Year 3: 9 paras = 180 pages / year -> 90 pages / six-months -> 15 pages / month
+      const y3Monthly = (9 * PAGES_PER_JUZ / 2) / 6;
+      expect(formatMonthlyHifzTarget(y3Monthly)).toBe('15 صفحات - تین پاؤ');
+
+      // Year 4: 12 paras = 240 pages / year -> 120 pages / six-months -> 20 pages / month
+      const y4Monthly = (12 * PAGES_PER_JUZ / 2) / 6;
+      expect(formatMonthlyHifzTarget(y4Monthly)).toBe('20 صفحات - ایک پارہ');
+    });
   });
 });
