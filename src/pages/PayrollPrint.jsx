@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import PrintPortal from '../components/PrintPortal';
 import {
@@ -20,7 +20,7 @@ import './PayrollPrint.css';
  * @param {Array} props.rows - Stored payroll_items rows
  * @param {Array} props.staffList - Madrasa staff list
  * @param {string} props.madrasaName - Name of active madrasa
- * @param {object|null} props.target - { type: 'slip', staffId } | { type: 'report' } | { type: 'allSlips' }
+ * @param {object|null} props.target - { type: 'slip', staffId } | { type: 'report' }
  * @param {Function} props.onClose - Unmount callback
  */
 export default function PayrollPrint({
@@ -33,6 +33,14 @@ export default function PayrollPrint({
 }) {
   const { role } = useAuth();
   const isAuthorized = role === 'admin' || role === 'super_admin';
+
+  // Keep latest onClose callback in a ref to avoid re-triggering effects
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const hasPrintedRef = useRef(false);
 
   // Extract target information safely
   const targetType = target?.type || null;
@@ -54,14 +62,13 @@ export default function PayrollPrint({
   }, [isAuthorized, targetType, rows, staffList, run]);
 
   // Consistency & Precondition Checks
-  const isSkippedAllSlips = targetType === 'allSlips';
   const isConsistent = useMemo(() => {
     if (!isAuthorized || !target) return false;
     if (targetType === 'slip') {
-      return singleSlipData ? singleSlipData.consistent : true;
+      return singleSlipData ? singleSlipData.consistent : false;
     }
     if (targetType === 'report') {
-      return reportData ? reportData.consistent : true;
+      return reportData ? reportData.consistent : false;
     }
     return false;
   }, [isAuthorized, target, targetType, singleSlipData, reportData]);
@@ -70,25 +77,29 @@ export default function PayrollPrint({
     if (targetType === 'slip' && singleSlipData && !singleSlipData.consistent) {
       return [singleSlipData.staff_name || singleSlipData.staff_code || 'استاذ'];
     }
+    if (targetType === 'report' && reportData && !reportData.consistent) {
+      return reportData.inconsistent_staff_names || [];
+    }
     return [];
-  }, [targetType, singleSlipData]);
+  }, [targetType, singleSlipData, reportData]);
 
-  // Trigger browser print dialog safely
+  // Trigger browser print dialog safely (at most once per mounted target)
   useEffect(() => {
-    if (!isAuthorized || !target || !isConsistent || isSkippedAllSlips) {
+    if (!isAuthorized || !target || !isConsistent) {
       return;
     }
     if (typeof window === 'undefined') return;
+    if (hasPrintedRef.current) return;
+    hasPrintedRef.current = true;
 
-    let cleanupTimer = null;
     const cleanup = () => {
       window.removeEventListener('afterprint', cleanup);
-      if (cleanupTimer) clearTimeout(cleanupTimer);
-      if (typeof onClose === 'function') onClose();
+      if (typeof onCloseRef.current === 'function') {
+        onCloseRef.current();
+      }
     };
 
     window.addEventListener('afterprint', cleanup);
-    cleanupTimer = setTimeout(cleanup, 3000);
 
     const frameId = requestAnimationFrame(() => {
       window.print();
@@ -97,41 +108,15 @@ export default function PayrollPrint({
     return () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener('afterprint', cleanup);
-      if (cleanupTimer) clearTimeout(cleanupTimer);
     };
-  }, [isAuthorized, target, isConsistent, isSkippedAllSlips, onClose]);
+  }, [isAuthorized, target, isConsistent]);
 
   // 1. Role-based guard: refuse render for non-admin
   if (!isAuthorized || !target) {
     return null;
   }
 
-  // 2. Banner: When allSlips is selected but page-break rule does not exist
-  if (isSkippedAllSlips) {
-    return (
-      <div className="payroll-print-screen-overlay" role="alert">
-        <div className="payroll-print-banner payroll-print-banner-warning">
-          <div className="payroll-print-banner-title">
-            تمام سلپس کا پرنٹ دستیاب نہیں ہے (صفحہ بندی کا اصول موجود نہیں)
-          </div>
-          <div className="payroll-print-banner-desc">
-            تمام اساتذہ کی سلپس علیحدہ صفحات پر نکالنے کے لیے پرنٹ سی ایس ایس میں صفحہ بندی کا اصول درکار ہے۔ براہ کرم انفرادی سلپ پرنٹ فرمائیں۔
-          </div>
-          <div className="payroll-print-banner-actions">
-            <button
-              type="button"
-              className="payroll-run-btn-secondary payroll-run-btn-sm"
-              onClick={onClose}
-            >
-              بند کریں
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. Banner: Inconsistent figures detected
+  // 2. Banner: Inconsistent figures detected
   if (!isConsistent) {
     return (
       <div className="payroll-print-screen-overlay" role="alert">
@@ -241,11 +226,11 @@ export default function PayrollPrint({
                         <td>{singleSlipData.shift_minutes} منٹ</td>
                       </tr>
                       <tr>
-                        <td>تاخیر</td>
+                        <td>{singleSlipData.late_minutes_label_urdu}</td>
                         <td>{singleSlipData.late_minutes_charged} منٹ</td>
                       </tr>
                       <tr>
-                        <td>قبل از وقت روانگی</td>
+                        <td>{singleSlipData.early_minutes_label_urdu}</td>
                         <td>{singleSlipData.early_minutes_charged} منٹ</td>
                       </tr>
                     </tbody>
@@ -270,7 +255,7 @@ export default function PayrollPrint({
                         <td>{formatRupees(singleSlipData.base_salary)}</td>
                       </tr>
                       <tr>
-                        <td>حاضری کے مطابق تنخواہ</td>
+                        <td>{singleSlipData.base_pay_title_urdu}</td>
                         <td>{formatRupees(singleSlipData.base_pay_display)}</td>
                       </tr>
                       {singleSlipData.has_encashment && (
@@ -323,7 +308,13 @@ export default function PayrollPrint({
                       {singleSlipData.show_rounding && (
                         <tr>
                           <td>{singleSlipData.rounding_label_urdu}</td>
-                          <td>{singleSlipData.rounding_display}</td>
+                          <td>
+                            <span dir="ltr">
+                              {singleSlipData.rounding_display > 0
+                                ? `+${singleSlipData.rounding_display}`
+                                : singleSlipData.rounding_display}
+                            </span>
+                          </td>
                         </tr>
                       )}
                       <tr className="payroll-slip-row-total">
@@ -334,6 +325,13 @@ export default function PayrollPrint({
                   </table>
                 </div>
               </div>
+
+              {/* Clamped Notice if deductions exceeded payable earnings */}
+              {singleSlipData.was_clamped && (
+                <div className="payroll-slip-clamped-notice">
+                  {singleSlipData.clamped_message_urdu}
+                </div>
+              )}
 
               {/* Net Salary Prominent Card */}
               <div className="payroll-slip-net-card">
