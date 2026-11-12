@@ -144,6 +144,7 @@ describe('PayrollPrint Component - Stage 6b Printable Slips & Reports', () => {
     if (portalRoot && portalRoot.parentNode) {
       portalRoot.parentNode.removeChild(portalRoot);
     }
+    document.body.className = '';
   });
 
   it('non-admin role renders nothing and does not open print dialog', () => {
@@ -438,6 +439,93 @@ describe('PayrollPrint Component - Stage 6b Printable Slips & Reports', () => {
     unmount();
     const portalRoot = document.getElementById('print-portal-root');
     expect(portalRoot ? portalRoot.children.length : 0).toBe(0);
+  });
+
+  // Stage 6d: printing-payroll body class lifecycle tests
+  it('adds "printing-payroll" class to body when print triggers and removes it after afterprint', async () => {
+    mockRole = 'admin';
+    const onClose = vi.fn();
+    render(
+      <PayrollPrint
+        run={runFixture}
+        rows={rowsFixture}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'slip', staffId: 'staff-1' }}
+        onClose={onClose}
+      />
+    );
+
+    expect(document.body.classList.contains('printing-payroll')).toBe(false);
+
+    // Trigger frame
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    expect(document.body.classList.contains('printing-payroll')).toBe(true);
+    expect(printSpy).toHaveBeenCalledTimes(1);
+
+    // Fire afterprint
+    act(() => {
+      window.dispatchEvent(new Event('afterprint'));
+    });
+
+    expect(document.body.classList.contains('printing-payroll')).toBe(false);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('removes "printing-payroll" class from body when close button is clicked', async () => {
+    mockRole = 'admin';
+    const onClose = vi.fn();
+    render(
+      <PayrollPrint
+        run={runFixture}
+        rows={rowsFixture}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'slip', staffId: 'staff-1' }}
+        onClose={onClose}
+      />
+    );
+
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    expect(document.body.classList.contains('printing-payroll')).toBe(true);
+
+    const closeBtn = screen.getByRole('button', { name: 'بند کریں' });
+    act(() => {
+      closeBtn.click();
+    });
+
+    expect(document.body.classList.contains('printing-payroll')).toBe(false);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('removes "printing-payroll" class from body on unmount', async () => {
+    mockRole = 'admin';
+    const { unmount } = render(
+      <PayrollPrint
+        run={runFixture}
+        rows={rowsFixture}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'slip', staffId: 'staff-1' }}
+        onClose={vi.fn()}
+      />
+    );
+
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    expect(document.body.classList.contains('printing-payroll')).toBe(true);
+
+    unmount();
+
+    expect(document.body.classList.contains('printing-payroll')).toBe(false);
   });
 
   it('contains no visible English words in rendered slip or report', () => {

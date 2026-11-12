@@ -137,7 +137,7 @@
   direction: rtl;
   background: #ffffff !important;
   color: #000000 !important;
-  font-family: system-ui, -apple-system, sans-serif, 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq';
+  font-family: 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaleeq Urdu', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   padding: 12px;
   margin: 0 auto;
   box-sizing: border-box;
@@ -145,6 +145,7 @@
 
 /* --- Salary Slip Styles --- */
 .payroll-slip-container {
+  page: payroll-slip;
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
@@ -156,7 +157,7 @@
 
 .payroll-slip-header {
   text-align: center;
-  border-bottom: 2px solid #000000;
+  border-bottom: 1px solid #bdbdbd;
   padding-bottom: 8px;
   margin-bottom: 12px;
 }
@@ -180,7 +181,7 @@
 .payroll-slip-meta-grid {
   display: flex;
   justify-content: space-between;
-  border: 1px solid #000000;
+  border: 1px solid #bdbdbd;
   padding: 6px 12px;
   margin-bottom: 10px;
   font-size: 13px;
@@ -203,7 +204,7 @@
 
 .payroll-slip-box {
   flex: 1;
-  border: 1px solid #000000;
+  border: 1px solid #bdbdbd;
   margin-bottom: 10px;
   page-break-inside: avoid;
   break-inside: avoid;
@@ -212,12 +213,10 @@
 .payroll-slip-box-title {
   font-size: 13px;
   font-weight: 700;
-  background: #f1f5f9;
-  border-bottom: 1px solid #000000;
+  background: transparent;
+  border-bottom: 1px solid #bdbdbd;
   padding: 4px 8px;
   text-align: right;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
 }
 
 .payroll-slip-mini-table {
@@ -228,7 +227,7 @@
 
 .payroll-slip-mini-table td {
   padding: 3px 6px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #bdbdbd;
   text-align: right;
 }
 
@@ -239,29 +238,27 @@
 }
 
 .payroll-slip-table th {
-  border: 1px solid #000000;
-  background: #f1f5f9;
+  border: 1px solid #bdbdbd;
+  background: transparent;
   padding: 4px 6px;
   text-align: right;
   font-size: 12px;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
 }
 
 .payroll-slip-table td {
-  border: 1px solid #cbd5e1;
+  border: 1px solid #bdbdbd;
   padding: 4px 6px;
   text-align: right;
 }
 
 .payroll-slip-row-total td {
-  border-top: 2px solid #000000;
+  border-top: 1px solid #bdbdbd;
   font-weight: 700;
 }
 
 .payroll-slip-net-card {
-  border: 2px solid #000000;
-  background: #f8fafc;
+  border: 1px solid #bdbdbd;
+  background: #ffffff;
   padding: 8px 12px;
   display: flex;
   justify-content: space-between;
@@ -269,8 +266,6 @@
   margin-bottom: 10px;
   page-break-inside: avoid;
   break-inside: avoid;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
 }
 
 .payroll-slip-net-label {
@@ -286,8 +281,8 @@
 .payroll-slip-clamped-notice {
   font-size: 12px;
   font-weight: 700;
-  border: 1px dashed #000000;
-  background: #f8fafc;
+  border: 1px dashed #bdbdbd;
+  background: #ffffff;
   padding: 6px 10px;
   margin-bottom: 10px;
   text-align: center;
@@ -306,7 +301,7 @@
 }
 
 .payroll-slip-notes {
-  border-top: 1px dashed #94a3b8;
+  border-top: 1px dashed #bdbdbd;
   padding-top: 4px;
 }
 
@@ -325,7 +320,7 @@
 }
 
 .payroll-slip-sig-line {
-  border-bottom: 1px solid #000000;
+  border-bottom: 1px solid #bdbdbd;
   margin-bottom: 6px;
   height: 24px;
 }
@@ -337,6 +332,7 @@
 
 /* --- Monthly Payroll Report Styles --- */
 .payroll-report-container {
+  page: payroll-report;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
@@ -344,7 +340,7 @@
 
 .payroll-report-header {
   text-align: center;
-  border-bottom: 2px solid #000000;
+  border-bottom: 1px solid #bdbdbd;
   padding-bottom: 8px;
   margin-bottom: 12px;
 }
@@ -382,18 +378,16 @@
 }
 
 .payroll-report-table th {
-  border: 1px solid #000000;
-  background: #f1f5f9;
+  border: 1px solid #bdbdbd;
+  background: transparent;
   padding: 5px 4px;
   text-align: right;
   font-size: 11px;
   font-weight: 700;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
 }
 
 .payroll-report-table td {
-  border: 1px solid #000000;
+  border: 1px solid #bdbdbd;
   padding: 4px;
   text-align: right;
   font-size: 11px;
@@ -404,11 +398,9 @@
 }
 
 .payroll-report-totals-row td {
-  border-top: 2px solid #000000;
+  border-top: 1px solid #bdbdbd;
   font-weight: 800;
-  background: #f8fafc;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
+  background: #ffffff;
 }
 
 .payroll-report-signatures {
@@ -426,7 +418,7 @@
 }
 
 .payroll-report-sig-line {
-  border-bottom: 1px solid #000000;
+  border-bottom: 1px solid #bdbdbd;
   margin-bottom: 6px;
   height: 28px;
 }

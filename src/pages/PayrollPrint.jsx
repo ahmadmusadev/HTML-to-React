@@ -84,10 +84,22 @@ export default function PayrollPrint({
     return [];
   }, [targetType, singleSlipData, reportData]);
 
+  // Ensure printing-payroll class is removed when component unmounts
+  useEffect(() => {
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('printing-payroll');
+      }
+    };
+  }, []);
+
   // Handle Escape key to manually close/dismiss print
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        if (typeof document !== 'undefined') {
+          document.body.classList.remove('printing-payroll');
+        }
         if (typeof onCloseRef.current === 'function') {
           onCloseRef.current();
         }
@@ -112,6 +124,9 @@ export default function PayrollPrint({
     let printCalled = false;
 
     const cleanup = () => {
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('printing-payroll');
+      }
       window.removeEventListener('afterprint', cleanup);
       if (typeof onCloseRef.current === 'function') {
         onCloseRef.current();
@@ -126,11 +141,17 @@ export default function PayrollPrint({
       }
       printedTargetsRef.current.add(targetKey);
       printCalled = true;
+      if (typeof document !== 'undefined') {
+        document.body.classList.add('printing-payroll');
+      }
       window.print();
     });
 
     return () => {
       cancelAnimationFrame(frameId);
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('printing-payroll');
+      }
       if (!printCalled) {
         window.removeEventListener('afterprint', cleanup);
       }
@@ -159,7 +180,14 @@ export default function PayrollPrint({
             <button
               type="button"
               className="payroll-run-btn-secondary payroll-run-btn-sm"
-              onClick={onClose}
+              onClick={() => {
+                if (typeof document !== 'undefined') {
+                  document.body.classList.remove('printing-payroll');
+                }
+                if (typeof onClose === 'function') {
+                  onClose();
+                }
+              }}
             >
               بند کریں
             </button>
@@ -178,6 +206,9 @@ export default function PayrollPrint({
           type="button"
           className="payroll-print-toast-btn"
           onClick={() => {
+            if (typeof document !== 'undefined') {
+              document.body.classList.remove('printing-payroll');
+            }
             if (typeof onCloseRef.current === 'function') {
               onCloseRef.current();
             }

@@ -157,5 +157,57 @@
   }
 }
 
+/* --- Named Page Definitions for Payroll Printing per AGENTS.md --- */
+@page payroll-slip {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@page payroll-report {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  /* Scoped rules for body.printing-payroll: hide the app and show print portal */
+  body.printing-payroll #root,
+  body.printing-payroll .wrap,
+  body.printing-payroll .tab-content,
+  body.printing-payroll .card {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  body.printing-payroll {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #FFFFFF !important;
+    overflow: visible !important;
+  }
+
+  body.printing-payroll #print-portal-root {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #FFFFFF !important;
+    overflow: visible !important;
+  }
+}
+
 
 
