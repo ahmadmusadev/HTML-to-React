@@ -132,6 +132,9 @@ export const mapSupabaseToUi = (row) => {
     admAge: computedAge,
     admBForm: row.b_form_number || '',
     admAddress: row.address || '',
+    admPrevMadrasa: row.previous_madrasa || '',
+    admPrevEducation: row.previous_education || '',
+    admPrevLeavingReason: row.previous_leaving_reason || '',
     fatherCnic: row.father_cnic || '',
     fatherEdu: row.father_education || '',
     fatherOcc: row.father_occupation || '',
@@ -194,6 +197,9 @@ export const mapUiToSupabase = (data) => {
     date_of_birth: date_of_birth,
     b_form_number: data.admBForm || null,
     address: data.admAddress || null,
+    previous_madrasa: (data.admPrevMadrasa || data.previous_madrasa || '').trim() || null,
+    previous_education: (data.admPrevEducation || data.previous_education || '').trim() || null,
+    previous_leaving_reason: (data.admPrevLeavingReason || data.previous_leaving_reason || '').trim() || null,
     father_cnic: data.fatherCnic || null,
     father_education: data.fatherEdu || null,
     father_occupation: data.fatherOcc || null,
@@ -319,6 +325,7 @@ export default function Admissions() {
   const initialFormData = {
     admRegNo: '', admDate: '', admName: '', admNameEnglish: '', admFatherName: '', admFatherNameEnglish: '', admDepartment: '', admClass: '', admGender: 'لڑکا',
     admDobDay: '', admDobMonth: '', admDobYear: '', admAge: '', admBForm: '', admAddress: '',
+    admPrevMadrasa: '', admPrevEducation: '', admPrevLeavingReason: '',
     fatherName: '', fatherCnic: '', fatherEdu: '', fatherOcc: '', fatherMobile: '', fatherWhatsapp: '', fatherEmail: '', fatherIncome: '', isFatherGuardian: 'yes',
     motherName: '', motherCnic: '', motherEdu: '', motherOcc: '', motherMobile: '', motherWhatsapp: '', motherIncome: '',
     guardianName: '', guardianRel: '', guardianCnic: '', guardianEdu: '', guardianOcc: '', guardianIncome: '', guardianMobile: '', guardianWhatsapp: ''
@@ -1129,6 +1136,43 @@ export default function Admissions() {
                   <div><label htmlFor="admBForm">ب فارم نمبر</label><input type="text" id="admBForm" placeholder="00000-0000000-0" value={formData.admBForm} onChange={handleInputChange} /></div>
                   <div><label htmlFor="admAddress">موجودہ رہائشی پتہ</label><input type="text" id="admAddress" value={formData.admAddress} onChange={handleInputChange} /></div>
                 </div>
+                <div className="grid-row">
+                  <div>
+                    <label htmlFor="admPrevMadrasa">سابقہ مدرسہ / ادارہ کا نام</label>
+                    <input
+                      type="text"
+                      id="admPrevMadrasa"
+                      name="admPrevMadrasa"
+                      placeholder="سابقہ مدرسہ یا اسکول کا نام درج کریں..."
+                      value={formData.admPrevMadrasa}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="admPrevEducation">سابقہ تعلیم اور دورانیہ</label>
+                    <input
+                      type="text"
+                      id="admPrevEducation"
+                      name="admPrevEducation"
+                      placeholder="کیا پڑھا اور کتنا عرصہ (مثلاً: 5 پارے - 1 سال)..."
+                      value={formData.admPrevEducation}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+                <div className="grid-row" style={{ gridTemplateColumns: '1fr' }}>
+                  <div>
+                    <label htmlFor="admPrevLeavingReason">سابقہ ادارہ چھوڑنے کی وجہ</label>
+                    <input
+                      type="text"
+                      id="admPrevLeavingReason"
+                      name="admPrevLeavingReason"
+                      placeholder="سابقہ ادارہ چھوڑنے کی وجہ (مثلاً: نقل مکانی، رہائش کی تبدیلی، فاصلہ وغیرہ)..."
+                      value={formData.admPrevLeavingReason}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
               </div>
               <div className="wizard-nav wizard-nav-centered"><button type="button" className="wizard-btn-next wizard-btn-down" onClick={wizardNext}>اگلا: والد کی معلومات ↓</button></div>
             </div>
@@ -1420,6 +1464,24 @@ export default function Admissions() {
                             <span className="review-field-label">رہائشی پتہ</span>
                             <span className="review-field-val">{formData.admAddress || '—'}</span>
                           </div>
+                          {formData.admPrevMadrasa && (
+                            <div className="review-field-row">
+                              <span className="review-field-label">سابقہ مدرسہ / ادارہ</span>
+                              <span className="review-field-val">{formData.admPrevMadrasa}</span>
+                            </div>
+                          )}
+                          {formData.admPrevEducation && (
+                            <div className="review-field-row">
+                              <span className="review-field-label">سابقہ تعلیم اور دورانیہ</span>
+                              <span className="review-field-val">{formData.admPrevEducation}</span>
+                            </div>
+                          )}
+                          {formData.admPrevLeavingReason && (
+                            <div className="review-field-row">
+                              <span className="review-field-label">سابقہ ادارہ چھوڑنے کی وجہ</span>
+                              <span className="review-field-val">{formData.admPrevLeavingReason}</span>
+                            </div>
+                          )}
                           <div className="review-field-row">
                             <span className="review-field-label">تاریخ داخلہ</span>
                             <span className="review-field-val">{formData.admDate || '—'}</span>
@@ -2101,6 +2163,22 @@ export default function Admissions() {
                         <td className="a4-label">رہائشی پتہ</td>
                         <td colSpan="3" className="a4-value">{selectedPrintStudent?.admAddress || ''}</td>
                       </tr>
+                      {(selectedPrintStudent?.admPrevMadrasa || selectedPrintStudent?.admPrevEducation) && (
+                        <>
+                          <tr>
+                            <td className="a4-label">سابقہ ادارہ</td>
+                            <td className="a4-value">{selectedPrintStudent?.admPrevMadrasa || '—'}</td>
+                            <td className="a4-label">سابقہ تعلیم و دورانیہ</td>
+                            <td className="a4-value">{selectedPrintStudent?.admPrevEducation || '—'}</td>
+                          </tr>
+                          {selectedPrintStudent?.admPrevLeavingReason && (
+                            <tr>
+                              <td className="a4-label">چھوڑنے کی وجہ</td>
+                              <td colSpan="3" className="a4-value">{selectedPrintStudent?.admPrevLeavingReason}</td>
+                            </tr>
+                          )}
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -2276,6 +2354,22 @@ export default function Admissions() {
                </div>
                <div className="grid-row">
                   <div><label>رہائشی پتہ</label><input type="text" name="admAddress" value={profileModal.admAddress || ''} onChange={handleProfileChange} /></div>
+               </div>
+               <div className="grid-row">
+                  <div>
+                    <label>سابقہ مدرسہ / ادارہ کا نام</label>
+                    <input type="text" name="admPrevMadrasa" value={profileModal.admPrevMadrasa || ''} onChange={handleProfileChange} />
+                  </div>
+                  <div>
+                    <label>سابقہ تعلیم اور دورانیہ</label>
+                    <input type="text" name="admPrevEducation" value={profileModal.admPrevEducation || ''} onChange={handleProfileChange} />
+                  </div>
+               </div>
+               <div className="grid-row">
+                  <div>
+                    <label>سابقہ ادارہ چھوڑنے کی وجہ</label>
+                    <input type="text" name="admPrevLeavingReason" value={profileModal.admPrevLeavingReason || ''} onChange={handleProfileChange} />
+                  </div>
                </div>
 
                <h3 style={{ marginTop: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>والد کی معلومات</h3>

@@ -87,4 +87,24 @@ describe('Admissions Department (شعبہ) Dropdown & Row Layout', () => {
     expect(css).toContain('grid-template-columns: repeat(3, minmax(0, 1fr))');
     expect(css).toContain('@media (max-width: 600px)');
   });
+
+  it('renders previous education fields: previous madrasa, previous education, and leaving reason', () => {
+    render(<Admissions />);
+
+    const prevMadrasa = screen.getByLabelText('سابقہ مدرسہ / ادارہ کا نام');
+    const prevEducation = screen.getByLabelText('سابقہ تعلیم اور دورانیہ');
+    const prevLeaving = screen.getByLabelText('سابقہ ادارہ چھوڑنے کی وجہ');
+
+    expect(prevMadrasa).toBeDefined();
+    expect(prevEducation).toBeDefined();
+    expect(prevLeaving).toBeDefined();
+
+    fireEvent.change(prevMadrasa, { target: { value: 'دارالعلوم کراچی' } });
+    fireEvent.change(prevEducation, { target: { value: '5 پارے حفظ - 1 سال' } });
+    fireEvent.change(prevLeaving, { target: { value: 'رہائش کی تبدیلی' } });
+
+    expect(prevMadrasa.value).toBe('دارالعلوم کراچی');
+    expect(prevEducation.value).toBe('5 پارے حفظ - 1 سال');
+    expect(prevLeaving.value).toBe('رہائش کی تبدیلی');
+  });
 });
