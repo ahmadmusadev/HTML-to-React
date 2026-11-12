@@ -233,6 +233,18 @@ The user-facing interface should use clear, natural, and professional **Urdu** t
 
 **Important:** This rule applies to all current and future features and changes. Whenever you add or modify functionality, check that every new user-facing message follows this Urdu-language requirement.
 
+## Print / Report Printing Rules
+
+- This rule applies to all reports and prints, except Fee Print.
+- Page Size: Must be A4.
+- Color Mode: Must be Black & White only. Do not use colored prints.
+- Background: Must always be White. Do not use colored background, gradient, or dark sections.
+- Text Color: Must always be Black.
+- For tables and headings, use only Black text on White background. Light Gray border is allowed.
+- Design must be clean and print-friendly with low ink usage.
+- Always ensure the print comes out neat and clear.
+- This rule does NOT apply to Fee Print.
+
 ## Branching Rule - MUST FOLLOW
 
 1. NEVER work directly on `main` branch.
