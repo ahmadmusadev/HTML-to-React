@@ -118,7 +118,7 @@ describe('StudentParaRecords Unit & Architecture Tests', () => {
 });
 
 describe('StudentParaRecords Component UI Integration Tests', () => {
-  it('renders student selection with both registration and name dropdowns, and 30-para table when picked', async () => {
+  it('renders student selection with registration search input and name dropdown, and 30-para table when picked', async () => {
     render(<StudentParaRecords />);
 
     expect(screen.getByText('طالب علم کا انتخاب')).toBeInTheDocument();
@@ -130,8 +130,10 @@ describe('StudentParaRecords Component UI Integration Tests', () => {
       expect(screen.getByText('محمد عبد اللہ (101)')).toBeInTheDocument();
     });
 
-    const regSelect = screen.getByLabelText('رجسٹریشن / رول نمبر سے انتخاب');
-    fireEvent.change(regSelect, { target: { value: 's-1' } });
+    const regInput = screen.getByLabelText('رجسٹریشن / رول نمبر سے انتخاب');
+    fireEvent.change(regInput, { target: { value: '101' } });
+    const searchBtn = screen.getByRole('button', { name: 'تلاش کریں' });
+    fireEvent.click(searchBtn);
 
     // Table should now be rendered with all 8 headers
     await waitFor(() => {
@@ -220,6 +222,47 @@ describe('StudentParaRecords Component UI Integration Tests', () => {
 
     // Auto-save ambient bar is present
     expect(screen.getByText(/تمام تبدیلیاں/)).toBeInTheDocument();
+  });
+
+  it('handles manual registration search via Enter key, syncs with name dropdown, shows error for invalid roll, and clears selection', async () => {
+    render(<StudentParaRecords />);
+
+    await waitFor(() => {
+      expect(screen.getByText('محمد عبد اللہ (101)')).toBeInTheDocument();
+    });
+
+    const regInput = screen.getByLabelText('رجسٹریشن / رول نمبر سے انتخاب');
+
+    // 1. Enter key search for valid student (101)
+    fireEvent.change(regInput, { target: { value: '101' } });
+    fireEvent.keyDown(regInput, { key: 'Enter', code: 'Enter' });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('محمد عبد اللہ').length).toBeGreaterThan(0);
+    });
+
+    // 2. Clear button should appear and reset selection when clicked
+    const clearBtn = screen.getByTitle('انتخاب ختم کریں');
+    fireEvent.click(clearBtn);
+
+    expect(regInput.value).toBe('');
+
+    // 3. Search for invalid registration number shows Urdu error alert
+    fireEvent.change(regInput, { target: { value: '99999' } });
+    const searchBtn = screen.getByRole('button', { name: 'تلاش کریں' });
+    fireEvent.click(searchBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/رجسٹریشن \/ رول نمبر "99999" کا کوئی طالب علم نہیں ملا/)).toBeInTheDocument();
+    });
+
+    // 4. Selecting from name dropdown updates registration input
+    const nameSelect = screen.getByLabelText('نام سے طالب علم منتخب کریں');
+    fireEvent.change(nameSelect, { target: { value: 's-1' } });
+
+    await waitFor(() => {
+      expect(regInput.value).toBe('101');
+    });
   });
 });
 

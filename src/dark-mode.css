@@ -370,10 +370,11 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 [data-theme="dark"] .tab-btn,
 [data-theme="dark"] .filter-btn,
 [data-theme="dark"] .payroll-subtab-btn,
+[data-theme="dark"] .records-subtab-btn,
 [data-theme="dark"] .btn-secondary,
 [data-theme="dark"] .mobile-menu-toggle {
   background: #18181b !important;
-  color: #a1a1aa !important;
+  color: #ffffff !important;
   border: 1px solid var(--border) !important;
   transition: all 0.2s ease !important;
 }
@@ -384,6 +385,7 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 [data-theme="dark"] .tab-btn:hover:not(.active),
 [data-theme="dark"] .filter-btn:hover:not(.active),
 [data-theme="dark"] .payroll-subtab-btn:hover:not(.active),
+[data-theme="dark"] .records-subtab-btn:hover:not(.active),
 [data-theme="dark"] .btn-secondary:hover,
 [data-theme="dark"] .mobile-menu-toggle:hover {
   background: #27272a !important;
@@ -396,7 +398,8 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 [data-theme="dark"] .fee-report-tab-btn.active,
 [data-theme="dark"] .tab-btn.active,
 [data-theme="dark"] .filter-btn.active,
-[data-theme="dark"] .payroll-subtab-btn.active {
+[data-theme="dark"] .payroll-subtab-btn.active,
+[data-theme="dark"] .records-subtab-btn.active {
   background: #ffffff !important;
   color: #000000 !important;
   border-color: #ffffff !important;
@@ -408,7 +411,8 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 [data-theme="dark"] .fee-report-tab-btn.active *,
 [data-theme="dark"] .tab-btn.active *,
 [data-theme="dark"] .filter-btn.active *,
-[data-theme="dark"] .payroll-subtab-btn.active * {
+[data-theme="dark"] .payroll-subtab-btn.active *,
+[data-theme="dark"] .records-subtab-btn.active * {
   color: #000000 !important;
 }
 
@@ -473,7 +477,7 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 }
 
 /* --- Primary Action Buttons (Pure White with Jet Black Text) --- */
-[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.payroll-subtab-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn),
+[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.payroll-subtab-btn):not(.records-subtab-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn),
 [data-theme="dark"] .wizard-btn-next,
 [data-theme="dark"] .search-container button,
 [data-theme="dark"] .me-load-btn,
@@ -487,7 +491,7 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   box-shadow: 0 3px 12px rgba(255, 255, 255, 0.2) !important;
 }
 
-[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.payroll-subtab-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn):hover,
+[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.payroll-subtab-btn):not(.records-subtab-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn):hover,
 [data-theme="dark"] .wizard-btn-next:hover,
 [data-theme="dark"] .search-container button:hover,
 [data-theme="dark"] .me-load-btn:hover,

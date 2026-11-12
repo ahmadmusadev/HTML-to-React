@@ -1,6 +1,85 @@
 import { isValidUUID } from '../lib/supabaseClient';
 
 /**
+ * Urdu weekday names where index 0 is Sunday (اتوار) and index 5 is Friday (جمعہ)
+ */
+export const WEEKDAY_NAMES_URDU = [
+  'اتوار',
+  'پیر',
+  'منگل',
+  'بدھ',
+  'جمعرات',
+  'جمعہ',
+  'ہفتہ'
+];
+
+/**
+ * Returns the day of the week index (0 = Sunday, 1 = Monday, ..., 5 = Friday, 6 = Saturday)
+ * Parses YYYY-MM-DD in local time to avoid timezone offsets.
+ */
+export const getDayOfWeekIndex = (dateStr) => {
+  if (!dateStr || typeof dateStr !== 'string') return -1;
+  const match = dateStr.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return -1;
+  const y = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10) - 1;
+  const d = parseInt(match[3], 10);
+  return new Date(y, m, d).getDay();
+};
+
+/**
+ * Checks whether a given date is a weekly holiday or official holiday for the madrasa.
+ * @param {string} dateStr - 'YYYY-MM-DD'
+ * @param {number[]} weeklyOffDays - e.g. [5] or [0]
+ * @param {Array} holidays - optional list of holiday records { holiday_date, title }
+ * @returns {{ isHoliday: boolean, isWeeklyOff: boolean, isSpecialHoliday: boolean, dayIndex: number, dayName: string, title: string }}
+ */
+export const checkStaffHolidayStatus = (dateStr, weeklyOffDays = [5], holidays = []) => {
+  const dayIndex = getDayOfWeekIndex(dateStr);
+  if (dayIndex === -1) {
+    return {
+      isHoliday: false,
+      isWeeklyOff: false,
+      isSpecialHoliday: false,
+      dayIndex: -1,
+      dayName: '',
+      title: ''
+    };
+  }
+
+  const dayName = WEEKDAY_NAMES_URDU[dayIndex] || '';
+  const offDays = Array.isArray(weeklyOffDays) && weeklyOffDays.length > 0 ? weeklyOffDays : [5];
+  const isWeeklyOff = offDays.includes(dayIndex);
+
+  const cleanDate = dateStr.trim();
+  const matchedHoliday = Array.isArray(holidays)
+    ? holidays.find(h => {
+        const hDate = String(h?.holiday_date || h?.holidayDate || '').trim();
+        return hDate === cleanDate;
+      })
+    : null;
+
+  const isSpecialHoliday = Boolean(matchedHoliday);
+  const isHoliday = isWeeklyOff || isSpecialHoliday;
+
+  let title = '';
+  if (isSpecialHoliday && matchedHoliday.title) {
+    title = matchedHoliday.title.trim();
+  } else if (isWeeklyOff) {
+    title = `ہفتہ وار چھٹی (${dayName})`;
+  }
+
+  return {
+    isHoliday,
+    isWeeklyOff,
+    isSpecialHoliday,
+    dayIndex,
+    dayName,
+    title
+  };
+};
+
+/**
  * Normalizes staff attendance status to one of: 'present', 'absent', 'leave', 'half_leave'
  * Matching the database CHECK constraint: CHECK (status IN ('present', 'absent', 'leave', 'half_leave'))
  */

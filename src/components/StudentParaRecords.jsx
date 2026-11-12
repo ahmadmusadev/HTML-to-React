@@ -26,7 +26,7 @@ export default function StudentParaRecords() {
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [regSearchInput, setRegSearchInput] = useState('');
 
   // Mid-Hifz Transfer State
   const [isMidHifz, setIsMidHifz] = useState(false);
@@ -92,43 +92,30 @@ export default function StudentParaRecords() {
     };
   }, [activeMadrasaId]);
 
-  // Filter students by selected class and search query
+  // Filter students by selected class
   const filteredStudents = useMemo(() => {
+    if (!selectedClassId) return studentsList;
     return studentsList.filter(s => {
-      // Class filter
-      if (selectedClassId) {
-        const cId = s.class_id || s.classId;
-        const cName = s.class_name || s.className;
-        if (cId !== selectedClassId && cName !== selectedClassId) {
-          return false;
-        }
-      }
-
-      // Search query filter (by name, roll/reg number, or father's name)
-      if (studentSearchQuery.trim()) {
-        const q = studentSearchQuery.trim().toLowerCase();
-        const name = (s.name || s.admName || '').toLowerCase();
-        const roll = String(s.roll_number || s.admRegNo || '').toLowerCase();
-        const father = (s.father_name || s.admFatherName || '').toLowerCase();
-        if (!name.includes(q) && !roll.includes(q) && !father.includes(q)) {
-          return false;
-        }
-      }
-
-      return true;
+      const cId = s.class_id || s.classId;
+      const cName = s.class_name || s.className;
+      return cId === selectedClassId || cName === selectedClassId;
     });
-  }, [studentsList, selectedClassId, studentSearchQuery]);
+  }, [studentsList, selectedClassId]);
 
   // 2. When a student is selected, fetch their record
   useEffect(() => {
     if (!selectedStudentId) {
       setSelectedStudent(null);
+      setRegSearchInput('');
       resetForm();
       return;
     }
 
     const currentStudent = studentsList.find(s => (s.id || s.roll_number) === selectedStudentId);
     setSelectedStudent(currentStudent || null);
+    if (currentStudent) {
+      setRegSearchInput(String(currentStudent.roll_number || currentStudent.admRegNo || ''));
+    }
 
     let isMounted = true;
     const loadStudentRecord = async () => {
@@ -479,12 +466,88 @@ export default function StudentParaRecords() {
     }
   };
 
-  // 8. Print Handler
+  // 8. Manual Registration / Roll Number Search
+  const handleSearchByReg = (query) => {
+    let q = query !== undefined ? query : regSearchInput;
+    if (!q) {
+      const domInput = document.getElementById('paraRegInput');
+      if (domInput && domInput.value) {
+        q = domInput.value;
+      }
+    }
+    q = (q || '').trim();
+    if (!q) {
+      setAlertMsg({ type: 'info', text: 'براہ کرم تلاش کے لیے رجسٹریشن یا رول نمبر درج کریں۔' });
+      return;
+    }
+
+    if (!studentsList || studentsList.length === 0) {
+      setAlertMsg({ type: 'error', text: 'طالب علموں کا ریکارڈ دستیاب نہیں ہے۔' });
+      return;
+    }
+
+    const qNum = parseInt(q, 10);
+    const isQNum = !isNaN(qNum);
+
+    const isMatch = s => {
+      const roll = String(s.roll_number || s.admRegNo || '').trim();
+      if (!roll) return false;
+      if (roll.toLowerCase() === q.toLowerCase()) return true;
+      if (isQNum) {
+        const sNum = parseInt(roll, 10);
+        if (!isNaN(sNum) && sNum === qNum) return true;
+      }
+      if (String(s.id || '').toLowerCase() === q.toLowerCase()) return true;
+      return false;
+    };
+
+    // 1. Search in currently selected class first
+    let found = null;
+    if (selectedClassId) {
+      found = studentsList.find(s => {
+        const cId = s.class_id || s.classId;
+        const cName = s.class_name || s.className;
+        return (cId === selectedClassId || cName === selectedClassId) && isMatch(s);
+      });
+    }
+
+    // 2. If not found in selected class, search all students
+    if (!found) {
+      found = studentsList.find(isMatch);
+    }
+
+    if (found) {
+      const studentClassId = found.class_id || found.classId;
+      if (studentClassId && classesList.some(c => c.id === studentClassId || c.name === studentClassId)) {
+        setSelectedClassId(studentClassId);
+      }
+      const sId = found.id || found.roll_number;
+      setSelectedStudentId(sId);
+      setSelectedStudent(found);
+      setRegSearchInput(String(found.roll_number || found.admRegNo || q));
+      setAlertMsg(null);
+    } else {
+      setAlertMsg({
+        type: 'error',
+        text: `رجسٹریشن / رول نمبر "${q}" کا کوئی طالب علم نہیں ملا۔ براہ کرم درست نمبر درج کریں۔`
+      });
+    }
+  };
+
+  const handleClearStudentSelection = () => {
+    setSelectedStudentId('');
+    setSelectedStudent(null);
+    setRegSearchInput('');
+    setAlertMsg(null);
+    resetForm();
+  };
+
+  // 9. Print Handler
   const handlePrint = () => {
     window.print();
   };
 
-  // 9. Reset with confirmation
+  // 10. Reset with confirmation
   const handleResetConfirm = () => {
     if (window.confirm('کیا آپ تمام درج شدہ معلومات صاف کرنا چاہتے ہیں؟')) {
       resetForm();
@@ -540,7 +603,46 @@ export default function StudentParaRecords() {
       <div className="para-records-card no-print">
         <h3 className="para-records-card-title">طالب علم کا انتخاب</h3>
         <div className="para-records-grid">
-          {/* 1. Class Dropdown */}
+          {/* 1. Manual Registration / Roll Number Search */}
+          <div className="para-records-field">
+            <label htmlFor="paraRegInput">رجسٹریشن / رول نمبر سے انتخاب</label>
+            <div className="para-reg-search-box">
+              <input
+                type="text"
+                id="paraRegInput"
+                className="para-reg-search-input"
+                placeholder="رجسٹریشن / رول نمبر درج کریں..."
+                value={regSearchInput}
+                onChange={e => setRegSearchInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearchByReg(e.target.value);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="para-btn para-btn-primary para-reg-search-btn"
+                onClick={() => handleSearchByReg()}
+                title="طالب علم تلاش کریں"
+              >
+                تلاش کریں
+              </button>
+              {(selectedStudentId || regSearchInput) && (
+                <button
+                  type="button"
+                  className="para-btn para-btn-secondary para-reg-clear-btn"
+                  onClick={handleClearStudentSelection}
+                  title="انتخاب ختم کریں"
+                >
+                  صاف کریں
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Class Dropdown */}
           <div className="para-records-field">
             <label htmlFor="paraClassSelect">کلاس منتخب کریں</label>
             <select
@@ -549,6 +651,8 @@ export default function StudentParaRecords() {
               onChange={e => {
                 setSelectedClassId(e.target.value);
                 setSelectedStudentId('');
+                setRegSearchInput('');
+                setAlertMsg(null);
               }}
             >
               <option value="">تمام کلاسز</option>
@@ -560,43 +664,25 @@ export default function StudentParaRecords() {
             </select>
           </div>
 
-          {/* 2. Registration / Roll Number Dropdown */}
-          <div className="para-records-field">
-            <label htmlFor="paraRegSelect">رجسٹریشن / رول نمبر سے انتخاب</label>
-            <select
-              id="paraRegSelect"
-              value={selectedStudentId}
-              onChange={e => setSelectedStudentId(e.target.value)}
-            >
-              <option value="">رجسٹریشن نمبر منتخب کریں...</option>
-              {filteredStudents
-                .filter(s => s.roll_number || s.admRegNo)
-                .sort((a, b) => {
-                  const rA = parseInt(a.roll_number || a.admRegNo, 10);
-                  const rB = parseInt(b.roll_number || b.admRegNo, 10);
-                  if (!isNaN(rA) && !isNaN(rB)) return rA - rB;
-                  return String(a.roll_number || a.admRegNo).localeCompare(String(b.roll_number || b.admRegNo));
-                })
-                .map(s => {
-                  const id = s.id || s.roll_number;
-                  const roll = s.roll_number || s.admRegNo;
-                  const name = s.name || s.admName;
-                  return (
-                    <option key={`reg-${id}`} value={id}>
-                      {roll} — {name}
-                    </option>
-                  );
-                })}
-            </select>
-          </div>
-
           {/* 3. Student Name Dropdown */}
           <div className="para-records-field">
             <label htmlFor="paraStudentSelect">نام سے طالب علم منتخب کریں</label>
             <select
               id="paraStudentSelect"
               value={selectedStudentId}
-              onChange={e => setSelectedStudentId(e.target.value)}
+              onChange={e => {
+                const sId = e.target.value;
+                setSelectedStudentId(sId);
+                if (sId) {
+                  const s = studentsList.find(st => (st.id || st.roll_number) === sId);
+                  if (s) {
+                    setRegSearchInput(String(s.roll_number || s.admRegNo || ''));
+                    setAlertMsg(null);
+                  }
+                } else {
+                  setRegSearchInput('');
+                }
+              }}
             >
               <option value="">نام سے انتخاب کریں...</option>
               {filteredStudents
@@ -614,30 +700,6 @@ export default function StudentParaRecords() {
                 })}
             </select>
           </div>
-        </div>
-
-        {/* Live Search Box */}
-        <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <div style={{ flex: 1 }}>
-            <input
-              type="text"
-              className="para-table-input"
-              placeholder="فوری تلاش: بچے کا نام یا رجسٹریشن نمبر لکھیں..."
-              value={studentSearchQuery}
-              onChange={e => setStudentSearchQuery(e.target.value)}
-              style={{ padding: '8px 12px', fontSize: '0.9rem' }}
-            />
-          </div>
-          {studentSearchQuery && (
-            <button
-              type="button"
-              className="para-btn para-btn-secondary"
-              onClick={() => setStudentSearchQuery('')}
-              style={{ padding: '7px 14px', fontSize: '0.85rem' }}
-            >
-              صاف کریں
-            </button>
-          )}
         </div>
 
         {/* Selected Student Details Strip */}

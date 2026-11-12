@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMadrasa } from '../context/MadrasaContext';
-import { isValidUUID } from '../lib/supabaseClient';
+import { supabase, isValidUUID } from '../lib/supabaseClient';
+import { fetchPayrollSettings, fetchHolidays } from '../lib/payrollApi';
 import { DEFAULT_CLASSES } from '../constants/defaults';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import {
@@ -14,7 +15,9 @@ import {
   mapUiToStaffAttendancePayload,
   derivePendingDate,
   getStaffAttendanceStatusLabelUrdu,
-  calculateStaffAttendanceCounts
+  calculateStaffAttendanceCounts,
+  checkStaffHolidayStatus,
+  WEEKDAY_NAMES_URDU
 } from '../utils/StaffAttendanceMappers';
 import './Entry.css';
 
@@ -917,6 +920,47 @@ export default function Attendance() {
   const [staffSession, setStaffSession] = useState('checkin');
   const [staffAttFormData, setStaffAttFormData] = useState({});
   const [staffFlowMsg, setStaffFlowMsg] = useState('');
+  const [weeklyOffDays, setWeeklyOffDays] = useState([5]);
+  const [officialHolidays, setOfficialHolidays] = useState([]);
+  const [allowHolidayOverride, setAllowHolidayOverride] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const cachedSettings = loadMadrasaData('hf_payroll_settings', activeMadrasaId);
+    if (cachedSettings && Array.isArray(cachedSettings.weekly_off_days)) {
+      setWeeklyOffDays(cachedSettings.weekly_off_days);
+    }
+    const cachedHolidays = loadMadrasaData('hf_holidays', activeMadrasaId);
+    if (Array.isArray(cachedHolidays)) {
+      setOfficialHolidays(cachedHolidays);
+    }
+
+    if (isValidUUID(activeMadrasaId)) {
+      fetchPayrollSettings(supabase, activeMadrasaId)
+        .then(row => {
+          if (isMounted && row && Array.isArray(row.weekly_off_days)) {
+            setWeeklyOffDays(row.weekly_off_days);
+            if (saveMadrasaData) saveMadrasaData('hf_payroll_settings', activeMadrasaId, row);
+          }
+        })
+        .catch(err => {
+          console.warn('Could not load payroll settings for attendance:', err);
+        });
+
+      fetchHolidays(supabase, activeMadrasaId)
+        .then(hols => {
+          if (isMounted && Array.isArray(hols)) {
+            setOfficialHolidays(hols);
+            if (saveMadrasaData) saveMadrasaData('hf_holidays', activeMadrasaId, hols);
+          }
+        })
+        .catch(err => {
+          console.warn('Could not load holidays for attendance:', err);
+        });
+    }
+
+    return () => { isMounted = false; };
+  }, [activeMadrasaId]);
 
   const getStaffForAttendance = () => {
     if (staffProfiles && staffProfiles.length > 0) {
@@ -955,6 +999,13 @@ export default function Attendance() {
     (savedStaffDataForDate && Object.keys(savedStaffDataForDate).length > 0) ||
     (staffPendingDate && staffPendingDate === staffAttDate)
   );
+  const holidayStatus = checkStaffHolidayStatus(staffAttDate, weeklyOffDays, officialHolidays);
+  const { isHoliday, isWeeklyOff, dayName, title: holidayTitle } = holidayStatus;
+  const hasSavedStaffRecordsForDate = Boolean(
+    savedStaffDataForDate && Object.keys(savedStaffDataForDate).length > 0
+  );
+
+  const prevStaffDateRef = useRef(staffAttDate);
 
   useEffect(() => {
     if (activeView === 'staff') {
@@ -970,6 +1021,9 @@ export default function Attendance() {
         setStaffFlowMsg('');
       }
 
+      const isDateChanged = prevStaffDateRef.current !== targetDate;
+      prevStaffDateRef.current = targetDate;
+
       const savedData = staffAttendance[targetDate] || {};
       const isTargetCheckInDone = Boolean(
         (savedData && Object.keys(savedData).length > 0) ||
@@ -979,21 +1033,29 @@ export default function Attendance() {
       if (!isTargetCheckInDone && staffSession !== 'checkin') {
         setStaffSession('checkin');
       }
-      const initialForm = {};
-      
-      staffMembers.forEach((staff) => {
-        const rec = savedData[staff.teacherId] || savedData[staff.name] || savedData[staff.id] || { status: 'present', checkIn: '', checkOut: '', remarks: '', lateMinutes: 0, earlyLeaveMinutes: 0 };
-        const initialStatus = rec.status || 'present';
-        initialForm[staff.teacherId] = {
-          status: initialStatus,
-          checkIn: rec.checkIn || (initialStatus === 'present' ? staff.shiftStart : ''),
-          checkOut: rec.checkOut || (initialStatus === 'present' ? staff.shiftEnd : ''),
-          lateMinutes: rec.lateMinutes !== undefined ? rec.lateMinutes : 0,
-          earlyLeaveMinutes: rec.earlyLeaveMinutes !== undefined ? rec.earlyLeaveMinutes : 0,
-          remarks: rec.remarks || ''
-        };
+
+      setStaffAttFormData(prev => {
+        const next = {};
+        staffMembers.forEach((staff) => {
+          const rec = savedData[staff.teacherId] || savedData[staff.name] || savedData[staff.id] || null;
+          const existing = (!isDateChanged && prev) ? prev[staff.teacherId] : null;
+
+          if (existing) {
+            next[staff.teacherId] = existing;
+          } else {
+            const initialStatus = rec?.status || 'present';
+            next[staff.teacherId] = {
+              status: initialStatus,
+              checkIn: rec?.checkIn || (initialStatus === 'present' ? staff.shiftStart : ''),
+              checkOut: rec?.checkOut || (initialStatus === 'present' ? staff.shiftEnd : ''),
+              lateMinutes: rec?.lateMinutes !== undefined ? rec.lateMinutes : 0,
+              earlyLeaveMinutes: rec?.earlyLeaveMinutes !== undefined ? rec.earlyLeaveMinutes : 0,
+              remarks: rec?.remarks || ''
+            };
+          }
+        });
+        return next;
       });
-      setStaffAttFormData(initialForm);
     }
   }, [activeView, staffAttDate, staffSession, staffProfiles, staffAttendance, staffPendingDate, classesList]);
 
@@ -1052,6 +1114,10 @@ export default function Attendance() {
 
   const saveStaffAttendanceCheckIn = async () => {
     if (!staffAttDate) return;
+    if (isHoliday && !hasSavedStaffRecordsForDate && !allowHolidayOverride) {
+      alert(`منتخب کردہ تاریخ (${staffAttDate} بروز ${dayName}) ادارے کی مقرر کردہ ${isWeeklyOff ? 'ہفتہ وار چھٹی' : 'عام تعطیل'} ہے۔ چھٹی کے دن باقاعدہ حاضری محفوظ نہیں کی جا سکتی۔`);
+      return;
+    }
 
     const recordsToSave = [];
     const attRecord = { ...(staffAttendance[staffAttDate] || {}) };
@@ -1117,6 +1183,10 @@ export default function Attendance() {
 
   const saveStaffAttendanceCheckOut = async () => {
     if (!staffAttDate) return;
+    if (isHoliday && !hasSavedStaffRecordsForDate && !allowHolidayOverride) {
+      alert(`منتخب کردہ تاریخ (${staffAttDate} بروز ${dayName}) ادارے کی مقرر کردہ ${isWeeklyOff ? 'ہفتہ وار چھٹی' : 'عام تعطیل'} ہے۔ چھٹی کے دن باقاعدہ حاضری محفوظ نہیں کی جا سکتی۔`);
+      return;
+    }
     if (!isStaffCheckInDone) {
       alert("پہلے چیک اِن کی حاضری درج اور محفوظ کریں۔");
       return;
@@ -1711,8 +1781,16 @@ export default function Attendance() {
         <h2>عملے کی حاضری</h2>
         <div className="grid-row" style={{ marginBottom: "20px" }}>
           <div>
-            <label>تاریخ</label>
-            <input type="date" value={staffAttDate} onChange={e => setStaffAttDate(e.target.value)} />
+            <label htmlFor="staffAttDate">تاریخ</label>
+            <input
+              id="staffAttDate"
+              type="date"
+              value={staffAttDate}
+              onChange={e => {
+                setStaffAttDate(e.target.value);
+                setAllowHolidayOverride(false);
+              }}
+            />
           </div>
           <div>
             <label>اندراج مرحلہ</label>
@@ -1741,13 +1819,35 @@ export default function Attendance() {
           </div>
         </div>
 
+        {/* تعطیل کا انتباہی بینر */}
+        {isHoliday && !allowHolidayOverride && (
+          <div id="staffHolidayWarningBanner" className="att-lock-banner staff-holiday-warning-banner">
+            توجہ فرمائیں: منتخب کردہ تاریخ ({staffAttDate} بروز {dayName}) ادارے کی مقرر کردہ {isWeeklyOff ? 'ہفتہ وار چھٹی' : 'عام تعطیل'} ({holidayTitle}) کا دن ہے۔ اس دن باقاعدہ حاضری مطلوب نہیں ہے۔
+          </div>
+        )}
+
+        {isHoliday && allowHolidayOverride && (
+          <div id="staffHolidayOverrideBanner" className="att-lock-banner staff-holiday-override-banner">
+            <span>
+              استثنائی موڈ فعال ہے: منتخب کردہ تاریخ ({staffAttDate} بروز {dayName}) اگرچہ {isWeeklyOff ? 'ہفتہ وار چھٹی' : 'عام تعطیل'} ({holidayTitle}) ہے، لیکن آپ کو خصوصی حاضری درج کرنے کی اجازت دی گئی ہے۔
+            </span>
+            <button
+              type="button"
+              className="staff-holiday-btn-override"
+              onClick={() => setAllowHolidayOverride(false)}
+            >
+              واپس تعطیل پر لاک کریں
+            </button>
+          </div>
+        )}
+
         {/* لاک انفو وارننگ بینر */}
         {staffFlowMsg && (
           <div id="staffAttendanceLockInfo" className="att-lock-banner" style={{ display: 'block' }}>{staffFlowMsg}</div>
         )}
 
         {/* روزانہ عملہ حاضری خلاصہ */}
-        {staffMembers.length > 0 && (() => {
+        {(!isHoliday || hasSavedStaffRecordsForDate || allowHolidayOverride) && staffMembers.length > 0 && (() => {
           const dailyStaffCounts = calculateStaffAttendanceCounts(Object.values(staffAttFormData));
           return (
             <div className="mini-stat-grid" style={{ marginTop: "14px", marginBottom: "14px" }}>
@@ -1778,6 +1878,25 @@ export default function Attendance() {
         <div id="staffAttendanceListArea">
           {!staffAttDate ? (
             <p style={{ textAlign: "center", color: "var(--muted)" }}>پہلے تاریخ منتخب کریں۔</p>
+          ) : isHoliday && !hasSavedStaffRecordsForDate && !allowHolidayOverride ? (
+            <div id="staffHolidayBlockedArea" className="staff-holiday-block-card">
+              <div className="staff-holiday-block-title">
+                تعطیل کا دن — باقاعدہ حاضری کا اندراج معطل ہے
+              </div>
+              <p className="staff-holiday-block-text">
+                منتخب کردہ تاریخ (<strong>{staffAttDate}</strong> بروز <strong>{dayName}</strong>) ادارے کی طرف سے مقرر کردہ <strong>{isWeeklyOff ? 'ہفتہ وار چھٹی' : 'عام تعطیل'}</strong> ({holidayTitle}) کا دن ہے۔
+                <br />
+                اس دن عملے کی باقاعدہ حاضری کے اختیارات بند رکھے گئے ہیں تاکہ غلط اندراج نہ ہو۔
+              </p>
+              <button
+                type="button"
+                id="staffHolidayOverrideBtn"
+                className="staff-holiday-btn-override"
+                onClick={() => setAllowHolidayOverride(true)}
+              >
+                اگر ادارہ کھلا تھا تو استثنائی طور پر حاضری درج کریں
+              </button>
+            </div>
           ) : staffMembers.length === 0 ? (
             <p style={{ textAlign: "center", color: "var(--muted)" }}>سسٹم میں کوئی استاد موجود نہیں ہے۔ کلاسز والے حصے میں جا کر کلاس اور استاد شامل کریں۔</p>
           ) : (
@@ -1903,7 +2022,7 @@ export default function Attendance() {
           )}
         </div>
 
-        {staffAttDate && staffMembers.length > 0 && (
+        {(!isHoliday || hasSavedStaffRecordsForDate || allowHolidayOverride) && staffAttDate && staffMembers.length > 0 && (
           <div className="btn-container" style={{ marginTop: "20px", gap: "14px", justifyContent: "center" }}>
             {staffSession === 'checkin' && (
               <button onClick={saveStaffAttendanceCheckIn} className="checkin-save-btn" style={{ display: "inline-block" }}>
