@@ -6,7 +6,6 @@ import {
   buildReportData,
   rowsForAllSlips
 } from './PayrollSlipLogic';
-import { roundHalfUp } from './PayrollCalc';
 
 describe('PayrollSlipLogic Pure Utility', () => {
   describe('formatDays', () => {
@@ -79,6 +78,7 @@ describe('PayrollSlipLogic Pure Utility', () => {
       expect(slip.net_salary).toBe(30000);
       expect(slip.rounding_display).toBe(0);
       expect(slip.show_rounding).toBe(false);
+      expect(slip.was_clamped).toBe(false);
       expect(slip.consistent).toBe(true);
       expect(slip.has_encashment).toBe(false);
       expect(slip.has_bonus).toBe(false);
@@ -110,6 +110,7 @@ describe('PayrollSlipLogic Pure Utility', () => {
       expect(slip.absence_deduction).toBe(2000);
       expect(slip.net_salary).toBe(28000);
       expect(slip.rounding_display).toBe(0);
+      expect(slip.was_clamped).toBe(false);
       expect(slip.consistent).toBe(true);
     });
 
@@ -288,6 +289,7 @@ describe('PayrollSlipLogic Pure Utility', () => {
       const validSlip = buildSlipData(validRow, {}, runFixture, madrasaName);
       expect(validSlip.rounding_display).toBe(-0.15);
       expect(Math.abs(validSlip.rounding_display)).toBeLessThanOrEqual(1);
+      expect(validSlip.show_rounding).toBe(true);
       expect(validSlip.consistent).toBe(true);
 
       // Corrupted row (tampered net_salary)
@@ -299,8 +301,66 @@ describe('PayrollSlipLogic Pure Utility', () => {
       expect(corruptedSlip.consistent).toBe(false);
     });
 
-    // No Latin letters in any generated Urdu label
-    it('contains no Latin letters in any generated Urdu label property', () => {
+    // Fix 1: Clamped Teacher Tests
+    describe('Clamped Teacher (Fix 1)', () => {
+      it('all-absent + advance 5000 fixture prints with was_clamped=true and consistent=true', () => {
+        const clampedRow = {
+          id: 'item-clamped',
+          staff_id: 'staff-clamped',
+          base_salary: 30000,
+          working_days_in_month: 30,
+          payable_working_days: 30,
+          absent_days: 30,
+          absence_deduction: 30000,
+          advance_deduction: 5000,
+          net_salary: 0
+        };
+        const staff = { id: 'staff-clamped', name: 'استاذ معذور', staff_code: '15' };
+
+        const slip = buildSlipData(clampedRow, staff, runFixture, madrasaName);
+        expect(slip.computed_net).toBe(-5000);
+        expect(slip.was_clamped).toBe(true);
+        expect(slip.consistent).toBe(true);
+        expect(slip.show_rounding).toBe(false);
+        expect(slip.clamped_message_urdu).toBe('کٹوتیاں قابل ادائیگی رقم سے زیادہ تھیں، خالص تنخواہ صفر کی گئی');
+      });
+
+      it('tampered non-zero net still blocks when computed_net is negative', () => {
+        const tamperedRow = {
+          id: 'item-tampered-nonzero',
+          staff_id: 'staff-bad',
+          base_salary: 30000,
+          working_days_in_month: 30,
+          payable_working_days: 30,
+          absent_days: 30,
+          absence_deduction: 30000,
+          advance_deduction: 5000,
+          net_salary: 2000 // Tampered: should be 0 (clamped), but non-zero given
+        };
+        const slip = buildSlipData(tamperedRow, {}, runFixture, madrasaName);
+        expect(slip.computed_net).toBe(-5000);
+        expect(slip.was_clamped).toBe(false);
+        expect(slip.consistent).toBe(false);
+      });
+
+      it('net 0 with positive computed_net still blocks as inconsistent', () => {
+        const tamperedZeroRow = {
+          id: 'item-tampered-zero',
+          staff_id: 'staff-zero',
+          base_salary: 30000,
+          working_days_in_month: 30,
+          payable_working_days: 30,
+          net_salary: 0 // Tampered: computed net is 30000, but net_salary entered as 0
+        };
+        const slip = buildSlipData(tamperedZeroRow, {}, runFixture, madrasaName);
+        expect(slip.computed_net).toBe(30000);
+        expect(slip.was_clamped).toBe(false);
+        expect(slip.consistent).toBe(false);
+      });
+    });
+
+    // Fix 5: Labels (Urdu only)
+    it('contains updated Urdu labels without Latin letters', () => {
       const row = {
         base_salary: 30000,
         working_days_in_month: 30,
@@ -310,17 +370,26 @@ describe('PayrollSlipLogic Pure Utility', () => {
         paid_on: '2026-08-01'
       };
       const slip = buildSlipData(row, { name: 'استاذ', staff_code: '1' }, runFixture, 'مدرسہ');
-      const urduLabels = [
+
+      expect(slip.base_pay_title_urdu).toBe('قابل ادائیگی ایام کی تنخواہ');
+      expect(slip.late_minutes_label_urdu).toBe('تاخیر کے قابل کٹوتی منٹ');
+      expect(slip.early_minutes_label_urdu).toBe('جلدی روانگی کے قابل کٹوتی منٹ');
+      expect(slip.rounding_label_urdu).toBe('روپے کی گول بندی');
+
+      const allLabels = [
         slip.title_urdu,
         slip.attendance_section_title,
         slip.time_section_title,
         slip.earnings_section_title,
         slip.deductions_section_title,
+        slip.base_pay_title_urdu,
+        slip.late_minutes_label_urdu,
+        slip.early_minutes_label_urdu,
         slip.rounding_label_urdu,
         slip.payment_status_urdu
       ];
 
-      for (const label of urduLabels) {
+      for (const label of allLabels) {
         expect(label).toBeTruthy();
         expect(/[a-zA-Z]/.test(label)).toBe(false);
       }
@@ -340,6 +409,8 @@ describe('PayrollSlipLogic Pure Utility', () => {
         id: 'r-10',
         staff_id: 's-10',
         base_salary: 30000,
+        working_days_in_month: 30,
+        payable_working_days: 30,
         absence_deduction: 0,
         unpaid_leave_deduction: 0,
         time_deduction: 0,
@@ -353,6 +424,8 @@ describe('PayrollSlipLogic Pure Utility', () => {
         id: 'r-2',
         staff_id: 's-2',
         base_salary: 25000,
+        working_days_in_month: 30,
+        payable_working_days: 30,
         absence_deduction: 1000,
         unpaid_leave_deduction: 0,
         time_deduction: 200,
@@ -366,6 +439,8 @@ describe('PayrollSlipLogic Pure Utility', () => {
         id: 'r-9',
         staff_id: 's-9',
         base_salary: 28000,
+        working_days_in_month: 30,
+        payable_working_days: 30,
         absence_deduction: 0,
         unpaid_leave_deduction: 500,
         time_deduction: 0,
@@ -406,31 +481,55 @@ describe('PayrollSlipLogic Pure Utility', () => {
       const sumIndividualNets = rowsFixture.reduce((acc, r) => acc + r.net_salary, 0);
       expect(report.totals.net_total).toBe(sumIndividualNets);
       expect(report.consistent).toBe(true);
+      expect(report.inconsistent_staff_names).toEqual([]);
     });
 
-    it('flips consistent to false if totals are tampered or row mismatch occurs', () => {
-      // Inconsistent rows where net_salary differs from components
-      const tamperedRows = [
+    // Fix 2: Report consistency test
+    it('flips report.consistent to false and lists affected staff name when a row is tampered', () => {
+      const validReport = buildReportData(rowsFixture, staffListFixture, runFixture);
+      expect(validReport.consistent).toBe(true);
+      expect(validReport.inconsistent_staff_names).toEqual([]);
+
+      // Tamper row for استاذ دو (s-2)
+      const tamperedRows = rowsFixture.map((r) => {
+        if (r.staff_id === 's-2') {
+          return {
+            ...r,
+            net_salary: 99999 // Corrupted figure
+          };
+        }
+        return r;
+      });
+
+      const corruptedReport = buildReportData(tamperedRows, staffListFixture, runFixture);
+      expect(corruptedReport.consistent).toBe(false);
+      expect(corruptedReport.inconsistent_staff_names).toContain('استاذ دو');
+    });
+
+    it('counts clamped rows as consistent in buildReportData', () => {
+      const staffListWithClamped = [
+        ...staffListFixture,
+        { id: 's-clamped', staff_code: '12', name: 'استاذ معذور' }
+      ];
+      const rowsWithClamped = [
         ...rowsFixture,
         {
-          id: 'r-tampered',
-          staff_id: 's-99',
+          id: 'r-clamped',
+          staff_id: 's-clamped',
           base_salary: 20000,
-          absence_deduction: 0,
-          unpaid_leave_deduction: 0,
-          time_deduction: 0,
-          bonus: 0,
-          advance_deduction: 0,
-          other_deduction: 0,
-          net_salary: 999999, // Wildly wrong net_salary
+          working_days_in_month: 30,
+          payable_working_days: 30,
+          absent_days: 30,
+          absence_deduction: 20000,
+          advance_deduction: 3000,
+          net_salary: 0,
           payment_status: 'unpaid'
         }
       ];
 
-      // totalsFromRows vs tampered buildReportData consistency
-      const normalReport = buildReportData(tamperedRows, staffListFixture, runFixture);
-      // Even if internal net_total matches totalsFromRows, let's verify tolerance logic
-      expect(typeof normalReport.consistent).toBe('boolean');
+      const report = buildReportData(rowsWithClamped, staffListWithClamped, runFixture);
+      expect(report.consistent).toBe(true);
+      expect(report.inconsistent_staff_names).toEqual([]);
     });
   });
 });
