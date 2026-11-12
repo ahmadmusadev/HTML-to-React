@@ -40,11 +40,12 @@ export default function PayrollPrint({
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  const hasPrintedRef = useRef(false);
+  const printedTargetsRef = useRef(new Set());
 
   // Extract target information safely
   const targetType = target?.type || null;
   const targetStaffId = target?.staffId || null;
+  const targetKey = target ? `${target.type || ''}_${target.staffId || ''}` : '';
 
   // Single Slip Resolution
   const singleSlipData = useMemo(() => {
@@ -83,14 +84,32 @@ export default function PayrollPrint({
     return [];
   }, [targetType, singleSlipData, reportData]);
 
+  // Handle Escape key to manually close/dismiss print
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (typeof onCloseRef.current === 'function') {
+          onCloseRef.current();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   // Trigger browser print dialog safely (at most once per mounted target)
   useEffect(() => {
     if (!isAuthorized || !target || !isConsistent) {
       return;
     }
     if (typeof window === 'undefined') return;
-    if (hasPrintedRef.current) return;
-    hasPrintedRef.current = true;
+    if (printedTargetsRef.current.has(targetKey)) {
+      return;
+    }
+
+    let printCalled = false;
 
     const cleanup = () => {
       window.removeEventListener('afterprint', cleanup);
@@ -102,14 +121,21 @@ export default function PayrollPrint({
     window.addEventListener('afterprint', cleanup);
 
     const frameId = requestAnimationFrame(() => {
+      if (printedTargetsRef.current.has(targetKey)) {
+        return;
+      }
+      printedTargetsRef.current.add(targetKey);
+      printCalled = true;
       window.print();
     });
 
     return () => {
       cancelAnimationFrame(frameId);
-      window.removeEventListener('afterprint', cleanup);
+      if (!printCalled) {
+        window.removeEventListener('afterprint', cleanup);
+      }
     };
-  }, [isAuthorized, target, isConsistent]);
+  }, [isAuthorized, target, isConsistent, targetKey]);
 
   // 1. Role-based guard: refuse render for non-admin
   if (!isAuthorized || !target) {
@@ -145,9 +171,20 @@ export default function PayrollPrint({
 
   return (
     <>
-      {/* Non-blocking on-screen toast */}
+      {/* Non-blocking on-screen toast with manual close button */}
       <div className="payroll-print-toast" aria-live="polite">
-        پرنٹ تیار ہو رہا ہے...
+        <span>پرنٹ تیار ہو رہا ہے...</span>
+        <button
+          type="button"
+          className="payroll-print-toast-btn"
+          onClick={() => {
+            if (typeof onCloseRef.current === 'function') {
+              onCloseRef.current();
+            }
+          }}
+        >
+          بند کریں
+        </button>
       </div>
 
       {/* Printable Output via Portal */}

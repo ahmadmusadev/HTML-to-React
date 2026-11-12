@@ -239,6 +239,114 @@ describe('PayrollPrint Component - Stage 6b Printable Slips & Reports', () => {
     expect(printSpy).toHaveBeenCalledTimes(1);
   });
 
+  // Stage 6c Tests: StrictMode safety, target switching, manual close & Escape
+  it('calls window.print exactly once inside React.StrictMode', async () => {
+    mockRole = 'admin';
+    render(
+      <React.StrictMode>
+        <PayrollPrint
+          run={runFixture}
+          rows={rowsFixture}
+          staffList={staffListFixture}
+          madrasaName="جامعہ دارالعلوم"
+          target={{ type: 'slip', staffId: 'staff-1' }}
+          onClose={vi.fn()}
+        />
+      </React.StrictMode>
+    );
+
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    expect(printSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('prints again when target switches from one teacher slip to another while mounted', async () => {
+    mockRole = 'admin';
+    const { rerender } = render(
+      <PayrollPrint
+        run={runFixture}
+        rows={rowsFixture}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'slip', staffId: 'staff-1' }}
+        onClose={vi.fn()}
+      />
+    );
+
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    expect(printSpy).toHaveBeenCalledTimes(1);
+
+    // Switch target to staff-2
+    rerender(
+      <PayrollPrint
+        run={runFixture}
+        rows={rowsFixture}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'slip', staffId: 'staff-2' }}
+        onClose={vi.fn()}
+      />
+    );
+
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    expect(printSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('clicking "بند کریں" calls onClose and unmounts the portal content', async () => {
+    mockRole = 'admin';
+    const onClose = vi.fn();
+    const { unmount } = render(
+      <PayrollPrint
+        run={runFixture}
+        rows={rowsFixture}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'slip', staffId: 'staff-1' }}
+        onClose={onClose}
+      />
+    );
+
+    const closeBtn = screen.getByRole('button', { name: 'بند کریں' });
+    act(() => {
+      closeBtn.click();
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    unmount();
+    const portalRoot = document.getElementById('print-portal-root');
+    expect(portalRoot ? portalRoot.children.length : 0).toBe(0);
+  });
+
+  it('pressing Escape key calls onClose', async () => {
+    mockRole = 'admin';
+    const onClose = vi.fn();
+    render(
+      <PayrollPrint
+        run={runFixture}
+        rows={rowsFixture}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'slip', staffId: 'staff-1' }}
+        onClose={onClose}
+      />
+    );
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('inconsistent data displays Urdu error banner and does NOT call window.print', async () => {
     mockRole = 'admin';
     const corruptedRows = [

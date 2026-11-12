@@ -86,18 +86,50 @@
   left: 24px;
   background-color: #0f172a;
   color: #f8fafc;
-  padding: 10px 18px;
+  padding: 8px 14px;
   border-radius: 6px;
   font-size: 14px;
   z-index: 99998;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   direction: rtl;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 [data-theme="dark"] .payroll-print-toast {
   background-color: #1e293b;
   color: #f8fafc;
   border: 1px solid #334155;
+}
+
+.payroll-print-toast-btn {
+  background: #334155 !important;
+  color: #f8fafc !important;
+  border: 1px solid #475569 !important;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.payroll-print-toast-btn:hover {
+  background: #475569 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .payroll-print-toast-btn {
+  background: #27272a !important;
+  color: #f4f4f5 !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme="dark"] .payroll-print-toast-btn:hover {
+  background: #3f3f46 !important;
+  color: #ffffff !important;
 }
 
 /* --- Printable Document Container --- */
