@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import PayrollPrint from './PayrollPrint';
 import PayrollRun from './PayrollRun';
 
@@ -51,7 +51,7 @@ vi.mock('../lib/payrollRunsApi', () => ({
   updateItemNotes: vi.fn()
 }));
 
-describe('PayrollPrint Component - Stage 6 Printable Slips & Reports', () => {
+describe('PayrollPrint Component - Stage 6b Printable Slips & Reports', () => {
   const runFixture = { id: 'run-1', month_date: '2026-07-01', status: 'finalized' };
   const staffListFixture = [
     { id: 'staff-1', staff_code: '1', name: 'قاری محمد احمد' },
@@ -196,6 +196,49 @@ describe('PayrollPrint Component - Stage 6 Printable Slips & Reports', () => {
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
+  // Fix 3: Re-render with new onClose callback calls print at most once
+  it('calls window.print at most once even when parent re-renders with a new onClose function', async () => {
+    mockRole = 'admin';
+    const onClose1 = vi.fn();
+    const { rerender } = render(
+      <PayrollPrint
+        run={runFixture}
+        rows={rowsFixture}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'slip', staffId: 'staff-1' }}
+        onClose={onClose1}
+      />
+    );
+
+    // Initial frame
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    expect(printSpy).toHaveBeenCalledTimes(1);
+
+    // Re-render with a new onClose reference
+    const onClose2 = vi.fn();
+    rerender(
+      <PayrollPrint
+        run={runFixture}
+        rows={rowsFixture}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'slip', staffId: 'staff-1' }}
+        onClose={onClose2}
+      />
+    );
+
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    // Still exactly 1 call!
+    expect(printSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('inconsistent data displays Urdu error banner and does NOT call window.print', async () => {
     mockRole = 'admin';
     const corruptedRows = [
@@ -227,6 +270,40 @@ describe('PayrollPrint Component - Stage 6 Printable Slips & Reports', () => {
 
     expect(printSpy).not.toHaveBeenCalled();
     expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  // Fix 2: Report inconsistency with affected staff names in UI banner
+  it('inconsistent report displays Urdu error banner with affected staff names and does not print', async () => {
+    mockRole = 'admin';
+    const corruptedRows = [
+      rowsFixture[0],
+      {
+        ...rowsFixture[1],
+        net_salary: 99999 // Corrupted net salary for مولانا عبد اللہ
+      }
+    ];
+
+    render(
+      <PayrollPrint
+        run={runFixture}
+        rows={corruptedRows}
+        staffList={staffListFixture}
+        madrasaName="جامعہ دارالعلوم"
+        target={{ type: 'report' }}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText('اعداد و شمار میں فرق ہے، پرنٹ روک دیا گیا')
+    ).toBeInTheDocument();
+    expect(screen.getByText(/مولانا عبد اللہ/)).toBeInTheDocument();
+
+    await act(async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+    });
+
+    expect(printSpy).not.toHaveBeenCalled();
   });
 
   it('portal content is cleaned up after afterprint event', async () => {
