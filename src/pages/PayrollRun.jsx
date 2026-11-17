@@ -43,7 +43,8 @@ import {
   totalsFromRows,
   toUrduRunError,
   formatRupees,
-  localTodayIso
+  localTodayIso,
+  canFinalizeMonth
 } from '../utils/PayrollRunLogic';
 import './PayrollRun.css';
 
@@ -51,12 +52,19 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
   const { role } = useAuth();
   const isAuthorized = role === 'admin' || role === 'super_admin';
 
-  // Current local month YYYY-MM
-  const todayMonth = useMemo(() => localTodayIso(new Date()).slice(0, 7), []);
-  const todayDate = useMemo(() => localTodayIso(new Date()), []);
+  // Current local date & month
+  const todayIso = localTodayIso(new Date());
+  const todayMonth = useMemo(() => todayIso.slice(0, 7), [todayIso]);
+  const todayDate = todayIso;
 
   // Selected Month State
   const [selectedMonth, setSelectedMonth] = useState(todayMonth);
+
+  // Month finalization eligibility check
+  const finalizeMonthCheck = useMemo(
+    () => canFinalizeMonth({ month: selectedMonth, todayIso }),
+    [selectedMonth, todayIso]
+  );
 
   // References to keep current inputs across silent action reloads
   const adjustmentsRef = useRef({});
@@ -460,6 +468,11 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
   const handleInitiateFinalize = async () => {
     if (!currentRun || currentRun.status !== 'draft' || !savedSettings) return;
 
+    if (!finalizeMonthCheck.allowed) {
+      setErrorMsg(finalizeMonthCheck.reasonUrdu);
+      return;
+    }
+
     // 1. Validate inputs before calling the engine
     const v = validateAllAdjustments(adjustments, staffMap);
     if (!v.valid) {
@@ -824,6 +837,14 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
           {/* Draft Banners: Blockers, Incomplete attendance, warnings */}
           {currentRun.status === 'draft' && (
             <>
+              {!finalizeMonthCheck.allowed && finalizeMonthCheck.reasonUrdu && (
+                <div className="payroll-run-banner payroll-run-banner-warning">
+                  <div className="payroll-run-banner-title">
+                    {finalizeMonthCheck.reasonUrdu}
+                  </div>
+                </div>
+              )}
+
               {finalizeBlockers.length > 0 && (
                 <div className="payroll-run-banner payroll-run-banner-warning">
                   <div className="payroll-run-banner-title">
@@ -1116,7 +1137,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                   <button
                     type="button"
                     className="payroll-run-btn-success"
-                    disabled={actionLoading || finalizeBlockers.length > 0}
+                    disabled={actionLoading || finalizeBlockers.length > 0 || !finalizeMonthCheck.allowed}
                     onClick={handleInitiateFinalize}
                   >
                     فائنل کریں

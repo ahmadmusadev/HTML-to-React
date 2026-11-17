@@ -209,6 +209,65 @@ export function canCreateRunForMonth({
 }
 
 /**
+ * Checks if a payroll month can be finalized based on the current local date.
+ * Rule: A month may be finalized only when todayIso >= the last calendar day of that month.
+ * Pure function: takes parameters, no new Date() without args, no toISOString().
+ *
+ * @param {object} params
+ * @param {string} params.month 'YYYY-MM'
+ * @param {string} params.todayIso 'YYYY-MM-DD'
+ * @returns {{ allowed: boolean, lastDay: string|null, reasonUrdu: string }}
+ */
+export function canFinalizeMonth(params) {
+  if (!params || typeof params !== 'object') {
+    return {
+      allowed: false,
+      lastDay: null,
+      reasonUrdu: 'درکار معلومات درست نہیں ہیں۔'
+    };
+  }
+
+  const { month, todayIso } = params;
+  if (typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return {
+      allowed: false,
+      lastDay: null,
+      reasonUrdu: 'درکار معلومات درست نہیں ہیں۔'
+    };
+  }
+
+  const [yStr, mStr] = month.split('-');
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10);
+  let daysCount;
+  if (m === 2) {
+    const isLeap = (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+    daysCount = isLeap ? 29 : 28;
+  } else if (m === 4 || m === 6 || m === 9 || m === 11) {
+    daysCount = 30;
+  } else {
+    daysCount = 31;
+  }
+  const lastDay = `${month}-${String(daysCount).padStart(2, '0')}`;
+
+  if (typeof todayIso !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(todayIso)) {
+    return {
+      allowed: false,
+      lastDay,
+      reasonUrdu: 'درکار معلومات درست نہیں ہیں۔'
+    };
+  }
+
+  const allowed = todayIso >= lastDay;
+  const reasonUrdu = allowed
+    ? ''
+    : `مہینہ مکمل ہونے سے پہلے فائنل نہیں ہو سکتا۔ فائنل کرنے کی پہلی تاریخ: ${dateLabelUrdu(lastDay)}`;
+
+  return { allowed, lastDay, reasonUrdu };
+}
+
+
+/**
  * Builds adjustments map from an array of engine items or stored rows.
  *
  * @param {Array} itemsOrRows
