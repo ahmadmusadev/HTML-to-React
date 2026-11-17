@@ -10,7 +10,11 @@
       // This script takes the current url and converts the path and query
       // into a query string, then redirects the browser to the new url with
       // the query string and hash fragment
+      var isGitHubPages = window.location.hostname.endsWith('github.io');
       var pathSegmentsToKeep = 1;
+      if (!isGitHubPages) {
+        pathSegmentsToKeep = 0;
+      }
 
       var l = window.location;
       l.replace(

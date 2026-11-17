@@ -404,7 +404,8 @@ export function MainHeader({
 
 export function MainLayout({ theme, toggleTheme }) {
   const location = useLocation();
-  const isAuthPage = ['/login', '/forgot-password', '/reset-password'].includes(location.pathname);
+  const currentPath = location.pathname.replace(/\/+$/, '') || '/';
+  const isAuthPage = ['/login', '/forgot-password', '/reset-password'].includes(currentPath);
   const { pendingSyncCount, madrasaError } = useMadrasa();
   const { role } = useAuth();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);

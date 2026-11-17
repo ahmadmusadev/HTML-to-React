@@ -116,6 +116,31 @@ describe('Login Component', () => {
     });
   });
 
+  it('handles unconfirmed email error with clear Urdu guidance message', async () => {
+    const unconfirmedErr = new Error('Email not confirmed');
+    unconfirmedErr.code = 'email_not_confirmed';
+    mockSignIn.mockRejectedValue(unconfirmedErr);
+
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>
+    );
+
+    const emailInput = screen.getByLabelText(/ای میل ایڈریس/i);
+    const passwordInput = screen.getByPlaceholderText('پاس ورڈ درج کریں');
+
+    fireEvent.change(emailInput, { target: { value: 'unconfirmed@test.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'pass123' } });
+
+    const submitBtn = screen.getByRole('button', { name: /سسٹم میں لاگ ان کریں/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/ای میل کی تصدیق نہیں ہوئی/i);
+    });
+  });
+
   it('redirects to target when isAuthenticated is true', () => {
     vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
       signIn: mockSignIn,
