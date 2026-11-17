@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { supabase, isValidUUID } from './supabaseClient';
+import { supabase, isValidUUID, sanitizeSupabaseUrl } from './supabaseClient';
 
 describe('Supabase Client Initializer', () => {
+  it('sanitizes various Supabase URL formats including trailing slashes and /rest/v1 paths', () => {
+    expect(sanitizeSupabaseUrl('https://errqnjvcyoetkbwbuxjk.supabase.co/rest/v1/')).toBe('https://errqnjvcyoetkbwbuxjk.supabase.co');
+    expect(sanitizeSupabaseUrl('https://errqnjvcyoetkbwbuxjk.supabase.co/rest/v1')).toBe('https://errqnjvcyoetkbwbuxjk.supabase.co');
+    expect(sanitizeSupabaseUrl('https://errqnjvcyoetkbwbuxjk.supabase.co/')).toBe('https://errqnjvcyoetkbwbuxjk.supabase.co');
+    expect(sanitizeSupabaseUrl('  https://errqnjvcyoetkbwbuxjk.supabase.co   ')).toBe('https://errqnjvcyoetkbwbuxjk.supabase.co');
+    expect(sanitizeSupabaseUrl('')).toBe('');
+    expect(sanitizeSupabaseUrl(null)).toBe('');
+  });
   it('exports a valid Supabase client instance', () => {
     expect(supabase).toBeDefined();
     expect(supabase.auth).toBeDefined();

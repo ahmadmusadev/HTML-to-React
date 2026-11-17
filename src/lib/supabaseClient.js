@@ -3,7 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const rawSupabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const supabaseUrl = rawSupabaseUrl ? rawSupabaseUrl.trim().replace(/\/+$/, '') : '';
+export const sanitizeSupabaseUrl = (url) => {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+  }
+};
+
+const supabaseUrl = sanitizeSupabaseUrl(rawSupabaseUrl);
 const supabaseAnonKey = rawSupabaseAnonKey ? rawSupabaseAnonKey.trim() : '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
