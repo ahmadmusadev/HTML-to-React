@@ -403,6 +403,7 @@ export function MainHeader({
 }
 
 export function MainLayout({ theme, toggleTheme }) {
+  const showAiUstad = import.meta.env.VITE_SHOW_AI_USTAD === 'true';
   const location = useLocation();
   const currentPath = location.pathname.replace(/\/+$/, '') || '/';
   const isAuthPage = ['/login', '/forgot-password', '/reset-password'].includes(currentPath);
@@ -489,7 +490,9 @@ export function MainLayout({ theme, toggleTheme }) {
           {(role === 'admin' || role === 'super_admin') && (
             <NavLink to="/payroll" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>تنخواہ</NavLink>
           )}
-          <NavLink to="/ai-listen" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
+          {showAiUstad && (
+            <NavLink to="/ai-listen" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
+          )}
         </nav>
 
         {madrasaError && (
@@ -540,7 +543,16 @@ export function MainLayout({ theme, toggleTheme }) {
             <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
             <Route path="/payroll" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']}><Payroll /></ProtectedRoute>} />
             <Route path="/exams" element={<ProtectedRoute><Exams /></ProtectedRoute>} />
-            <Route path="/ai-listen" element={<ProtectedRoute><AiListen /></ProtectedRoute>} />
+            <Route
+              path="/ai-listen"
+              element={
+                showAiUstad ? (
+                  <ProtectedRoute><AiListen /></ProtectedRoute>
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
             <Route path="/fees" element={<ProtectedRoute><Fees /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
             <Route path="/chatbot-preview" element={<div style={{ padding: '40px', textAlign: 'center' }}><h2>اے آئی رہنما (AI Rehnuma) — لائیو چیٹ بوٹ پری ویو</h2><p style={{ color: '#64748b', marginTop: '8px' }}>تیرتے ہوئے چیٹ بوٹ آئیکن اور پاپ اپ ڈائیلاگ کو اسکرین پر کہیں بھی ماؤس یا ٹچ سے کھینچ کر منتقل کریں۔</p></div>} />
