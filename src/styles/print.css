@@ -157,5 +157,102 @@
   }
 }
 
+/* --- Named Page Definitions for Payroll Printing per AGENTS.md --- */
+@page payroll-slip {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@page payroll-report {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  /* Scoped rules for body.printing-payroll: hide the app and show print portal */
+  body.printing-payroll #root,
+  body.printing-payroll .wrap,
+  body.printing-payroll .tab-content,
+  body.printing-payroll .card {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  body.printing-payroll {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #FFFFFF !important;
+    overflow: visible !important;
+  }
+
+  body.printing-payroll #print-portal-root {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #FFFFFF !important;
+    overflow: visible !important;
+  }
+}
+
+@media print {
+  /* --- Print Isolation for Payroll Printing per Stage 6f --- */
+  body.printing-payroll #print-portal-root,
+  body.printing-payroll #print-portal-root * {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+
+  body.printing-payroll #print-portal-root table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    display: table !important;
+  }
+
+  body.printing-payroll #print-portal-root thead {
+    display: table-header-group !important;
+  }
+
+  body.printing-payroll #print-portal-root tbody {
+    display: table-row-group !important;
+  }
+
+  body.printing-payroll #print-portal-root tfoot {
+    display: table-footer-group !important;
+  }
+
+  body.printing-payroll #print-portal-root tr {
+    display: table-row !important;
+  }
+
+  body.printing-payroll #print-portal-root th,
+  body.printing-payroll #print-portal-root td {
+    display: table-cell !important;
+    border-color: #bdbdbd !important;
+  }
+}
+
+
 
 

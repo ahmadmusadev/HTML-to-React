@@ -14,7 +14,8 @@ import {
   totalsFromRows,
   toUrduRunError,
   validateAllAdjustments,
-  hasUnsavedChanges
+  hasUnsavedChanges,
+  canFinalizeMonth
 } from './PayrollRunLogic';
 
 describe('PayrollRunLogic - Pure Helpers & Business Logic', () => {
@@ -512,6 +513,106 @@ describe('PayrollRunLogic - Pure Helpers & Business Logic', () => {
       const adjs = { 't-1': { bonus: '1000', advance_deduction: '500', other_deduction: '0' } };
       const notes = { 't-1': 'نیا غیر محفوظ نوٹ' };
       expect(hasUnsavedChanges(stored, adjs, notes)).toBe(true);
+    });
+  });
+
+  describe('canFinalizeMonth - Safety Rule for Month Finalization (Stage 6g)', () => {
+    it('blocks finalization when today is mid-month', () => {
+      const res = canFinalizeMonth({ month: '2026-11', todayIso: '2026-11-15' });
+      expect(res.allowed).toBe(false);
+      expect(res.lastDay).toBe('2026-11-30');
+      expect(res.reasonUrdu).toContain('مہینہ مکمل ہونے سے پہلے فائنل نہیں ہو سکتا');
+      expect(res.reasonUrdu).toContain('30 نومبر 2026');
+      expect(/[a-zA-Z]/.test(res.reasonUrdu)).toBe(false);
+    });
+
+    it('blocks finalization on the day before the last day of the month', () => {
+      const res = canFinalizeMonth({ month: '2026-11', todayIso: '2026-11-29' });
+      expect(res.allowed).toBe(false);
+      expect(res.lastDay).toBe('2026-11-30');
+      expect(res.reasonUrdu).toContain('30 نومبر 2026');
+    });
+
+    it('allows finalization when today equals the last day of the month', () => {
+      const res = canFinalizeMonth({ month: '2026-11', todayIso: '2026-11-30' });
+      expect(res.allowed).toBe(true);
+      expect(res.lastDay).toBe('2026-11-30');
+      expect(res.reasonUrdu).toBe('');
+    });
+
+    it('allows finalization in a later month', () => {
+      const res = canFinalizeMonth({ month: '2026-11', todayIso: '2026-12-05' });
+      expect(res.allowed).toBe(true);
+      expect(res.lastDay).toBe('2026-11-30');
+      expect(res.reasonUrdu).toBe('');
+    });
+
+    it('blocks finalization when the requested month is in the future', () => {
+      const res = canFinalizeMonth({ month: '2026-12', todayIso: '2026-11-30' });
+      expect(res.allowed).toBe(false);
+      expect(res.lastDay).toBe('2026-12-31');
+      expect(res.reasonUrdu).toContain('31 دسمبر 2026');
+    });
+
+    it('correctly handles leap year February 2028 (last day 29)', () => {
+      const beforeLeapEnd = canFinalizeMonth({ month: '2028-02', todayIso: '2028-02-28' });
+      expect(beforeLeapEnd.allowed).toBe(false);
+      expect(beforeLeapEnd.lastDay).toBe('2028-02-29');
+      expect(beforeLeapEnd.reasonUrdu).toContain('29 فروری 2028');
+
+      const onLeapEnd = canFinalizeMonth({ month: '2028-02', todayIso: '2028-02-29' });
+      expect(onLeapEnd.allowed).toBe(true);
+      expect(onLeapEnd.lastDay).toBe('2028-02-29');
+      expect(onLeapEnd.reasonUrdu).toBe('');
+    });
+
+    it('correctly handles non-leap February 2027 (last day 28)', () => {
+      const beforeNonLeapEnd = canFinalizeMonth({ month: '2027-02', todayIso: '2027-02-27' });
+      expect(beforeNonLeapEnd.allowed).toBe(false);
+      expect(beforeNonLeapEnd.lastDay).toBe('2027-02-28');
+      expect(beforeNonLeapEnd.reasonUrdu).toContain('28 فروری 2027');
+
+      const onNonLeapEnd = canFinalizeMonth({ month: '2027-02', todayIso: '2027-02-28' });
+      expect(onNonLeapEnd.allowed).toBe(true);
+      expect(onNonLeapEnd.lastDay).toBe('2027-02-28');
+      expect(onNonLeapEnd.reasonUrdu).toBe('');
+    });
+
+    it('correctly handles 30-day and 31-day months', () => {
+      // 30-day months: April (04), June (06), September (09), November (11)
+      expect(canFinalizeMonth({ month: '2026-04', todayIso: '2026-04-30' }).allowed).toBe(true);
+      expect(canFinalizeMonth({ month: '2026-04', todayIso: '2026-04-29' }).allowed).toBe(false);
+      expect(canFinalizeMonth({ month: '2026-06', todayIso: '2026-06-30' }).lastDay).toBe('2026-06-30');
+      expect(canFinalizeMonth({ month: '2026-09', todayIso: '2026-09-30' }).lastDay).toBe('2026-09-30');
+
+      // 31-day months: January, March, May, July, August, October, December
+      expect(canFinalizeMonth({ month: '2026-01', todayIso: '2026-01-31' }).allowed).toBe(true);
+      expect(canFinalizeMonth({ month: '2026-01', todayIso: '2026-01-30' }).allowed).toBe(false);
+      expect(canFinalizeMonth({ month: '2026-05', todayIso: '2026-05-31' }).lastDay).toBe('2026-05-31');
+      expect(canFinalizeMonth({ month: '2026-07', todayIso: '2026-07-31' }).lastDay).toBe('2026-07-31');
+      expect(canFinalizeMonth({ month: '2026-08', todayIso: '2026-08-31' }).lastDay).toBe('2026-08-31');
+      expect(canFinalizeMonth({ month: '2026-10', todayIso: '2026-10-31' }).lastDay).toBe('2026-10-31');
+      expect(canFinalizeMonth({ month: '2026-12', todayIso: '2026-12-31' }).lastDay).toBe('2026-12-31');
+    });
+
+    it('rejects invalid inputs safely', () => {
+      expect(canFinalizeMonth(null).allowed).toBe(false);
+      expect(canFinalizeMonth({}).allowed).toBe(false);
+      expect(canFinalizeMonth({ month: 'invalid', todayIso: '2026-11-30' }).allowed).toBe(false);
+      expect(canFinalizeMonth({ month: '2026-13', todayIso: '2026-11-30' }).allowed).toBe(false);
+      expect(canFinalizeMonth({ month: '2026-11', todayIso: 'invalid' }).allowed).toBe(false);
+      expect(canFinalizeMonth({ month: '2026-11', todayIso: null }).allowed).toBe(false);
+
+      const invalidRes = canFinalizeMonth({ month: 'invalid', todayIso: 'invalid' });
+      expect(invalidRes.allowed).toBe(false);
+      expect(/[a-zA-Z]/.test(invalidRes.reasonUrdu)).toBe(false);
+    });
+
+    it('ensures reasonUrdu contains no Latin letters and mentions the last calendar day', () => {
+      const res = canFinalizeMonth({ month: '2026-11', todayIso: '2026-11-10' });
+      expect(res.allowed).toBe(false);
+      expect(res.reasonUrdu).toBe('مہینہ مکمل ہونے سے پہلے فائنل نہیں ہو سکتا۔ فائنل کرنے کی پہلی تاریخ: 30 نومبر 2026');
+      expect(/[a-zA-Z]/.test(res.reasonUrdu)).toBe(false);
     });
   });
 

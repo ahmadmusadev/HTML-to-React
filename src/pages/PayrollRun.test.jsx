@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PayrollRun from './PayrollRun';
 import * as AuthContextModule from '../context/AuthContext';
@@ -39,6 +39,8 @@ const MOCK_SETTINGS = {
 
 describe('PayrollRun Component - Stage 5 Monthly Payroll', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-30T12:00:00Z'));
     vi.restoreAllMocks();
     localStorage.clear();
     sessionStorage.clear();
@@ -90,6 +92,10 @@ describe('PayrollRun Component - Stage 5 Monthly Payroll', () => {
     vi.spyOn(payrollApi, 'fetchHolidays').mockResolvedValue([]);
     vi.spyOn(payrollApi, 'fetchLeaveOpening').mockResolvedValue([]);
   });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
 
   describe('Access Control & Defense in Depth', () => {
     it('blocks teacher role from fetching data and renders unauthorized notice', async () => {
@@ -909,6 +915,158 @@ describe('PayrollRun Component - Stage 5 Monthly Payroll', () => {
       });
 
       expect(staff2NoteInput.value).toBe('غیر محفوظ شدہ تبدیل شدہ نوٹ دوم');
+    });
+  });
+
+  describe('canFinalizeMonth UI Restrictions (Stage 6g)', () => {
+    it('with today mid-month the finalize button is disabled, the Urdu reason is visible, and calling the finalize flow never calls finalizeRun', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-11-15T12:00:00Z'));
+
+      const draftRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'draft' };
+      const completeAtt = getWorkingDates('2026-11', [5], []).map((date) => ({
+        staff_id: 'staff-1',
+        date,
+        status: 'present',
+        late_minutes: 0,
+        early_leave_minutes: 0
+      }));
+      const storedItems = [
+        {
+          id: 'item-1',
+          staff_id: 'staff-1',
+          base_salary: 30000,
+          net_salary: 30000,
+          payable_working_days: completeAtt.length,
+          present_days: completeAtt.length,
+          absent_days: 0,
+          paid_leave_days: 0,
+          unpaid_leave_days: 0,
+          absence_deduction: 0,
+          unpaid_leave_deduction: 0,
+          time_deduction: 0,
+          bonus: 0,
+          advance_deduction: 0,
+          other_deduction: 0,
+          notes: '',
+          payment_status: 'unpaid'
+        }
+      ];
+
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockResolvedValue(draftRun);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue(storedItems);
+      vi.spyOn(payrollRunsApi, 'fetchMonthAttendance').mockResolvedValue(completeAtt);
+      const finalizeSpy = vi.spyOn(payrollRunsApi, 'finalizeRun');
+
+      render(
+        <PayrollRun
+          staffList={[MOCK_STAFF[0]]}
+          activeMadrasaId={VALID_MADRASA_ID}
+        />
+      );
+
+      // Verify finalize button is disabled
+      await waitFor(() => {
+        const finalizeBtn = screen.getByRole('button', { name: 'فائنل کریں' });
+        expect(finalizeBtn).toBeDisabled();
+      });
+
+      // Verify Urdu reason banner is visible with expected text
+      expect(
+        screen.getByText('مہینہ مکمل ہونے سے پہلے فائنل نہیں ہو سکتا۔ فائنل کرنے کی پہلی تاریخ: 30 نومبر 2026')
+      ).toBeInTheDocument();
+
+      // Trigger click on finalize button and verify finalizeRun is NEVER called
+      fireEvent.click(screen.getByRole('button', { name: 'فائنل کریں' }));
+      expect(finalizeSpy).not.toHaveBeenCalled();
+      expect(screen.queryByText('پے رول فائنل کرنے کی تصدیق')).not.toBeInTheDocument();
+
+      vi.useRealTimers();
+    });
+
+    it('with today after the month end and no other blockers the button is enabled and finalizeRun is called on confirm', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      // Set date to December 2026 (after November end)
+      vi.setSystemTime(new Date('2026-12-05T12:00:00Z'));
+
+      const draftRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'draft' };
+      const finalizedRun = { id: VALID_RUN_ID, month: '2026-11-01', status: 'finalized' };
+      const completeAtt = getWorkingDates('2026-11', [5], []).map((date) => ({
+        staff_id: 'staff-1',
+        date,
+        status: 'present',
+        late_minutes: 0,
+        early_leave_minutes: 0
+      }));
+      const storedItems = [
+        {
+          id: 'item-1',
+          staff_id: 'staff-1',
+          base_salary: 30000,
+          net_salary: 30000,
+          payable_working_days: completeAtt.length,
+          present_days: completeAtt.length,
+          absent_days: 0,
+          paid_leave_days: 0,
+          unpaid_leave_days: 0,
+          absence_deduction: 0,
+          unpaid_leave_deduction: 0,
+          time_deduction: 0,
+          bonus: 0,
+          advance_deduction: 0,
+          other_deduction: 0,
+          notes: '',
+          payment_status: 'unpaid'
+        }
+      ];
+
+      let runState = draftRun;
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockImplementation(async () => runState);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue(storedItems);
+      vi.spyOn(payrollRunsApi, 'fetchMonthAttendance').mockResolvedValue(completeAtt);
+      const finalizeSpy = vi.spyOn(payrollRunsApi, 'finalizeRun').mockImplementation(async () => {
+        runState = finalizedRun;
+        return finalizedRun;
+      });
+
+      render(
+        <PayrollRun
+          staffList={[MOCK_STAFF[0]]}
+          activeMadrasaId={VALID_MADRASA_ID}
+        />
+      );
+
+      // Change input to November 2026 since current todayMonth is December 2026
+      const monthInput = screen.getByLabelText(/مہینہ منتخب کریں/);
+      fireEvent.change(monthInput, { target: { value: '2026-11' } });
+
+      // Button should now be enabled
+      await waitFor(() => {
+        const finalizeBtn = screen.getByRole('button', { name: 'فائنل کریں' });
+        expect(finalizeBtn).not.toBeDisabled();
+      });
+
+      // No month-end blocker banner should be displayed
+      expect(
+        screen.queryByText(/مہینہ مکمل ہونے سے پہلے فائنل نہیں ہو سکتا/)
+      ).not.toBeInTheDocument();
+
+      // Click finalize button to open confirm modal
+      fireEvent.click(screen.getByRole('button', { name: 'فائنل کریں' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('پے رول فائنل کرنے کی تصدیق')).toBeInTheDocument();
+      });
+
+      // Click confirmation button in modal
+      const confirmBtn = screen.getByRole('button', { name: 'ہاں، فائنل کریں' });
+      fireEvent.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(finalizeSpy).toHaveBeenCalledWith(expect.anything(), VALID_MADRASA_ID, VALID_RUN_ID);
+      });
+
+      vi.useRealTimers();
     });
   });
 
