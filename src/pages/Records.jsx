@@ -3,6 +3,7 @@ import { useMadrasa } from '../context/MadrasaContext';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import { isValidUUID } from '../lib/supabaseClient';
 import StudentParaRecords from '../components/StudentParaRecords';
+import CumulativeHifzForm from '../components/CumulativeHifzForm';
 
 export const mapSupabaseToUi = (row, studentLookup = {}) => {
   if (!row) return null;
@@ -221,9 +222,18 @@ export default function Records() {
         >
           ششماہی تعلیمی ریکارڈز و خلاصہ
         </button>
+        <button
+          type="button"
+          className={`records-subtab-btn ${subTab === 'cumulativeForm' ? 'active' : ''}`}
+          onClick={() => setSubTab('cumulativeForm')}
+        >
+          مجموعی حفظ کارکردگی فارم
+        </button>
       </div>
 
-      {subTab === 'paraRecords' ? (
+      {subTab === 'cumulativeForm' ? (
+        <CumulativeHifzForm />
+      ) : subTab === 'paraRecords' ? (
         <StudentParaRecords />
       ) : (
         <>

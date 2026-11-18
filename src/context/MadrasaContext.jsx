@@ -1410,6 +1410,144 @@ export function MadrasaProvider({ children }) {
     }
   };
 
+  // --- Hifz Completion Forms (مجموعی حفظ کارکردگی فارم) ---
+  const fetchHifzCompletionFormsFromSupabase = async (madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId)) {
+      const localStore = loadMadrasaData('hf_hifz_completion_forms_v1', madrasaId) || {};
+      return Object.values(localStore);
+    }
+    try {
+      const { data, error } = await supabase
+        .from('hifz_completion_forms')
+        .select('*')
+        .eq('madrasa_id', madrasaId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[MadrasaContext] Error fetching hifz completion forms:', error.message);
+        const localStore = loadMadrasaData('hf_hifz_completion_forms_v1', madrasaId) || {};
+        return Object.values(localStore);
+      }
+      if (data) {
+        try {
+          const localStore = {};
+          data.forEach(item => {
+            if (item.student_id) localStore[item.student_id] = item;
+          });
+          saveMadrasaData('hf_hifz_completion_forms_v1', localStore, madrasaId);
+        } catch (cErr) {}
+        return data;
+      }
+    } catch (e) {
+      console.warn('[MadrasaContext] Exception in fetchHifzCompletionFormsFromSupabase:', e);
+    }
+    const localStore = loadMadrasaData('hf_hifz_completion_forms_v1', madrasaId) || {};
+    return Object.values(localStore);
+  };
+
+  const fetchHifzCompletionFormForStudent = async (studentId, madrasaId = activeMadrasaId) => {
+    if (!studentId) return null;
+    if (isValidUUID(madrasaId) && isValidUUID(studentId)) {
+      try {
+        const { data, error } = await supabase
+          .from('hifz_completion_forms')
+          .select('*')
+          .eq('madrasa_id', madrasaId)
+          .eq('student_id', studentId)
+          .maybeSingle();
+
+        if (error) {
+          console.warn('[MadrasaContext] Error fetching completion form for student:', error.message);
+        } else if (data) {
+          try {
+            const localStore = loadMadrasaData('hf_hifz_completion_forms_v1', madrasaId) || {};
+            localStore[studentId] = data;
+            saveMadrasaData('hf_hifz_completion_forms_v1', localStore, madrasaId);
+          } catch (cErr) {}
+          return data;
+        }
+      } catch (e) {
+        console.warn('[MadrasaContext] Exception in fetchHifzCompletionFormForStudent:', e);
+      }
+    }
+    const localStore = loadMadrasaData('hf_hifz_completion_forms_v1', madrasaId) || {};
+    return localStore[studentId] || null;
+  };
+
+  const saveHifzCompletionFormToSupabase = async (formData, madrasaId = activeMadrasaId) => {
+    if (!formData || !formData.student_id) {
+      throw new Error('طالب علم کا انتخاب لازمی ہے۔');
+    }
+    const studentId = formData.student_id;
+    const isRemote = isValidUUID(madrasaId) && isValidUUID(studentId);
+    const payload = {
+      ...formData,
+      madrasa_id: madrasaId,
+      student_id: studentId,
+      updated_at: new Date().toISOString()
+    };
+
+    if (isRemote) {
+      try {
+        const { data, error } = await supabase
+          .from('hifz_completion_forms')
+          .upsert(payload, { onConflict: 'madrasa_id,student_id' })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('[MadrasaContext] Supabase upsert hifz_completion_forms error:', error);
+          if (isNetworkError(error)) {
+            enqueueWrite({
+              table: 'hifz_completion_forms',
+              operation: 'upsert',
+              payload,
+              onConflict: 'madrasa_id,student_id',
+              madrasaId
+            });
+          } else {
+            throw error;
+          }
+        }
+        const savedResult = data || payload;
+        const localStore = loadMadrasaData('hf_hifz_completion_forms_v1', madrasaId) || {};
+        localStore[studentId] = savedResult;
+        saveMadrasaData('hf_hifz_completion_forms_v1', localStore, madrasaId);
+        return savedResult;
+      } catch (e) {
+        console.error('[MadrasaContext] Error saving hifz completion form:', e);
+        const localStore = loadMadrasaData('hf_hifz_completion_forms_v1', madrasaId) || {};
+        localStore[studentId] = payload;
+        saveMadrasaData('hf_hifz_completion_forms_v1', localStore, madrasaId);
+        throw new Error(e.message || 'فارم محفوظ کرنے میں خرابی پیش آئی۔');
+      }
+    } else {
+      const localStore = loadMadrasaData('hf_hifz_completion_forms_v1', madrasaId) || {};
+      localStore[studentId] = payload;
+      saveMadrasaData('hf_hifz_completion_forms_v1', localStore, madrasaId);
+      return payload;
+    }
+  };
+
+  const deleteHifzCompletionFormFromSupabase = async (studentId, madrasaId = activeMadrasaId) => {
+    if (!studentId) return;
+    if (isValidUUID(madrasaId) && isValidUUID(studentId)) {
+      try {
+        const { error } = await supabase
+          .from('hifz_completion_forms')
+          .delete()
+          .eq('madrasa_id', madrasaId)
+          .eq('student_id', studentId);
+        if (error) console.warn('[MadrasaContext] Error deleting hifz completion form:', error.message);
+      } catch (e) {
+        console.warn('[MadrasaContext] Exception deleting hifz completion form:', e);
+      }
+    }
+    const localStore = loadMadrasaData('hf_hifz_completion_forms_v1', madrasaId) || {};
+    delete localStore[studentId];
+    saveMadrasaData('hf_hifz_completion_forms_v1', localStore, madrasaId);
+  };
+
   // --- Monthly Evaluations (ماہانہ جائزہ) ---
   const fetchMonthlyEvaluationsFromSupabase = async (filters = {}, madrasaId = activeMadrasaId) => {
     if (!isValidUUID(madrasaId)) {
@@ -3069,6 +3207,10 @@ export function MadrasaProvider({ children }) {
       syncDailyAttendanceToHifzRecords,
       fetchStudentParaRecordFromSupabase,
       saveStudentParaRecordToSupabase,
+      fetchHifzCompletionFormsFromSupabase,
+      fetchHifzCompletionFormForStudent,
+      saveHifzCompletionFormToSupabase,
+      deleteHifzCompletionFormFromSupabase,
       isMadrasaDisabled: activeMadrasa?.status === 'disabled'
     }}>
       {children}
