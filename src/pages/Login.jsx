@@ -14,7 +14,9 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/';
+  const rawFrom = location.state?.from?.pathname;
+  const isAuthRoute = (path) => ['/login', '/forgot-password', '/reset-password'].includes((path || '').replace(/\/+$/, ''));
+  const from = (rawFrom && !isAuthRoute(rawFrom)) ? rawFrom : '/';
 
   // If already authenticated, redirect to home/target
   useEffect(() => {
@@ -32,19 +34,41 @@ export default function Login() {
       await signIn(email.trim(), password.trim());
       navigate(from, { replace: true });
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('[Supabase Auth Error]', {
+        message: err?.message,
+        status: err?.status,
+        code: err?.code,
+        name: err?.name,
+        error: err
+      });
+
+      const msg = (err?.message || '').toLowerCase();
+      const code = (err?.code || '').toLowerCase();
 
       const isServerError =
         err?.status >= 500 ||
         err?.name === 'AuthRetryableFetchError' ||
         err?.message === 'SERVER_CONNECTION_ERROR' ||
-        err?.message?.includes('Database error') ||
-        err?.message?.includes('schema') ||
-        err?.message?.includes('Failed to fetch') ||
+        msg.includes('database error') ||
+        msg.includes('schema') ||
+        msg.includes('failed to fetch') ||
         (typeof navigator !== 'undefined' && !navigator.onLine);
+
+      const isEmailNotConfirmed =
+        code === 'email_not_confirmed' ||
+        msg.includes('email not confirmed');
+
+      const isRateLimited =
+        err?.status === 429 ||
+        code === 'over_request_rate_limit' ||
+        msg.includes('rate limit');
 
       if (isServerError) {
         setErrorMsg('سرور یا ڈیٹا بیس سے رابطہ نہیں ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔');
+      } else if (isEmailNotConfirmed) {
+        setErrorMsg('ای میل کی تصدیق نہیں ہوئی! براہ کرم اپنی ای میل میں تصدیقی لنک چیک کریں یا ایڈمن سے رابطہ کریں۔');
+      } else if (isRateLimited) {
+        setErrorMsg('بہت زیادہ کوششیں کی گئیں۔ براہ کرم کچھ دیر بعد دوبارہ کوشش کریں۔');
       } else {
         setErrorMsg('غلط ای میل یا پاس ورڈ! براہ کرم درست معلومات درج کریں۔');
       }
