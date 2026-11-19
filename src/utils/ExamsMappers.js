@@ -33,23 +33,27 @@ export const calculatePct = (achievedRuku, targetRuku) => {
 
 /**
  * Returns Urdu grade label based on percentage.
- * >= 80%: ممتاز, >= 60%: اچھا, >= 40%: اوسط, < 40%: ضعیف
+ * >= 90%: ممتاز, >= 80%: جید جدا, >= 70%: جید, >= 60%: مقبول, < 60%: فیل
  */
 export const getExamGrade = (pct) => {
   const p = Number(pct) || 0;
-  if (p >= 80) return 'ممتاز';
-  if (p >= 60) return 'اچھا';
-  if (p >= 40) return 'اوسط';
-  return 'ضعیف';
+  if (p >= 90) return 'ممتاز';
+  if (p >= 80) return 'جید جدا';
+  if (p >= 70) return 'جید';
+  if (p >= 60) return 'مقبول';
+  return 'فیل';
 };
 
 /**
  * Returns color code corresponding to percentage tier.
- * >= 80%: #15803d (green), >= 60%: #b45309 (amber), < 60%: #dc2626 (red)
+ * >= 80%: #15803d (green - اعلیٰ), >= 70%: #1d4ed8 (blue), >= 60%: #b45309 (amber), < 60%: #dc2626 (red - کمزور)
  */
 export const getPctColor = (pct) => {
   const p = Number(pct) || 0;
-  return p >= 80 ? '#15803d' : p >= 60 ? '#b45309' : '#dc2626';
+  if (p >= 80) return '#15803d';
+  if (p >= 70) return '#1d4ed8';
+  if (p >= 60) return '#b45309';
+  return '#dc2626';
 };
 
 /**

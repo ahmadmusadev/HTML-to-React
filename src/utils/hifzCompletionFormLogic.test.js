@@ -62,23 +62,40 @@ describe('hifzCompletionFormLogic', () => {
   });
 
   describe('getGradeFromScore', () => {
-    it('maps scores to correct Urdu grades with default 100 total marks', () => {
+    it('maps scores to correct Urdu grades with default 100 total marks (general)', () => {
       expect(getGradeFromScore(95)).toBe('ممتاز');
-      expect(getGradeFromScore(80)).toBe('ممتاز');
-      expect(getGradeFromScore(75)).toBe('جید جدا');
-      expect(getGradeFromScore(63)).toBe('جید');
-      expect(getGradeFromScore(55)).toBe('مقبول');
-      expect(getGradeFromScore(40)).toBe('راسب');
+      expect(getGradeFromScore(90)).toBe('ممتاز');
+      expect(getGradeFromScore(85)).toBe('جید جدا');
+      expect(getGradeFromScore(80)).toBe('جید جدا');
+      expect(getGradeFromScore(75)).toBe('جید');
+      expect(getGradeFromScore(70)).toBe('جید');
+      expect(getGradeFromScore(65)).toBe('مقبول');
+      expect(getGradeFromScore(60)).toBe('مقبول');
+      expect(getGradeFromScore(55)).toBe('فیل');
+      expect(getGradeFromScore(40)).toBe('فیل');
       expect(getGradeFromScore(0)).toBe('—');
       expect(getGradeFromScore('')).toBe('—');
     });
 
-    it('calculates grades correctly when custom total marks are provided', () => {
-      // Out of 50: 40/50 is 80% (ممتاز), 35/50 is 70% (جید جدا), 25/50 is 50% (مقبول), 20/50 is 40% (راسب)
-      expect(getGradeFromScore(40, 50)).toBe('ممتاز');
-      expect(getGradeFromScore(35, 50)).toBe('جید جدا');
-      expect(getGradeFromScore(25, 50)).toBe('مقبول');
-      expect(getGradeFromScore(20, 50)).toBe('راسب');
+    it('calculates grades correctly when custom total marks are provided (general)', () => {
+      // Out of 50: 45/50 is 90% (ممتاز), 40/50 is 80% (جید جدا), 35/50 is 70% (جید), 30/50 is 60% (مقبول), 25/50 is 50% (فیل)
+      expect(getGradeFromScore(45, 50)).toBe('ممتاز');
+      expect(getGradeFromScore(40, 50)).toBe('جید جدا');
+      expect(getGradeFromScore(35, 50)).toBe('جید');
+      expect(getGradeFromScore(30, 50)).toBe('مقبول');
+      expect(getGradeFromScore(25, 50)).toBe('فیل');
+    });
+
+    it('maps scores to correct Urdu grades for Wifaq-ul-Madaris exam', () => {
+      expect(getGradeFromScore(85, 100, 'wifaq')).toBe('ممتاز');
+      expect(getGradeFromScore(80, 100, 'wifaq')).toBe('ممتاز');
+      expect(getGradeFromScore(75, 100, 'wifaq')).toBe('جید جدا');
+      expect(getGradeFromScore(60, 100, 'wifaq')).toBe('جید جدا');
+      expect(getGradeFromScore(55, 100, 'wifaq')).toBe('جید');
+      expect(getGradeFromScore(50, 100, 'wifaq')).toBe('جید');
+      expect(getGradeFromScore(45, 100, 'wifaq')).toBe('مقبول');
+      expect(getGradeFromScore(40, 100, 'wifaq')).toBe('مقبول');
+      expect(getGradeFromScore(35, 100, 'wifaq')).toBe('فیل');
     });
   });
 

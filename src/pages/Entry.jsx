@@ -6,6 +6,7 @@ import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import SubjectAnalysisModal from '../components/SubjectAnalysisModal';
+import { calculateClassGrading, getIndividualStudentGrade } from '../utils/classGrading';
 import './Entry.css';
 
 // Constants from edit.html
@@ -405,12 +406,13 @@ export default function Entry() {
         return { g: 'غلط', cls: 'me-total-invalid', color: '#dc2626' };
       }
     }
-    if (pct > 100) return { g: 'غلط', cls: 'me-total-invalid', color: '#dc2626' };
-    if (pct >= 90) return { g: 'A+', cls: 'me-total-a', color: '#15803d' };
-    if (pct >= 75) return { g: 'A', cls: 'me-total-a', color: '#15803d' };
-    if (pct >= 60) return { g: 'B', cls: 'me-total-b', color: '#1d4ed8' };
-    if (pct >= 50) return { g: 'C', cls: 'me-total-c', color: '#d97706' };
-    return { g: 'D', cls: 'me-total-d', color: '#dc2626' };
+    if (pct > 100 || pct < 0) return { g: 'غلط', cls: 'me-total-invalid', color: '#dc2626' };
+    const res = getIndividualStudentGrade(pct);
+    let cls = 'me-total-d';
+    if (pct >= 80) cls = 'me-total-a';
+    else if (pct >= 70) cls = 'me-total-b';
+    else if (pct >= 60) cls = 'me-total-c';
+    return { g: res.grade, cls, color: res.color };
   };
 
   const switchTab = (tab) => {
@@ -668,7 +670,7 @@ export default function Entry() {
         const gradeObj = item.gradeObj || meGrade(pct);
         row.total = Number(item.total) || 0;
         row.pct = Number(pct.toFixed(1));
-        row.grade = gradeObj?.g || 'D';
+        row.grade = gradeObj?.g || 'فیل';
         return row;
       });
 
@@ -1396,7 +1398,8 @@ export default function Entry() {
     
     if (!exam) { setCrResultsData('empty'); return; }
     const avg = exam.students.reduce((s, r) => s + (r.pct || 0), 0) / exam.students.length;
-    setCrResultsData({ clsName: cls ? (cls.name || cls.className || crClassSelect) : '', month: crMonth, year: crYear, exam, avg });
+    const classGrading = calculateClassGrading(exam.students);
+    setCrResultsData({ clsName: cls ? (cls.name || cls.className || crClassSelect) : '', month: crMonth, year: crYear, exam, avg, classGrading });
   };
 
   // --- 4. Student Report ---
@@ -1429,7 +1432,9 @@ export default function Entry() {
     
     const totalStudents = exams.reduce((s, e) => s + e.students.length, 0);
     const overallAvg = exams.reduce((s, e) => s + e.students.reduce((ss, st) => ss + (st.pct || 0), 0), 0) / totalStudents;
-    setIrResultsData({ month: irMonth, year: irYear, exams, totalStudents, overallAvg });
+    const allStudents = exams.flatMap(e => e.students || []);
+    const instituteGrading = calculateClassGrading(allStudents);
+    setIrResultsData({ month: irMonth, year: irYear, exams, totalStudents, overallAvg, instituteGrading });
   };
 
   return (
@@ -2253,7 +2258,28 @@ export default function Entry() {
                   <div style={{ textAlign: "center", borderBottom: "2px solid var(--accent)", paddingBottom: "12px", marginBottom: "16px" }}>
                     <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--accent)" }}>ماہانہ جائزہ رپورٹ</div>
                     <div style={{ fontSize: "1rem", color: "var(--muted)" }}>{crResultsData.exam.className} — {crResultsData.month} {crResultsData.year}</div>
-                    <div style={{ fontSize: "0.9rem", color: "var(--accent-2)", marginTop: "4px" }}>اوسط: {crResultsData.avg.toFixed(1)}% ({meGrade(crResultsData.avg).g}) | طلباء: {crResultsData.exam.students.length}</div>
+                    <div style={{ display: "flex", justifyContent: "center", gap: "16px", alignItems: "center", flexWrap: "wrap", marginTop: "6px" }}>
+                      <span style={{ fontSize: "0.95rem", color: "var(--accent-2)", fontWeight: "700" }}>اوسط: {crResultsData.avg.toFixed(1)}%</span>
+                      {crResultsData.classGrading && crResultsData.classGrading.classGrade !== '—' && (
+                        <span style={{ fontWeight: "800", color: crResultsData.classGrading.classGradeColor, background: "var(--bg-card, #f8fafc)", padding: "3px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                          درجہ کلاس: {crResultsData.classGrading.classGrade}
+                        </span>
+                      )}
+                      <span style={{ fontSize: "0.88rem", color: "var(--muted)" }}>طلباء: {crResultsData.exam.students.length}</span>
+                    </div>
+                    {crResultsData.classGrading && crResultsData.classGrading.total > 0 && (
+                      <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap", marginTop: "10px", fontSize: "0.85rem" }}>
+                        <span style={{ padding: "3px 8px", borderRadius: "4px", background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", fontWeight: "600" }}>
+                          اعلیٰ: {crResultsData.classGrading.aCount} ({crResultsData.classGrading.aPct}%)
+                        </span>
+                        <span style={{ padding: "3px 8px", borderRadius: "4px", background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", fontWeight: "600" }}>
+                          اوسط: {crResultsData.classGrading.mCount} ({crResultsData.classGrading.mPct}%)
+                        </span>
+                        <span style={{ padding: "3px 8px", borderRadius: "4px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", fontWeight: "600" }}>
+                          کمزور: {crResultsData.classGrading.wCount} ({crResultsData.classGrading.wPct}%)
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
@@ -2276,7 +2302,7 @@ export default function Entry() {
                               <td style={{ textAlign: "center" }}>{s.para || '—'}</td>
                               <td style={{ textAlign: "center" }}>{s.tarkoo || '—'}</td>
                               <td style={{ textAlign: "center", fontWeight: "700" }}>{s.total}</td>
-                              <td style={{ textAlign: "center", fontWeight: "700", color: sg.color }}>{s.pct}% ({s.grade})</td>
+                              <td style={{ textAlign: "center", fontWeight: "700", color: sg.color }}>{s.pct}% ({sg.g})</td>
                             </tr>
                           )
                         })}
@@ -2337,7 +2363,7 @@ export default function Entry() {
                               <td style={{ textAlign: "center" }}>{s?.para || '—'}</td>
                               <td style={{ textAlign: "center" }}>{s?.tarkoo || '—'}</td>
                               <td style={{ textAlign: "center", fontWeight: "700" }}>{s?.total ?? 0}</td>
-                              <td style={{ textAlign: "center", fontWeight: "700", color: sg.color }}>{s?.pct ?? 0}% ({s?.grade || '—'})</td>
+                              <td style={{ textAlign: "center", fontWeight: "700", color: sg.color }}>{s?.pct ?? 0}% ({sg.g})</td>
                             </tr>
                           )
                         })}
@@ -2404,7 +2430,9 @@ export default function Entry() {
                   <div className="ir-stat-card ir-stat-amber">
                     <div style={{ fontSize: "0.85rem", color: "#b45309" }}>مجموعی اوسط</div>
                     <div style={{ fontSize: "2rem", fontWeight: "800", color: "#b45309" }}>{irResultsData.overallAvg.toFixed(1)}%</div>
-                    <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#b45309" }}>{meGrade(irResultsData.overallAvg).g}</div>
+                    <div style={{ fontSize: "0.9rem", fontWeight: "700", color: irResultsData.instituteGrading?.classGradeColor || "#b45309" }}>
+                      {irResultsData.instituteGrading?.classGrade ? `درجہ: ${irResultsData.instituteGrading.classGrade}` : meGrade(irResultsData.overallAvg).g}
+                    </div>
                   </div>
                 </div>
 
@@ -2419,14 +2447,14 @@ export default function Entry() {
                     <tbody>
                       {irResultsData.exams.map((exam, i) => {
                         const avg = exam.students.reduce((s, r) => s + (r.pct || 0), 0) / exam.students.length;
-                        const gd = meGrade(avg);
+                        const clsGrading = calculateClassGrading(exam.students);
                         const best = exam.students.reduce((a, b) => (a.pct || 0) >= (b.pct || 0) ? a : b, exam.students[0]);
                         return (
                           <tr key={i}>
                             <td style={{ textAlign: "right", fontWeight: "700", padding: "10px 14px" }}>{exam.className}</td>
                             <td style={{ textAlign: "center", padding: "10px" }}>{exam.students.length}</td>
-                            <td style={{ textAlign: "center", padding: "10px", fontWeight: "700", color: gd.color }}>{avg.toFixed(1)}%</td>
-                            <td style={{ textAlign: "center", padding: "10px", fontWeight: "700" }}>{gd.g}</td>
+                            <td style={{ textAlign: "center", padding: "10px", fontWeight: "700" }}>{avg.toFixed(1)}%</td>
+                            <td style={{ textAlign: "center", padding: "10px", fontWeight: "800", color: clsGrading.classGradeColor }}>{clsGrading.classGrade}</td>
                             <td style={{ textAlign: "right", padding: "10px" }}>{best?.name || '—'} ({best?.pct || 0}%)</td>
                           </tr>
                         )

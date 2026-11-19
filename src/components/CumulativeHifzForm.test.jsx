@@ -96,9 +96,9 @@ describe('CumulativeHifzForm (مجموعی حفظ کارکردگی فارم)', (
 
     const marksInputs = screen.getAllByPlaceholderText('نمبرات');
     expect(marksInputs.length).toBeGreaterThan(0);
-    fireEvent.change(marksInputs[0], { target: { value: '83' } });
+    fireEvent.change(marksInputs[0], { target: { value: '93' } });
 
-    // 83 is >= 80, so grade should be ممتاز
+    // 93 is >= 90, so grade should be ممتاز
     await waitFor(() => {
       expect(screen.getByDisplayValue('ممتاز')).toBeInTheDocument();
     });
@@ -189,9 +189,9 @@ describe('CumulativeHifzForm (مجموعی حفظ کارکردگی فارم)', (
     fireEvent.change(totalMarksInputs[0], { target: { value: '50' } });
     expect(totalMarksInputs[0]).toHaveValue(50);
 
-    // Enter 40 marks out of 50 (80%), so grade should be ممتاز
+    // Enter 45 marks out of 50 (90%), so grade should be ممتاز
     const marksInputs = screen.getAllByPlaceholderText('نمبرات');
-    fireEvent.change(marksInputs[0], { target: { value: '40' } });
+    fireEvent.change(marksInputs[0], { target: { value: '45' } });
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('ممتاز')).toBeInTheDocument();

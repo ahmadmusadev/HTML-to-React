@@ -134,19 +134,30 @@ export function toHijriDateString(dateStr) {
  * 
  * @param {number|string} score
  * @param {number|string} [totalMarks=100]
+ * @param {string} [examType='general'] - 'general' | 'wifaq'
  * @returns {string} Grade in Urdu
  */
-export function getGradeFromScore(score, totalMarks = 100) {
+export function getGradeFromScore(score, totalMarks = 100, examType = 'general') {
   if (score === '' || score === null || score === undefined) return '—';
   const num = Number(score);
   if (isNaN(num) || num <= 0) return '—';
   const total = Number(totalMarks) > 0 ? Number(totalMarks) : 100;
   const percentage = (num / total) * 100;
-  if (percentage >= 80) return 'ممتاز';
-  if (percentage >= 70) return 'جید جدا';
-  if (percentage >= 60) return 'جید';
-  if (percentage >= 50) return 'مقبول';
-  return 'راسب';
+
+  if (examType === 'wifaq') {
+    if (percentage >= 80) return 'ممتاز';
+    if (percentage >= 60) return 'جید جدا';
+    if (percentage >= 50) return 'جید';
+    if (percentage >= 40) return 'مقبول';
+    return 'فیل';
+  }
+
+  // General / Shishmahi / Salana
+  if (percentage >= 90) return 'ممتاز';
+  if (percentage >= 80) return 'جید جدا';
+  if (percentage >= 70) return 'جید';
+  if (percentage >= 60) return 'مقبول';
+  return 'فیل';
 }
 
 /**
