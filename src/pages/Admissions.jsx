@@ -4,6 +4,7 @@ import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
 import PrintPortal from '../components/PrintPortal';
 import BulkStudentImportExport from '../components/BulkStudentImportExport';
+import { initializeDepartmentStartDates } from '../utils/hifzCompletionFormLogic';
 import './Admissions.css';
 import './BulkStudentImportExport.css';
 
@@ -123,6 +124,13 @@ export const mapSupabaseToUi = (row) => {
     fatherNameEnglish: fatherEng,
     admFatherNameEnglish: fatherEng,
     admDepartment: row.department || row.section || '',
+    initialDepartment: row.initial_department || row.department || row.section || '',
+    qaidaStartDate: row.qaida_start_date || '',
+    qaidaCompletionDate: row.qaida_completion_date || '',
+    naziraStartDate: row.nazira_start_date || '',
+    naziraCompletionDate: row.nazira_completion_date || '',
+    hifzStartDate: row.hifz_start_date || '',
+    hifzCompletionDate: row.hifz_completion_date || '',
     admClass: row.class_id || '',
     admGender: row.gender || 'لڑکا',
     admDobFull: row.date_of_birth || '',
@@ -184,6 +192,17 @@ export const mapUiToSupabase = (data) => {
   const name_english = (data.admNameEnglish || data.nameEnglish || '').trim().toUpperCase();
   const father_name_english = (data.admFatherNameEnglish || data.fatherNameEnglish || '').trim().toUpperCase();
 
+  const dept = data.admDepartment || data.department || null;
+  const milestones = initializeDepartmentStartDates(data.admDate, dept, {
+    initial_department: data.initialDepartment || data.initial_department,
+    qaida_start_date: data.qaidaStartDate || data.qaida_start_date,
+    qaida_completion_date: data.qaidaCompletionDate || data.qaida_completion_date,
+    nazira_start_date: data.naziraStartDate || data.nazira_start_date,
+    nazira_completion_date: data.naziraCompletionDate || data.nazira_completion_date,
+    hifz_start_date: data.hifzStartDate || data.hifz_start_date,
+    hifz_completion_date: data.hifzCompletionDate || data.hifz_completion_date
+  });
+
   return {
     roll_number: data.admRegNo || null,
     admission_date: data.admDate || null,
@@ -191,7 +210,14 @@ export const mapUiToSupabase = (data) => {
     name_english: name_english || null,
     father_name: father_name,
     father_name_english: father_name_english || null,
-    department: data.admDepartment || data.department || null,
+    department: dept,
+    initial_department: milestones.initial_department || null,
+    qaida_start_date: milestones.qaida_start_date || null,
+    qaida_completion_date: milestones.qaida_completion_date || null,
+    nazira_start_date: milestones.nazira_start_date || null,
+    nazira_completion_date: milestones.nazira_completion_date || null,
+    hifz_start_date: milestones.hifz_start_date || null,
+    hifz_completion_date: milestones.hifz_completion_date || null,
     class_id: data.admClass || data.class_id || null,
     gender: data.admGender || 'لڑکا',
     date_of_birth: date_of_birth,
@@ -324,6 +350,7 @@ export default function Admissions() {
 
   const initialFormData = {
     admRegNo: '', admDate: '', admName: '', admNameEnglish: '', admFatherName: '', admFatherNameEnglish: '', admDepartment: '', admClass: '', admGender: 'لڑکا',
+    initialDepartment: '', qaidaStartDate: '', qaidaCompletionDate: '', naziraStartDate: '', naziraCompletionDate: '', hifzStartDate: '', hifzCompletionDate: '',
     admDobDay: '', admDobMonth: '', admDobYear: '', admAge: '', admBForm: '', admAddress: '',
     admPrevMadrasa: '', admPrevEducation: '', admPrevLeavingReason: '',
     fatherName: '', fatherCnic: '', fatherEdu: '', fatherOcc: '', fatherMobile: '', fatherWhatsapp: '', fatherEmail: '', fatherIncome: '', isFatherGuardian: 'yes',
@@ -486,6 +513,16 @@ export default function Admissions() {
       const next = { ...prev, [field]: val };
       if (['admDobDay', 'admDobMonth', 'admDobYear', 'admDate'].includes(field)) {
         next.admAge = calculateAge(next.admDobDay, next.admDobMonth, next.admDobYear, next.admDate);
+      }
+      if (field === 'admDepartment' || field === 'admDate') {
+        const d = next.admDepartment;
+        const date = next.admDate;
+        if (d && date) {
+          if (d === 'قاعدہ' && !next.qaidaStartDate) next.qaidaStartDate = date;
+          else if (d === 'ناظرہ' && !next.naziraStartDate) next.naziraStartDate = date;
+          else if (d === 'حفظ' && !next.hifzStartDate) next.hifzStartDate = date;
+          if (!next.initialDepartment) next.initialDepartment = d;
+        }
       }
       return next;
     });
@@ -848,6 +885,17 @@ export default function Admissions() {
         }
       } else if (name === 'admDate' && next.admDobYear && next.admDobMonth && next.admDobDay) {
         next.admAge = calculateAge(next.admDobDay, next.admDobMonth, next.admDobYear, val);
+      }
+
+      if (name === 'admDepartment' || name === 'admDate') {
+        const d = next.admDepartment;
+        const date = next.admDate;
+        if (d && date) {
+          if (d === 'قاعدہ' && !next.qaidaStartDate) next.qaidaStartDate = date;
+          else if (d === 'ناظرہ' && !next.naziraStartDate) next.naziraStartDate = date;
+          else if (d === 'حفظ' && !next.hifzStartDate) next.hifzStartDate = date;
+          if (!next.initialDepartment) next.initialDepartment = d;
+        }
       }
 
       return next;
@@ -2371,6 +2419,21 @@ export default function Admissions() {
                     <input type="text" name="admPrevLeavingReason" value={profileModal.admPrevLeavingReason || ''} onChange={handleProfileChange} />
                   </div>
                </div>
+
+               <h3 style={{ marginTop: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>مراحلِ ترقی و شعبہ جاتی تواریخ</h3>
+               <div className="grid-row">
+                  <div><label>تاریخ آغاز قاعدہ</label><input type="date" name="qaidaStartDate" value={profileModal.qaidaStartDate || ''} onChange={handleProfileChange} /></div>
+                  <div><label>تاریخ تکمیل قاعدہ</label><input type="date" name="qaidaCompletionDate" value={profileModal.qaidaCompletionDate || ''} onChange={handleProfileChange} /></div>
+               </div>
+               <div className="grid-row">
+                  <div><label>تاریخ آغاز ناظرہ</label><input type="date" name="naziraStartDate" value={profileModal.naziraStartDate || ''} onChange={handleProfileChange} /></div>
+                  <div><label>تاریخ تکمیل ناظرہ</label><input type="date" name="naziraCompletionDate" value={profileModal.naziraCompletionDate || ''} onChange={handleProfileChange} /></div>
+               </div>
+               <div className="grid-row">
+                  <div><label>تاریخ آغاز حفظ</label><input type="date" name="hifzStartDate" value={profileModal.hifzStartDate || ''} onChange={handleProfileChange} /></div>
+                  <div><label>تاریخ تکمیل حفظ</label><input type="date" name="hifzCompletionDate" value={profileModal.hifzCompletionDate || ''} onChange={handleProfileChange} /></div>
+               </div>
+
 
                <h3 style={{ marginTop: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>والد کی معلومات</h3>
                <div className="grid-row">
