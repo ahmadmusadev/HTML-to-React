@@ -504,11 +504,26 @@
       background:#eef4ff; color:var(--accent);
       border-radius:999px; padding:3px 14px;
       font-size:0.82rem; font-weight:700;
+      border: 1px solid transparent;
+    }
+    [data-theme="dark"] .me-history-badge {
+      background: #27272a !important;
+      color: #ffffff !important;
+      border: 1px solid #3f3f46 !important;
     }
     .me-del-btn {
       background:#fff5f5 !important; color:var(--danger) !important;
       border:1px solid #f5c2c2 !important; padding:6px 14px !important;
       border-radius:8px !important; font-size:0.82rem !important;
+    }
+    [data-theme="dark"] .me-del-btn {
+      background: #27272a !important;
+      color: #f87171 !important;
+      border: 1px solid #3f3f46 !important;
+    }
+    [data-theme="dark"] .me-del-btn:hover {
+      background: #451a1a !important;
+      color: #fca5a5 !important;
     }
 
 

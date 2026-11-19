@@ -287,6 +287,11 @@ describe('Monthly Evaluations (ماہانہ جائزہ) - Local & Supabase Persi
       expect(within(historyArea).getByText('رکوع')).toBeInTheDocument();
       expect(within(historyArea).queryByText('ترکو')).not.toBeInTheDocument();
       expect(within(historyArea).getByText('3')).toBeInTheDocument();
+
+      // Check month & year badge is rendered with me-history-badge
+      const badge = within(historyArea).getByText('اپریل 2025');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveClass('me-history-badge');
     });
 
     // In entry form table, header must have رکوع نمبر and NOT ترکو نمبر
