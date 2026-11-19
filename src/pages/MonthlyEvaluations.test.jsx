@@ -253,4 +253,59 @@ describe('Monthly Evaluations (ماہانہ جائزہ) - Local & Supabase Persi
       expect(screen.getByText('کوئی ریکارڈ موجود نہیں۔')).toBeInTheDocument();
     });
   });
+
+  it('displays correct "رکوع" and "رکوع نمبر" labels and no typo "ترکو" in monthly evaluations', async () => {
+    const existingExam = {
+      id: 'monthly-eval-uuid-77',
+      classId: CLASS_ID,
+      className: 'کلاس نمبر: 1-شعبہ حفظ',
+      month: 'اپریل',
+      year: '2025',
+      students: [
+        {
+          student_id: 'std-uuid-101',
+          regNo: '101',
+          name: 'محمد حذیفہ',
+          para: '12',
+          tarkoo: '3',
+          total: 100,
+          pct: 100,
+          grade: 'A+'
+        }
+      ],
+      savedAt: '2025-04-10T12:00:00.000Z'
+    };
+
+    mockFetchMonthlyEvaluations.mockResolvedValueOnce([existingExam]);
+
+    render(<Entry />);
+
+    // In history card, table header must have رکوع and NOT ترکو
+    await waitFor(() => {
+      const historyArea = document.getElementById('meHistoryArea');
+      expect(historyArea).toBeInTheDocument();
+      expect(within(historyArea).getByText('رکوع')).toBeInTheDocument();
+      expect(within(historyArea).queryByText('ترکو')).not.toBeInTheDocument();
+      expect(within(historyArea).getByText('3')).toBeInTheDocument();
+    });
+
+    // In entry form table, header must have رکوع نمبر and NOT ترکو نمبر
+    await waitFor(() => {
+      expect(mockFetchClasses).toHaveBeenCalled();
+    });
+
+    const classSelect = screen.getByRole('combobox', { name: /کلاس منتخب کریں/i });
+    fireEvent.change(classSelect, { target: { value: CLASS_ID } });
+
+    const loadBtn = screen.getByText('طلباء لوڈ کریں');
+    fireEvent.click(loadBtn);
+
+    await waitFor(() => {
+      const tableArea = document.getElementById('meTableArea');
+      expect(tableArea).toBeInTheDocument();
+      expect(within(tableArea).getByText('رکوع نمبر')).toBeInTheDocument();
+      expect(within(tableArea).queryByText('ترکو نمبر')).not.toBeInTheDocument();
+      expect(within(tableArea).getByPlaceholderText('ر')).toBeInTheDocument();
+    });
+  });
 });
