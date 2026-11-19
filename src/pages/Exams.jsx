@@ -13,7 +13,7 @@ import {
   mapExamResultToUi,
   mapUiToExamResultPayload
 } from '../utils/ExamsMappers';
-import { calculateClassGrading } from '../utils/classGrading';
+import { calculateClassGrading, getGradeBadgeClass } from '../utils/classGrading';
 
 export default function Exams() {
   const {
@@ -910,20 +910,20 @@ export default function Exams() {
                       اوسط: {crResultsData.avg.toFixed(1)}%
                     </div>
                     {crResultsData.classGrading && crResultsData.classGrading.classGrade !== '—' && (
-                      <div style={{ fontWeight: "800", color: crResultsData.classGrading.classGradeColor, background: "var(--bg-card, #f8fafc)", padding: "4px 12px", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                      <div className={`class-grade-badge ${getGradeBadgeClass(crResultsData.classGrading.classGrade)}`}>
                         درجہ کلاس: {crResultsData.classGrading.classGrade}
                       </div>
                     )}
                   </div>
                   {crResultsData.classGrading && crResultsData.classGrading.total > 0 && (
                     <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap", marginTop: "10px", fontSize: "0.85rem" }}>
-                      <span style={{ padding: "3px 8px", borderRadius: "4px", background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", fontWeight: "600" }}>
+                      <span className="grade-chip grade-chip-high">
                         اعلیٰ: {crResultsData.classGrading.aCount} ({crResultsData.classGrading.aPct}%)
                       </span>
-                      <span style={{ padding: "3px 8px", borderRadius: "4px", background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", fontWeight: "600" }}>
+                      <span className="grade-chip grade-chip-mid">
                         اوسط: {crResultsData.classGrading.mCount} ({crResultsData.classGrading.mPct}%)
                       </span>
-                      <span style={{ padding: "3px 8px", borderRadius: "4px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", fontWeight: "600" }}>
+                      <span className="grade-chip grade-chip-low">
                         کمزور: {crResultsData.classGrading.wCount} ({crResultsData.classGrading.wPct}%)
                       </span>
                     </div>

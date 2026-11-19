@@ -145,9 +145,15 @@ describe('Class Grading Integration in Exams and Entry', () => {
     await waitFor(() => {
       // In the table, the grade header and class grade badge should be rendered
       expect(screen.getByText('ادارے کا مجموعی درجہ')).toBeInTheDocument();
-      expect(screen.getByText('کلاسوں کی بنیاد پر پورے ادارے کی درجہ بندی کا خلاصہ:')).toBeInTheDocument();
+      const summaryTitle = screen.getByText('کلاسوں کی بنیاد پر پورے ادارے کی درجہ بندی کا خلاصہ:');
+      expect(summaryTitle).toBeInTheDocument();
+      expect(summaryTitle.closest('.ir-summary-card')).toBeInTheDocument();
       expect(screen.getByText('کلاس وار نتیجہ و تجزیہ')).toBeInTheDocument();
       expect(screen.getByText('کلاس اول')).toBeInTheDocument();
+      
+      // Verify class grade badge has the class-grade-badge class
+      const badges = document.querySelectorAll('.class-grade-badge');
+      expect(badges.length).toBeGreaterThanOrEqual(1);
     });
   });
 });

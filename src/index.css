@@ -1585,3 +1585,87 @@ body, .card, .tab-button, input, select, textarea, th, td, .modal-content,
 .profile-modal-btn-cancel:hover {
   background: var(--bg, #f1f5f9);
 }
+
+/* --- Class & Institution Grading Badges & Chips --- */
+.ir-summary-card {
+  background: #f8fafc;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+.ir-summary-card-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--accent, #0d3b66);
+  margin-bottom: 8px;
+}
+.ir-summary-card-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+}
+
+/* Grade Chips */
+.grade-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.grade-chip-high {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.grade-chip-mid {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.grade-chip-low {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+.grade-chip-neutral {
+  background: #f8fafc;
+  color: var(--muted, #64748b);
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+/* Class Grade Badges */
+.class-grade-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  text-align: center;
+}
+.grade-badge-high {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.grade-badge-mid {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.grade-badge-low {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+.grade-badge-neutral {
+  background: #f8fafc;
+  color: var(--muted, #64748b);
+  border: 1px solid var(--border, #e2e8f0);
+}
+

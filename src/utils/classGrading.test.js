@@ -4,7 +4,8 @@ import {
   getWifaqGrade,
   getStudentTier,
   calculateClassGrading,
-  calculateInstituteGrading
+  calculateInstituteGrading,
+  getGradeBadgeClass
 } from './classGrading';
 
 describe('classGrading utility', () => {
@@ -241,6 +242,27 @@ describe('classGrading utility', () => {
       const res = calculateInstituteGrading([]);
       expect(res.instituteGrade).toBe('—');
       expect(res.totalClasses).toBe(0);
+    });
+  });
+
+  describe('getGradeBadgeClass', () => {
+    it('returns grade-badge-high for اعلیٰ A and اعلیٰ B', () => {
+      expect(getGradeBadgeClass('اعلیٰ A')).toBe('grade-badge-high');
+      expect(getGradeBadgeClass('اعلیٰ B')).toBe('grade-badge-high');
+    });
+
+    it('returns grade-badge-mid for اوسط', () => {
+      expect(getGradeBadgeClass('اوسط')).toBe('grade-badge-mid');
+    });
+
+    it('returns grade-badge-low for کمزور', () => {
+      expect(getGradeBadgeClass('کمزور')).toBe('grade-badge-low');
+    });
+
+    it('returns grade-badge-neutral for — or empty/invalid', () => {
+      expect(getGradeBadgeClass('—')).toBe('grade-badge-neutral');
+      expect(getGradeBadgeClass('')).toBe('grade-badge-neutral');
+      expect(getGradeBadgeClass(null)).toBe('grade-badge-neutral');
     });
   });
 });

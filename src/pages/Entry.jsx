@@ -6,7 +6,7 @@ import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import SubjectAnalysisModal from '../components/SubjectAnalysisModal';
-import { calculateClassGrading, calculateInstituteGrading, getIndividualStudentGrade } from '../utils/classGrading';
+import { calculateClassGrading, calculateInstituteGrading, getIndividualStudentGrade, getGradeBadgeClass } from '../utils/classGrading';
 import './Entry.css';
 
 // Constants from edit.html
@@ -2278,21 +2278,21 @@ export default function Entry() {
                     <div style={{ display: "flex", justifyContent: "center", gap: "16px", alignItems: "center", flexWrap: "wrap", marginTop: "6px" }}>
                       <span style={{ fontSize: "0.95rem", color: "var(--accent-2)", fontWeight: "700" }}>اوسط: {crResultsData.avg.toFixed(1)}%</span>
                       {crResultsData.classGrading && crResultsData.classGrading.classGrade !== '—' && (
-                        <span style={{ fontWeight: "800", color: crResultsData.classGrading.classGradeColor, background: "var(--bg-card, #f8fafc)", padding: "3px 10px", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                        <span className={`class-grade-badge ${getGradeBadgeClass(crResultsData.classGrading.classGrade)}`}>
                           درجہ کلاس: {crResultsData.classGrading.classGrade}
                         </span>
                       )}
                       <span style={{ fontSize: "0.88rem", color: "var(--muted)" }}>طلباء: {crResultsData.exam.students.length}</span>
                     </div>
                     {crResultsData.classGrading && crResultsData.classGrading.total > 0 && (
-                      <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap", marginTop: "10px", fontSize: "0.85rem" }}>
-                        <span style={{ padding: "3px 8px", borderRadius: "4px", background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", fontWeight: "600" }}>
+                      <div className="ir-summary-card-chips" style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap", marginTop: "10px", fontSize: "0.85rem" }}>
+                        <span className="grade-chip grade-chip-high">
                           اعلیٰ: {crResultsData.classGrading.aCount} ({crResultsData.classGrading.aPct}%)
                         </span>
-                        <span style={{ padding: "3px 8px", borderRadius: "4px", background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", fontWeight: "600" }}>
+                        <span className="grade-chip grade-chip-mid">
                           اوسط: {crResultsData.classGrading.mCount} ({crResultsData.classGrading.mPct}%)
                         </span>
-                        <span style={{ padding: "3px 8px", borderRadius: "4px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", fontWeight: "600" }}>
+                        <span className="grade-chip grade-chip-low">
                           کمزور: {crResultsData.classGrading.wCount} ({crResultsData.classGrading.wPct}%)
                         </span>
                       </div>
@@ -2448,7 +2448,7 @@ export default function Entry() {
                     <div style={{ fontSize: "0.85rem", color: "#b45309" }}>مجموعی اوسط</div>
                     <div style={{ fontSize: "2rem", fontWeight: "800", color: "#b45309" }}>{irResultsData.overallAvg.toFixed(1)}%</div>
                   </div>
-                  <div className="ir-stat-card" style={{ flex: "1", minWidth: "160px", background: "var(--bg-card, #f8fafc)", border: "1px solid var(--border)" }}>
+                  <div className="ir-stat-card ir-stat-grade" style={{ flex: "1", minWidth: "160px" }}>
                     <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>ادارے کا مجموعی درجہ</div>
                     <div style={{ fontSize: "1.8rem", fontWeight: "800", color: irResultsData.instituteGrading?.instituteGradeColor || "var(--accent)" }}>
                       {irResultsData.instituteGrading?.instituteGrade || '—'}
@@ -2458,18 +2458,18 @@ export default function Entry() {
 
                 {/* ادارہ جاتی درجہ بندی کا خلاصہ (تمام کلاسوں کے تناسب سے) */}
                 {irResultsData.instituteGrading && irResultsData.instituteGrading.totalClasses > 0 && (
-                  <div style={{ background: "var(--bg-card, #f8fafc)", border: "1px solid var(--border)", borderRadius: "10px", padding: "14px 18px", marginBottom: "20px" }}>
-                    <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "var(--accent)", marginBottom: "8px" }}>
+                  <div className="ir-summary-card">
+                    <div className="ir-summary-card-title">
                       کلاسوں کی بنیاد پر پورے ادارے کی درجہ بندی کا خلاصہ:
                     </div>
-                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "0.88rem" }}>
-                      <span style={{ padding: "4px 10px", borderRadius: "6px", background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", fontWeight: "700" }}>
+                    <div className="ir-summary-card-chips">
+                      <span className="grade-chip grade-chip-high">
                         اعلیٰ کلاسیں (اعلیٰ A اور B): {irResultsData.instituteGrading.aClassCount} ({irResultsData.instituteGrading.aClassPct}%)
                       </span>
-                      <span style={{ padding: "4px 10px", borderRadius: "6px", background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", fontWeight: "700" }}>
+                      <span className="grade-chip grade-chip-mid">
                         اوسط کلاسیں: {irResultsData.instituteGrading.mClassCount} ({irResultsData.instituteGrading.mClassPct}%)
                       </span>
-                      <span style={{ padding: "4px 10px", borderRadius: "6px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", fontWeight: "700" }}>
+                      <span className="grade-chip grade-chip-low">
                         کمزور کلاسیں: {irResultsData.instituteGrading.wClassCount} ({irResultsData.instituteGrading.wClassPct}%)
                       </span>
                     </div>
@@ -2505,8 +2505,8 @@ export default function Entry() {
                             <td style={{ textAlign: "right", fontWeight: "700", padding: "10px 12px" }}>{exam.className}</td>
                             <td style={{ textAlign: "center", padding: "10px" }}>{exam.students ? exam.students.length : 0}</td>
                             <td style={{ textAlign: "center", padding: "10px", fontWeight: "700" }}>{avg.toFixed(1)}%</td>
-                            <td style={{ textAlign: "center", padding: "10px", fontWeight: "800", color: clsGrading.classGradeColor }}>
-                              <span style={{ padding: "2px 8px", borderRadius: "4px", background: "var(--bg-card, #f8fafc)", border: "1px solid var(--border)" }}>
+                            <td style={{ textAlign: "center", padding: "10px", fontWeight: "800" }}>
+                              <span className={`class-grade-badge ${getGradeBadgeClass(clsGrading.classGrade)}`}>
                                 {clsGrading.classGrade}
                               </span>
                             </td>

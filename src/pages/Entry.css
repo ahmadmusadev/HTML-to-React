@@ -2484,6 +2484,148 @@
     .ir-stat-green { background: #f0fdf4; border: 1px solid #bbf7d0; }
     .ir-stat-blue { background: #eff6ff; border: 1px solid #bfdbfe; }
     .ir-stat-amber { background: #fefce8; border: 1px solid #fde68a; }
+    .ir-stat-grade { background: #f8fafc; border: 1px solid var(--border); }
+
+    .ir-summary-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+    }
+    .ir-summary-card-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .ir-summary-card-chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.88rem;
+    }
+
+    /* Grade Chips */
+    .grade-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+    .grade-chip-high {
+      background: #f0fdf4;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .grade-chip-mid {
+      background: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+    .grade-chip-low {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    .grade-chip-neutral {
+      background: #f8fafc;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    /* Class Grade Badges */
+    .class-grade-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      text-align: center;
+    }
+    .grade-badge-high {
+      background: #f0fdf4;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .grade-badge-mid {
+      background: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+    .grade-badge-low {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    .grade-badge-neutral {
+      background: #f8fafc;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    /* Dark Mode styling */
+    [data-theme="dark"] .ir-summary-card {
+      background: #141417 !important;
+      border-color: #27272a !important;
+      color: #ffffff !important;
+    }
+    [data-theme="dark"] .ir-summary-card-title {
+      color: #ffffff !important;
+    }
+    [data-theme="dark"] .grade-chip-high {
+      background: rgba(21, 128, 61, 0.25) !important;
+      color: #4ade80 !important;
+      border: 1px solid rgba(74, 222, 128, 0.45) !important;
+    }
+    [data-theme="dark"] .grade-chip-mid {
+      background: rgba(180, 83, 9, 0.25) !important;
+      color: #fde047 !important;
+      border: 1px solid rgba(253, 224, 71, 0.45) !important;
+    }
+    [data-theme="dark"] .grade-chip-low {
+      background: rgba(220, 38, 38, 0.25) !important;
+      color: #f87171 !important;
+      border: 1px solid rgba(248, 113, 113, 0.45) !important;
+    }
+    [data-theme="dark"] .grade-chip-neutral {
+      background: #1c1c20 !important;
+      color: #a1a1aa !important;
+      border: 1px solid #3f3f46 !important;
+    }
+
+    [data-theme="dark"] td .class-grade-badge,
+    [data-theme="dark"] .class-grade-badge {
+      background: #1c1c20 !important;
+    }
+    [data-theme="dark"] td .grade-badge-high,
+    [data-theme="dark"] .grade-badge-high {
+      background: rgba(21, 128, 61, 0.25) !important;
+      color: #4ade80 !important;
+      border: 1px solid rgba(74, 222, 128, 0.45) !important;
+    }
+    [data-theme="dark"] td .grade-badge-mid,
+    [data-theme="dark"] .grade-badge-mid {
+      background: rgba(180, 83, 9, 0.25) !important;
+      color: #fde047 !important;
+      border: 1px solid rgba(253, 224, 71, 0.45) !important;
+    }
+    [data-theme="dark"] td .grade-badge-low,
+    [data-theme="dark"] .grade-badge-low {
+      background: rgba(220, 38, 38, 0.25) !important;
+      color: #f87171 !important;
+      border: 1px solid rgba(248, 113, 113, 0.45) !important;
+    }
+    [data-theme="dark"] td .grade-badge-neutral,
+    [data-theme="dark"] .grade-badge-neutral {
+      background: #1c1c20 !important;
+      color: #a1a1aa !important;
+      border: 1px solid #3f3f46 !important;
+    }
 
     [data-theme="dark"] .ir-stat-card {
       background: #18181b !important;

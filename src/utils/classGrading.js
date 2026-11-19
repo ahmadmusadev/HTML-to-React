@@ -290,3 +290,17 @@ export function calculateInstituteGrading(exams = []) {
     totalClasses
   };
 }
+
+/**
+ * Helper to get CSS class name for a class/institute grade badge.
+ * @param {string} grade 
+ * @returns {string} CSS class modifier
+ */
+export function getGradeBadgeClass(grade) {
+  if (!grade || grade === '—') return 'grade-badge-neutral';
+  if (typeof grade === 'string' && grade.includes('اعلیٰ')) return 'grade-badge-high';
+  if (grade === 'اوسط') return 'grade-badge-mid';
+  if (grade === 'کمزور') return 'grade-badge-low';
+  return 'grade-badge-neutral';
+}
+
