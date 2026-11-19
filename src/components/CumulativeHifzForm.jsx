@@ -243,15 +243,15 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
       if (field === 'shishmahiMarks' || field === 'shishmahiTotalMarks') {
         const marks = field === 'shishmahiMarks' ? value : next.shishmahiMarks;
         const total = field === 'shishmahiTotalMarks' ? value : next.shishmahiTotalMarks;
-        next.shishmahiGrade = getGradeFromScore(marks, total);
+        next.shishmahiGrade = getGradeFromScore(marks, total, 'general');
       } else if (field === 'salanaMarks' || field === 'salanaTotalMarks') {
         const marks = field === 'salanaMarks' ? value : next.salanaMarks;
         const total = field === 'salanaTotalMarks' ? value : next.salanaTotalMarks;
-        next.salanaGrade = getGradeFromScore(marks, total);
+        next.salanaGrade = getGradeFromScore(marks, total, 'general');
       } else if (field === 'wifaqMarks' || field === 'wifaqTotalMarks') {
         const marks = field === 'wifaqMarks' ? value : next.wifaqMarks;
         const total = field === 'wifaqTotalMarks' ? value : next.wifaqTotalMarks;
-        next.wifaqGrade = getGradeFromScore(marks, total);
+        next.wifaqGrade = getGradeFromScore(marks, total, 'wifaq');
       }
 
       return next;

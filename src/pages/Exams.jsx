@@ -13,6 +13,7 @@ import {
   mapExamResultToUi,
   mapUiToExamResultPayload
 } from '../utils/ExamsMappers';
+import { calculateClassGrading, getGradeBadgeClass } from '../utils/classGrading';
 
 export default function Exams() {
   const {
@@ -498,7 +499,8 @@ export default function Exams() {
 
     if (!results.length) { setCrResultsData('empty'); return; }
     const avg = results.reduce((s, r) => s + (r.pct || 0), 0) / results.length;
-    setCrResultsData({ clsName: cls ? (cls.class_name || cls.name) : '', term: crExamTerm, year: yr, results, avg });
+    const classGrading = calculateClassGrading(results);
+    setCrResultsData({ clsName: cls ? (cls.class_name || cls.name) : '', term: crExamTerm, year: yr, results, avg, classGrading });
   };
 
   const printClassExamResult = async () => {
@@ -903,9 +905,29 @@ export default function Exams() {
                   <div style={{ color: "var(--muted)" }}>
                     {crResultsData.clsName} — {crResultsData.term === 'annual' ? 'سالانہ' : crResultsData.term === 'first' ? 'پہلی' : 'دوسری'} ششماہی {crResultsData.year}
                   </div>
-                  <div style={{ color: "var(--accent-2)", fontWeight: "700", marginTop: "4px" }}>
-                    اوسط: {crResultsData.avg.toFixed(1)}%
+                  <div style={{ display: "flex", justifyContent: "center", gap: "16px", alignItems: "center", flexWrap: "wrap", marginTop: "8px" }}>
+                    <div style={{ color: "var(--accent-2)", fontWeight: "700" }}>
+                      اوسط: {crResultsData.avg.toFixed(1)}%
+                    </div>
+                    {crResultsData.classGrading && crResultsData.classGrading.classGrade !== '—' && (
+                      <div className={`class-grade-badge ${getGradeBadgeClass(crResultsData.classGrading.classGrade)}`}>
+                        درجہ کلاس: {crResultsData.classGrading.classGrade}
+                      </div>
+                    )}
                   </div>
+                  {crResultsData.classGrading && crResultsData.classGrading.total > 0 && (
+                    <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap", marginTop: "10px", fontSize: "0.85rem" }}>
+                      <span className="grade-chip grade-chip-high">
+                        اعلیٰ: {crResultsData.classGrading.aCount} ({crResultsData.classGrading.aPct}%)
+                      </span>
+                      <span className="grade-chip grade-chip-mid">
+                        اوسط: {crResultsData.classGrading.mCount} ({crResultsData.classGrading.mPct}%)
+                      </span>
+                      <span className="grade-chip grade-chip-low">
+                        کمزور: {crResultsData.classGrading.wCount} ({crResultsData.classGrading.wPct}%)
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
@@ -918,6 +940,7 @@ export default function Exams() {
                         <th style={{ padding: "10px" }}>ہدف</th>
                         <th style={{ padding: "10px" }}>حاصل</th>
                         <th style={{ padding: "10px" }}>فیصد</th>
+                        <th style={{ padding: "10px" }}>درجہ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -930,6 +953,7 @@ export default function Exams() {
                           <td style={{ padding: "10px", textAlign: "center" }}>{r.targetRuku}</td>
                           <td style={{ padding: "10px", textAlign: "center" }}>{r.achievedRuku}</td>
                           <td style={{ padding: "10px", textAlign: "center", fontWeight: "800", color: getPctColor(r.pct) }}>{r.pct}%</td>
+                          <td style={{ padding: "10px", textAlign: "center", fontWeight: "700" }}>{getExamGrade(r.pct)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -983,7 +1007,7 @@ export default function Exams() {
                     والد: {indResultsData.student.admFatherName || '—'} | ID: {indExamId}
                   </div>
                   <div style={{ color: "var(--accent-2)", fontWeight: "700", marginTop: "4px" }}>
-                    سالانہ اوسط: {indResultsData.avg.toFixed(1)}%
+                    سالانہ اوسط: {indResultsData.avg.toFixed(1)}% ({getExamGrade(indResultsData.avg)})
                   </div>
                 </div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
@@ -1004,7 +1028,7 @@ export default function Exams() {
                         <td style={{ padding: "10px", textAlign: "center" }}>{r.achievedRuku}</td>
                         <td style={{ padding: "10px", textAlign: "center", fontWeight: "800", color: getPctColor(r.pct) }}>{r.pct}%</td>
                         <td style={{ padding: "10px", textAlign: "center", fontWeight: "700" }}>
-                          {r.pct >= 80 ? 'ممتاز' : r.pct >= 60 ? 'اچھا' : r.pct >= 40 ? 'اوسط' : 'ضعیف'}
+                          {getExamGrade(r.pct)}
                         </td>
                       </tr>
                     ))}

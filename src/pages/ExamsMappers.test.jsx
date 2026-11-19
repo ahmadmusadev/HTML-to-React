@@ -75,33 +75,41 @@ describe('Exams Mappers & Calculation Utilities', () => {
   });
 
   describe('getExamGrade', () => {
-    it('returns ممتاز for percentages >= 80', () => {
+    it('returns ممتاز for percentages >= 90', () => {
       expect(getExamGrade(100)).toBe('ممتاز');
-      expect(getExamGrade(85)).toBe('ممتاز');
-      expect(getExamGrade(80)).toBe('ممتاز');
-      expect(getExamGrade('80')).toBe('ممتاز');
+      expect(getExamGrade(95)).toBe('ممتاز');
+      expect(getExamGrade(90)).toBe('ممتاز');
+      expect(getExamGrade('90')).toBe('ممتاز');
     });
 
-    it('returns اچھا for percentages >= 60 and < 80', () => {
-      expect(getExamGrade(79)).toBe('اچھا');
-      expect(getExamGrade(65)).toBe('اچھا');
-      expect(getExamGrade(60)).toBe('اچھا');
-      expect(getExamGrade('60')).toBe('اچھا');
+    it('returns جید جدا for percentages >= 80 and < 90', () => {
+      expect(getExamGrade(89)).toBe('جید جدا');
+      expect(getExamGrade(85)).toBe('جید جدا');
+      expect(getExamGrade(80)).toBe('جید جدا');
+      expect(getExamGrade('80')).toBe('جید جدا');
     });
 
-    it('returns اوسط for percentages >= 40 and < 60', () => {
-      expect(getExamGrade(59)).toBe('اوسط');
-      expect(getExamGrade(45)).toBe('اوسط');
-      expect(getExamGrade(40)).toBe('اوسط');
-      expect(getExamGrade('40')).toBe('اوسط');
+    it('returns جید for percentages >= 70 and < 80', () => {
+      expect(getExamGrade(79)).toBe('جید');
+      expect(getExamGrade(75)).toBe('جید');
+      expect(getExamGrade(70)).toBe('جید');
+      expect(getExamGrade('70')).toBe('جید');
     });
 
-    it('returns ضعیف for percentages < 40', () => {
-      expect(getExamGrade(39)).toBe('ضعیف');
-      expect(getExamGrade(10)).toBe('ضعیف');
-      expect(getExamGrade(0)).toBe('ضعیف');
-      expect(getExamGrade(-5)).toBe('ضعیف');
-      expect(getExamGrade(null)).toBe('ضعیف');
+    it('returns مقبول for percentages >= 60 and < 70', () => {
+      expect(getExamGrade(69)).toBe('مقبول');
+      expect(getExamGrade(65)).toBe('مقبول');
+      expect(getExamGrade(60)).toBe('مقبول');
+      expect(getExamGrade('60')).toBe('مقبول');
+    });
+
+    it('returns فیل for percentages < 60', () => {
+      expect(getExamGrade(59)).toBe('فیل');
+      expect(getExamGrade(39)).toBe('فیل');
+      expect(getExamGrade(10)).toBe('فیل');
+      expect(getExamGrade(0)).toBe('فیل');
+      expect(getExamGrade(-5)).toBe('فیل');
+      expect(getExamGrade(null)).toBe('فیل');
     });
   });
 
@@ -111,9 +119,14 @@ describe('Exams Mappers & Calculation Utilities', () => {
       expect(getPctColor(95)).toBe('#15803d');
     });
 
-    it('returns amber #b45309 for pct >= 60 and < 80', () => {
+    it('returns blue #1d4ed8 for pct >= 70 and < 80', () => {
+      expect(getPctColor(79)).toBe('#1d4ed8');
+      expect(getPctColor(70)).toBe('#1d4ed8');
+    });
+
+    it('returns amber #b45309 for pct >= 60 and < 70', () => {
+      expect(getPctColor(69)).toBe('#b45309');
       expect(getPctColor(60)).toBe('#b45309');
-      expect(getPctColor(79)).toBe('#b45309');
     });
 
     it('returns red #dc2626 for pct < 60', () => {
