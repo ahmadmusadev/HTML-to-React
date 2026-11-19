@@ -33,10 +33,13 @@ CREATE TABLE IF NOT EXISTS public.hifz_completion_forms (
   area_name TEXT NOT NULL DEFAULT '',
   teacher_name TEXT NOT NULL DEFAULT '',
   overall_quality TEXT NOT NULL DEFAULT '',
+  shishmahi_total_marks NUMERIC DEFAULT 100,
   shishmahi_marks NUMERIC DEFAULT 0,
   shishmahi_grade TEXT NOT NULL DEFAULT '',
+  salana_total_marks NUMERIC DEFAULT 100,
   salana_marks NUMERIC DEFAULT 0,
   salana_grade TEXT NOT NULL DEFAULT '',
+  wifaq_total_marks NUMERIC DEFAULT 100,
   wifaq_marks NUMERIC DEFAULT 0,
   wifaq_grade TEXT NOT NULL DEFAULT '',
   attendance_quality TEXT NOT NULL DEFAULT '',
@@ -57,6 +60,12 @@ CREATE INDEX IF NOT EXISTS idx_hifz_completion_forms_madrasa_id
 
 CREATE INDEX IF NOT EXISTS idx_hifz_completion_forms_student_id 
   ON public.hifz_completion_forms (madrasa_id, student_id);
+
+-- Ensure total marks columns exist if table was already created
+ALTER TABLE public.hifz_completion_forms 
+  ADD COLUMN IF NOT EXISTS shishmahi_total_marks NUMERIC DEFAULT 100,
+  ADD COLUMN IF NOT EXISTS salana_total_marks NUMERIC DEFAULT 100,
+  ADD COLUMN IF NOT EXISTS wifaq_total_marks NUMERIC DEFAULT 100;
 
 -- 3. Row Level Security Policies
 ALTER TABLE public.hifz_completion_forms ENABLE ROW LEVEL SECURITY;

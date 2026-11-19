@@ -55,10 +55,13 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
     areaName: '',
     teacherName: '',
     overallQuality: 'اوسط',
+    shishmahiTotalMarks: 100,
     shishmahiMarks: '',
     shishmahiGrade: '',
+    salanaTotalMarks: 100,
     salanaMarks: '',
     salanaGrade: '',
+    wifaqTotalMarks: 100,
     wifaqMarks: '',
     wifaqGrade: '',
     attendanceQuality: 'بہترین',
@@ -195,10 +198,13 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
         areaName: area,
         teacherName: teacher,
         overallQuality: 'اوسط',
+        shishmahiTotalMarks: 100,
         shishmahiMarks: '',
         shishmahiGrade: '',
+        salanaTotalMarks: 100,
         salanaMarks: '',
         salanaGrade: '',
+        wifaqTotalMarks: 100,
         wifaqMarks: '',
         wifaqGrade: '',
         attendanceQuality: 'بہترین',
@@ -233,13 +239,19 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
         }
       }
 
-      // Auto calculate exam grades from marks
-      if (field === 'shishmahiMarks') {
-        next.shishmahiGrade = getGradeFromScore(value);
-      } else if (field === 'salanaMarks') {
-        next.salanaGrade = getGradeFromScore(value);
-      } else if (field === 'wifaqMarks') {
-        next.wifaqGrade = getGradeFromScore(value);
+      // Auto calculate exam grades from marks and total marks
+      if (field === 'shishmahiMarks' || field === 'shishmahiTotalMarks') {
+        const marks = field === 'shishmahiMarks' ? value : next.shishmahiMarks;
+        const total = field === 'shishmahiTotalMarks' ? value : next.shishmahiTotalMarks;
+        next.shishmahiGrade = getGradeFromScore(marks, total);
+      } else if (field === 'salanaMarks' || field === 'salanaTotalMarks') {
+        const marks = field === 'salanaMarks' ? value : next.salanaMarks;
+        const total = field === 'salanaTotalMarks' ? value : next.salanaTotalMarks;
+        next.salanaGrade = getGradeFromScore(marks, total);
+      } else if (field === 'wifaqMarks' || field === 'wifaqTotalMarks') {
+        const marks = field === 'wifaqMarks' ? value : next.wifaqMarks;
+        const total = field === 'wifaqTotalMarks' ? value : next.wifaqTotalMarks;
+        next.wifaqGrade = getGradeFromScore(marks, total);
       }
 
       return next;
@@ -645,6 +657,7 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
                 <thead>
                   <tr>
                     <th>امتحان</th>
+                    <th>کل نمبرات</th>
                     <th>حاصل کردہ نمبرات</th>
                     <th>درجہ کامیابی</th>
                   </tr>
@@ -652,6 +665,14 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
                 <tbody>
                   <tr>
                     <td><strong>ششماہی امتحان</strong></td>
+                    <td>
+                      <input
+                        type="number"
+                        value={formData.shishmahiTotalMarks}
+                        onChange={(e) => handleFieldChange('shishmahiTotalMarks', e.target.value)}
+                        placeholder="کل نمبر"
+                      />
+                    </td>
                     <td>
                       <input
                         type="number"
@@ -674,6 +695,14 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
                     <td>
                       <input
                         type="number"
+                        value={formData.salanaTotalMarks}
+                        onChange={(e) => handleFieldChange('salanaTotalMarks', e.target.value)}
+                        placeholder="کل نمبر"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
                         value={formData.salanaMarks}
                         onChange={(e) => handleFieldChange('salanaMarks', e.target.value)}
                         placeholder="نمبرات"
@@ -690,6 +719,14 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
                   </tr>
                   <tr>
                     <td><strong>امتحان وفاق المدارس</strong></td>
+                    <td>
+                      <input
+                        type="number"
+                        value={formData.wifaqTotalMarks}
+                        onChange={(e) => handleFieldChange('wifaqTotalMarks', e.target.value)}
+                        placeholder="کل نمبر"
+                      />
+                    </td>
                     <td>
                       <input
                         type="number"
@@ -1082,25 +1119,31 @@ function HifzCompletionPrintDocument({
         <table className="a4-results-table">
           <thead>
             <tr>
-              <th colSpan="2" className="th-exam">ششماہی امتحان</th>
-              <th colSpan="2" className="th-exam">امتحان سالانہ / تکمیل حفظ</th>
-              <th colSpan="2" className="th-exam">امتحان وفاق المدارس</th>
+              <th colSpan="3" className="th-exam">ششماہی امتحان</th>
+              <th colSpan="3" className="th-exam">امتحان سالانہ / تکمیل حفظ</th>
+              <th colSpan="3" className="th-exam">امتحان وفاق المدارس</th>
             </tr>
             <tr className="sub-th-row">
-              <th className="sub-th">نمبرات</th>
+              <th className="sub-th">کل نمبرات</th>
+              <th className="sub-th">حاصل کردہ</th>
               <th className="sub-th">درجہ کامیابی</th>
-              <th className="sub-th">نمبرات</th>
+              <th className="sub-th">کل نمبرات</th>
+              <th className="sub-th">حاصل کردہ</th>
               <th className="sub-th">درجہ کامیابی</th>
-              <th className="sub-th">نمبرات</th>
+              <th className="sub-th">کل نمبرات</th>
+              <th className="sub-th">حاصل کردہ</th>
               <th className="sub-th">درجہ کامیابی</th>
             </tr>
           </thead>
           <tbody>
             <tr>
+              <td className="td-val">{formData.shishmahiTotalMarks || 100}</td>
               <td className="td-val">{formData.shishmahiMarks || 0}</td>
               <td className="td-val">{formData.shishmahiGrade || '—'}</td>
+              <td className="td-val">{formData.salanaTotalMarks || 100}</td>
               <td className="td-val">{formData.salanaMarks || 0}</td>
               <td className="td-val">{formData.salanaGrade || '—'}</td>
+              <td className="td-val">{formData.wifaqTotalMarks || 100}</td>
               <td className="td-val">{formData.wifaqMarks || 0}</td>
               <td className="td-val">{formData.wifaqGrade || '—'}</td>
             </tr>

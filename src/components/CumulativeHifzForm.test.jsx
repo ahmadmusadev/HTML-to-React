@@ -169,4 +169,32 @@ describe('CumulativeHifzForm (مجموعی حفظ کارکردگی فارم)', (
     const options = Array.from(qualitySelect.querySelectorAll('option')).map(opt => opt.value);
     expect(options).toEqual(['بہترین', 'بہتر', 'اوسط', 'قدرے اوسط', 'کمزور']);
   });
+
+  it('renders "کل نمبرات" column prefilled with 100 and allows user customization', async () => {
+    render(<CumulativeHifzForm initialStudentId="std-uuid-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('محمد ابراہیم شاہد')).toBeInTheDocument();
+    });
+
+    // Verify "کل نمبرات" table header exists
+    expect(screen.getAllByText('کل نمبرات').length).toBeGreaterThan(0);
+
+    // Verify total marks inputs are prefilled with 100
+    const totalMarksInputs = screen.getAllByPlaceholderText('کل نمبر');
+    expect(totalMarksInputs.length).toBe(3);
+    expect(totalMarksInputs[0]).toHaveValue(100);
+
+    // Change total marks to 50
+    fireEvent.change(totalMarksInputs[0], { target: { value: '50' } });
+    expect(totalMarksInputs[0]).toHaveValue(50);
+
+    // Enter 40 marks out of 50 (80%), so grade should be ممتاز
+    const marksInputs = screen.getAllByPlaceholderText('نمبرات');
+    fireEvent.change(marksInputs[0], { target: { value: '40' } });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('ممتاز')).toBeInTheDocument();
+    });
+  });
 });

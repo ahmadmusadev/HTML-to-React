@@ -130,19 +130,22 @@ export function toHijriDateString(dateStr) {
 }
 
 /**
- * Maps numeric exam score to Urdu grade label.
+ * Maps numeric exam score to Urdu grade label based on score and total marks.
  * 
  * @param {number|string} score
+ * @param {number|string} [totalMarks=100]
  * @returns {string} Grade in Urdu
  */
-export function getGradeFromScore(score) {
+export function getGradeFromScore(score, totalMarks = 100) {
   if (score === '' || score === null || score === undefined) return '—';
   const num = Number(score);
   if (isNaN(num) || num <= 0) return '—';
-  if (num >= 80) return 'ممتاز';
-  if (num >= 70) return 'جید جدا';
-  if (num >= 60) return 'جید';
-  if (num >= 50) return 'مقبول';
+  const total = Number(totalMarks) > 0 ? Number(totalMarks) : 100;
+  const percentage = (num / total) * 100;
+  if (percentage >= 80) return 'ممتاز';
+  if (percentage >= 70) return 'جید جدا';
+  if (percentage >= 60) return 'جید';
+  if (percentage >= 50) return 'مقبول';
   return 'راسب';
 }
 
@@ -210,10 +213,13 @@ export function mapCompletionFormSupabaseToUi(row) {
     areaName: row.area_name || '',
     teacherName: row.teacher_name || '',
     overallQuality: row.overall_quality || '',
+    shishmahiTotalMarks: row.shishmahi_total_marks ?? 100,
     shishmahiMarks: row.shishmahi_marks ?? '',
     shishmahiGrade: row.shishmahi_grade || '',
+    salanaTotalMarks: row.salana_total_marks ?? 100,
     salanaMarks: row.salana_marks ?? '',
     salanaGrade: row.salana_grade || '',
+    wifaqTotalMarks: row.wifaq_total_marks ?? 100,
     wifaqMarks: row.wifaq_marks ?? '',
     wifaqGrade: row.wifaq_grade || '',
     attendanceQuality: row.attendance_quality || '',
@@ -257,10 +263,13 @@ export function mapCompletionFormUiToSupabase(data, madrasaId, studentId) {
     area_name: (data.areaName || '').trim(),
     teacher_name: (data.teacherName || '').trim(),
     overall_quality: (data.overallQuality || '').trim(),
+    shishmahi_total_marks: data.shishmahiTotalMarks !== '' && data.shishmahiTotalMarks !== null && !isNaN(data.shishmahiTotalMarks) ? Number(data.shishmahiTotalMarks) : 100,
     shishmahi_marks: data.shishmahiMarks !== '' && data.shishmahiMarks !== null && !isNaN(data.shishmahiMarks) ? Number(data.shishmahiMarks) : 0,
     shishmahi_grade: (data.shishmahiGrade || '').trim(),
+    salana_total_marks: data.salanaTotalMarks !== '' && data.salanaTotalMarks !== null && !isNaN(data.salanaTotalMarks) ? Number(data.salanaTotalMarks) : 100,
     salana_marks: data.salanaMarks !== '' && data.salanaMarks !== null && !isNaN(data.salanaMarks) ? Number(data.salanaMarks) : 0,
     salana_grade: (data.salanaGrade || '').trim(),
+    wifaq_total_marks: data.wifaqTotalMarks !== '' && data.wifaqTotalMarks !== null && !isNaN(data.wifaqTotalMarks) ? Number(data.wifaqTotalMarks) : 100,
     wifaq_marks: data.wifaqMarks !== '' && data.wifaqMarks !== null && !isNaN(data.wifaqMarks) ? Number(data.wifaqMarks) : 0,
     wifaq_grade: (data.wifaqGrade || '').trim(),
     attendance_quality: (data.attendanceQuality || '').trim(),

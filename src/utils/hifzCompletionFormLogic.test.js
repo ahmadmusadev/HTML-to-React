@@ -62,7 +62,7 @@ describe('hifzCompletionFormLogic', () => {
   });
 
   describe('getGradeFromScore', () => {
-    it('maps scores to correct Urdu grades', () => {
+    it('maps scores to correct Urdu grades with default 100 total marks', () => {
       expect(getGradeFromScore(95)).toBe('ممتاز');
       expect(getGradeFromScore(80)).toBe('ممتاز');
       expect(getGradeFromScore(75)).toBe('جید جدا');
@@ -71,6 +71,14 @@ describe('hifzCompletionFormLogic', () => {
       expect(getGradeFromScore(40)).toBe('راسب');
       expect(getGradeFromScore(0)).toBe('—');
       expect(getGradeFromScore('')).toBe('—');
+    });
+
+    it('calculates grades correctly when custom total marks are provided', () => {
+      // Out of 50: 40/50 is 80% (ممتاز), 35/50 is 70% (جید جدا), 25/50 is 50% (مقبول), 20/50 is 40% (راسب)
+      expect(getGradeFromScore(40, 50)).toBe('ممتاز');
+      expect(getGradeFromScore(35, 50)).toBe('جید جدا');
+      expect(getGradeFromScore(25, 50)).toBe('مقبول');
+      expect(getGradeFromScore(20, 50)).toBe('راسب');
     });
   });
 
@@ -151,6 +159,7 @@ describe('hifzCompletionFormLogic', () => {
       expect(ui.id).toBe('a0000000-0000-0000-0000-000000000001');
       expect(ui.computerId).toBe('100723');
       expect(ui.initialDepartment).toBe('قاعدہ');
+      expect(ui.shishmahiTotalMarks).toBe(100);
       expect(ui.shishmahiMarks).toBe(83);
       expect(ui.monthlyFee).toBe(4400);
       expect(ui.specialNotes).toBe('ماشاءاللہ باصلاحیت طالب علم ہے');
@@ -165,6 +174,7 @@ describe('hifzCompletionFormLogic', () => {
         hifzStartDate: '2020-11-01',
         hifzCompletionDate: '2026-05-20',
         hifzDurationText: '5 سال، 6 ماہ، 19 دن',
+        shishmahiTotalMarks: '100',
         shishmahiMarks: '83',
         shishmahiGrade: 'جید',
         monthlyFee: '4400',
@@ -178,6 +188,7 @@ describe('hifzCompletionFormLogic', () => {
       );
       expect(payload.madrasa_id).toBe('b0000000-0000-0000-0000-000000000002');
       expect(payload.student_id).toBe('c0000000-0000-0000-0000-000000000003');
+      expect(payload.shishmahi_total_marks).toBe(100);
       expect(payload.shishmahi_marks).toBe(83);
       expect(payload.monthly_fee).toBe(4400);
       expect(payload.special_notes).toBe('نوٹ');
