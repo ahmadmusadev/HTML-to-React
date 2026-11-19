@@ -344,29 +344,6 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
             >
               اندراج فارم
             </button>
-            <button
-              type="button"
-              className={`tab-btn-pill ${viewMode === 'preview' ? 'active' : ''}`}
-              onClick={() => setViewMode('preview')}
-            >
-              پرنٹ پری ویو (A4)
-            </button>
-            <button
-              type="button"
-              className="action-btn-save"
-              onClick={handleSave}
-              disabled={isSaving || !selectedStudent}
-            >
-              {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
-            </button>
-            <button
-              type="button"
-              className="action-btn-print"
-              onClick={handlePrint}
-              disabled={!selectedStudent}
-            >
-              پرنٹ / پی ڈی ایف ڈاؤن لوڈ
-            </button>
           </div>
         </div>
 
@@ -846,6 +823,33 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
               </div>
             </div>
           </div>
+
+          {/* Bottom Action Buttons (Centered with proper spacing) */}
+          <div className="cumulative-bottom-actions no-print">
+            <button
+              type="button"
+              className="tab-btn-pill bottom-preview-btn"
+              onClick={() => setViewMode('preview')}
+            >
+              پرنٹ پری ویو (A4)
+            </button>
+            <button
+              type="button"
+              className="action-btn-save bottom-save-btn"
+              onClick={handleSave}
+              disabled={isSaving || !selectedStudent}
+            >
+              {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
+            </button>
+            <button
+              type="button"
+              className="action-btn-print bottom-print-btn"
+              onClick={handlePrint}
+              disabled={!selectedStudent}
+            >
+              پرنٹ / پی ڈی ایف ڈاؤن لوڈ
+            </button>
+          </div>
         </div>
       )}
 
@@ -865,6 +869,33 @@ export default function CumulativeHifzForm({ initialStudentId = null, onSelectSt
               madrasaNameEnglish={madrasaNameEnglish}
               activeLogo={activeLogo}
             />
+          </div>
+
+          {/* Bottom Action Buttons in Preview Mode */}
+          <div className="cumulative-bottom-actions no-print">
+            <button
+              type="button"
+              className="tab-btn-pill bottom-preview-btn"
+              onClick={() => setViewMode('form')}
+            >
+              اندراج فارم
+            </button>
+            <button
+              type="button"
+              className="action-btn-save bottom-save-btn"
+              onClick={handleSave}
+              disabled={isSaving || !selectedStudent}
+            >
+              {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
+            </button>
+            <button
+              type="button"
+              className="action-btn-print bottom-print-btn"
+              onClick={handlePrint}
+              disabled={!selectedStudent}
+            >
+              پرنٹ / پی ڈی ایف ڈاؤن لوڈ
+            </button>
           </div>
         </div>
       )}

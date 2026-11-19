@@ -197,4 +197,25 @@ describe('CumulativeHifzForm (مجموعی حفظ کارکردگی فارم)', (
       expect(screen.getByDisplayValue('ممتاز')).toBeInTheDocument();
     });
   });
+
+  it('renders "اندراج فارم" at top and centers the 3 action buttons at the bottom of the form', async () => {
+    const { container } = render(<CumulativeHifzForm initialStudentId="std-uuid-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('محمد ابراہیم شاہد')).toBeInTheDocument();
+    });
+
+    // Top action bar should contain only the "اندراج فارم" button
+    const topBar = container.querySelector('.cumulative-actions-wrap');
+    expect(topBar).toBeInTheDocument();
+    const topButtons = topBar.querySelectorAll('button');
+    expect(topButtons.length).toBe(1);
+    expect(topButtons[0]).toHaveTextContent('اندراج فارم');
+
+    // Bottom action bar should exist and contain the 3 buttons
+    const bottomBar = container.querySelector('.cumulative-bottom-actions');
+    expect(bottomBar).toBeInTheDocument();
+    const bottomButtons = Array.from(bottomBar.querySelectorAll('button')).map(b => b.textContent.trim());
+    expect(bottomButtons).toEqual(['پرنٹ پری ویو (A4)', 'محفوظ کریں', 'پرنٹ / پی ڈی ایف ڈاؤن لوڈ']);
+  });
 });
