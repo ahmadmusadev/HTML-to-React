@@ -248,18 +248,15 @@ The user-facing interface should use clear, natural, and professional **Urdu** t
 ## Branching Rule - MUST FOLLOW
 
 1. NEVER work directly on `main` branch.
-2. For EVERY new feature, create a separate branch first:
-   `feature/<feature-name>`
-   Example: `feature/bulk-import-export`, `feature/fee-system`
-3. Complete the full feature in that branch only.
-   Test it fully before merging.
-4. Merge to `main` ONLY after:
-   - Feature is 100% complete
-   - No old feature is broken
-   - User confirms: "Merge it"
-5. If user asks for a small fix, use:
-   `fix/<fix-name>`
-6. Do NOT merge without user approval.
+2. For EVERY new conversation / session, create a separate branch FIRST before writing any code:
+   `conversation/<date>-<short-topic>`
+   Example: `conversation/2026-11-19-hide-ai-ustad`
+3. Complete the full work of THAT conversation in that branch only. Do NOT mix two conversations in one branch.
+4. Test it fully in that branch before merging.
+5. Merge to `main` ONLY after work is 100% complete, no old feature is broken, and user confirms: "Merge it"
+6. If user asks for a small fix in same conversation, stay in the SAME conversation branch. Only use `fix/<fix-name>` if user starts a NEW conversation only for a fix.
+7. Do NOT merge without user approval. Do NOT push directly to `main`.
+8. If user starts a NEW conversation, ALWAYS check current branch first. If still on old conversation branch, switch to `main`, pull latest, then create new conversation branch.
 
 
 ## Local Testing Rule - MUST FOLLOW

@@ -970,6 +970,7 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 [data-theme="dark"] .me-chip,
 [data-theme="dark"] .me-chip-green,
 [data-theme="dark"] .me-chip-blue,
+[data-theme="dark"] .me-history-badge,
 [data-theme="dark"] .me-total-a,
 [data-theme="dark"] .me-total-b,
 [data-theme="dark"] .me-total-c,
@@ -978,6 +979,17 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   background: #27272a !important;
   color: #ffffff !important;
   border: 1px solid #3f3f46 !important;
+}
+
+[data-theme="dark"] .me-del-btn {
+  background: #27272a !important;
+  color: #f87171 !important;
+  border: 1px solid #3f3f46 !important;
+}
+
+[data-theme="dark"] .me-del-btn:hover {
+  background: #451a1a !important;
+  color: #fca5a5 !important;
 }
 
 [data-theme="dark"] .attendance-grid .day-cell {

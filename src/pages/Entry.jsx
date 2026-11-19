@@ -17,7 +17,7 @@ const ME_COLS = [
   { key: 'islamiat', label: 'اسلامیات', max: 10, icon: '' },
   { key: 'itmaad', label: 'اعتماد', max: 10, icon: '' },
   { key: 'para', label: 'پارہ نمبر', max: null, icon: '', group: 'literacy', sub: true },
-  { key: 'tarkoo', label: 'ترکو نمبر', max: null, icon: '', group: 'literacy', sub: true },
+  { key: 'tarkoo', label: 'رکوع نمبر', max: null, icon: '', group: 'literacy', sub: true },
 ];
 const ME_MAX_TOTAL = ME_COLS.filter(c => c.max).reduce((s, c) => s + c.max, 0);
 
@@ -491,7 +491,7 @@ export default function Entry() {
       ) || {};
       let item = { student: s };
       ME_COLS.forEach(c => { 
-        item[c.key] = (prev[c.key] !== undefined && prev[c.key] !== null) ? prev[c.key] : ''; 
+        item[c.key] = (prev[c.key] !== undefined && prev[c.key] !== null) ? prev[c.key] : (c.key === 'tarkoo' && prev.ruku !== undefined && prev.ruku !== null ? prev.ruku : ''); 
       });
 
       // Automatically calculate attendance marks from previous month's attendance if not already saved
@@ -1685,7 +1685,7 @@ export default function Entry() {
                                       <tr>
                                         <th>نمبر</th><th>نام</th>
                                         {ME_COLS.filter(c => !c.sub && c.max).map(c => <th key={c.key}>{c.label}</th>)}
-                                        <th>پارہ</th><th>ترکو</th><th>کل</th><th>فیصد</th>
+                                        <th>پارہ</th><th>رکوع</th><th>کل</th><th>فیصد</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -1697,7 +1697,7 @@ export default function Entry() {
                                                   <td style={{ textAlign: "right", fontWeight: "700", paddingRight: "10px" }}>{s.name || '-'}</td>
                                                   {ME_COLS.filter(c => !c.sub && c.max).map(c => <td key={c.key} style={{ textAlign: "center" }}>{s[c.key] ?? 0}/{c.max}</td>)}
                                                   <td style={{ textAlign: "center" }}>{s.para || '—'}</td>
-                                                  <td style={{ textAlign: "center" }}>{s.tarkoo || '—'}</td>
+                                                  <td style={{ textAlign: "center" }}>{s.tarkoo || s.ruku || '—'}</td>
                                                   <td style={{ textAlign: "center" }}><span className={`me-total-cell ${sg.cls}`} style={{ fontSize: "0.88rem" }}>{s.total}</span></td>
                                                   <td style={{ textAlign: "center" }}><span style={{ fontSize: "0.8rem", fontWeight: "700", color: sg.color }}>{s.pct}% ({s.grade})</span></td>
                                               </tr>
@@ -2304,7 +2304,7 @@ export default function Entry() {
                         <tr className="report-table-header">
                           <th style={{ padding: "8px" }}>نمبر</th><th style={{ padding: "8px" }}>ID</th><th style={{ padding: "8px" }}>نام</th>
                           {ME_COLS.filter(c => !c.sub && c.max).map(c => <th key={c.key} style={{ padding: "8px" }}>{c.label}</th>)}
-                          <th style={{ padding: "8px" }}>پارہ</th><th style={{ padding: "8px" }}>ترکو</th><th style={{ padding: "8px" }}>کل</th><th style={{ padding: "8px" }}>فیصد</th>
+                          <th style={{ padding: "8px" }}>پارہ</th><th style={{ padding: "8px" }}>رکوع</th><th style={{ padding: "8px" }}>کل</th><th style={{ padding: "8px" }}>فیصد</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2317,7 +2317,7 @@ export default function Entry() {
                               <td style={{ textAlign: "right", fontWeight: "700", paddingRight: "10px" }}>{s.name || '-'}</td>
                               {ME_COLS.filter(c => !c.sub && c.max).map(c => <td key={c.key} style={{ textAlign: "center" }}>{s[c.key] ?? 0}/{c.max}</td>)}
                               <td style={{ textAlign: "center" }}>{s.para || '—'}</td>
-                              <td style={{ textAlign: "center" }}>{s.tarkoo || '—'}</td>
+                              <td style={{ textAlign: "center" }}>{s.tarkoo || s.ruku || '—'}</td>
                               <td style={{ textAlign: "center", fontWeight: "700" }}>{s.total}</td>
                               <td style={{ textAlign: "center", fontWeight: "700", color: sg.color }}>{s.pct}% ({sg.g})</td>
                             </tr>
@@ -2365,7 +2365,7 @@ export default function Entry() {
                         <tr className="report-table-header">
                           <th style={{ padding: "8px" }}>مہینہ</th><th style={{ padding: "8px" }}>کلاس</th>
                           {ME_COLS.filter(c => !c.sub && c.max).map(c => <th key={c.key} style={{ padding: "8px" }}>{c.label}</th>)}
-                          <th style={{ padding: "8px" }}>پارہ</th><th style={{ padding: "8px" }}>ترکو</th><th style={{ padding: "8px" }}>کل</th><th style={{ padding: "8px" }}>فیصد</th>
+                          <th style={{ padding: "8px" }}>پارہ</th><th style={{ padding: "8px" }}>رکوع</th><th style={{ padding: "8px" }}>کل</th><th style={{ padding: "8px" }}>فیصد</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2378,7 +2378,7 @@ export default function Entry() {
                               <td style={{ textAlign: "right", paddingRight: "10px" }}>{exam.className}</td>
                               {ME_COLS.filter(c => !c.sub && c.max).map(c => <td key={c.key} style={{ textAlign: "center" }}>{s?.[c.key] ?? 0}/{c.max}</td>)}
                               <td style={{ textAlign: "center" }}>{s?.para || '—'}</td>
-                              <td style={{ textAlign: "center" }}>{s?.tarkoo || '—'}</td>
+                              <td style={{ textAlign: "center" }}>{s?.tarkoo || s?.ruku || '—'}</td>
                               <td style={{ textAlign: "center", fontWeight: "700" }}>{s?.total ?? 0}</td>
                               <td style={{ textAlign: "center", fontWeight: "700", color: sg.color }}>{s?.pct ?? 0}% ({sg.g})</td>
                             </tr>

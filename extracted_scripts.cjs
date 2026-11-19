@@ -1023,7 +1023,7 @@ function renderClassReport() {
               <th style="padding:8px;">نام</th>
               ${ME_COLS.filter(c=>!c.sub&&c.max).map(c=>`<th style="padding:8px;">${c.label}</th>`).join('')}
               <th style="padding:8px;">پارہ</th>
-              <th style="padding:8px;">ترکو</th>
+              <th style="padding:8px;">رکوع</th>
               <th style="padding:8px;">کل</th>
               <th style="padding:8px;">فیصد</th>
             </tr>
@@ -1097,7 +1097,7 @@ function renderStudentReport() {
               <th style="padding:8px;">کلاس</th>
               ${ME_COLS.filter(c=>!c.sub&&c.max).map(c=>`<th style="padding:8px;">${c.label}</th>`).join('')}
               <th style="padding:8px;">پارہ</th>
-              <th style="padding:8px;">ترکو</th>
+              <th style="padding:8px;">رکوع</th>
               <th style="padding:8px;">کل</th>
               <th style="padding:8px;">فیصد</th>
             </tr>
@@ -4266,7 +4266,7 @@ const ME_COLS = [
   { key:'itmaad',     label:'اعتماد',  max:10,  icon:'' },
   // خواندگی — دو ذیلی فیلڈز
   { key:'para',       label:'پارہ نمبر',   max:null, icon:'', group:'literacy', sub:true },
-  { key:'tarkoo',     label:'ترکو نمبر',   max:null, icon:'', group:'literacy', sub:true },
+  { key:'tarkoo',     label:'رکوع نمبر',   max:null, icon:'', group:'literacy', sub:true },
 ];
 
 // کل ممکنہ نمبر (صرف scored فیلڈز)
@@ -4510,7 +4510,7 @@ function meRenderHistory() {
               <tr>
                 <th>نمبر</th><th>نام</th>
                 ${ME_COLS.filter(c=>!c.sub&&c.max).map(c=>`<th>${c.label}</th>`).join('')}
-                <th>پارہ</th><th>ترکو</th>
+                <th>پارہ</th><th>رکوع</th>
                 <th>کل</th><th>فیصد</th>
               </tr>
             </thead>
