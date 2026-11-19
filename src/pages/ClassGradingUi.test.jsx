@@ -144,7 +144,9 @@ describe('Class Grading Integration in Exams and Entry', () => {
 
     await waitFor(() => {
       // In the table, the grade header and class grade badge should be rendered
-      expect(screen.getByText('کلاس وار نتیجہ')).toBeInTheDocument();
+      expect(screen.getByText('ادارے کا مجموعی درجہ')).toBeInTheDocument();
+      expect(screen.getByText('کلاسوں کی بنیاد پر پورے ادارے کی درجہ بندی کا خلاصہ:')).toBeInTheDocument();
+      expect(screen.getByText('کلاس وار نتیجہ و تجزیہ')).toBeInTheDocument();
       expect(screen.getByText('کلاس اول')).toBeInTheDocument();
     });
   });

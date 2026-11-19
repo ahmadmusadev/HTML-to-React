@@ -3,7 +3,8 @@ import {
   getIndividualStudentGrade,
   getWifaqGrade,
   getStudentTier,
-  calculateClassGrading
+  calculateClassGrading,
+  calculateInstituteGrading
 } from './classGrading';
 
 describe('classGrading utility', () => {
@@ -160,6 +161,86 @@ describe('classGrading utility', () => {
       const res = calculateClassGrading([]);
       expect(res.classGrade).toBe('—');
       expect(res.total).toBe(0);
+    });
+  });
+
+  describe('calculateInstituteGrading (پورے ادارے کا رزلٹ درجہ بندی)', () => {
+    it('classifies institute as اعلیٰ A when >= 65% classes are اعلیٰ and <= 10% are کمزور', () => {
+      // 10 classes: 7 اعلیٰ A (70%), 2 اوسط (20%), 1 کمزور (10%)
+      const exams = [
+        ...Array(7).fill({ classGrading: { classGrade: 'اعلیٰ A' } }),
+        ...Array(2).fill({ classGrading: { classGrade: 'اوسط' } }),
+        ...Array(1).fill({ classGrading: { classGrade: 'کمزور' } })
+      ];
+      const res = calculateInstituteGrading(exams);
+      expect(res.instituteGrade).toBe('اعلیٰ A');
+      expect(res.aClassPct).toBe(70);
+      expect(res.mClassPct).toBe(20);
+      expect(res.wClassPct).toBe(10);
+      expect(res.totalClasses).toBe(10);
+    });
+
+    it('classifies institute as اعلیٰ B when >= 65% classes are اعلیٰ and <= 20% are کمزور', () => {
+      // 10 classes: 7 اعلیٰ (70%), 1 اوسط (10%), 2 کمزور (20%)
+      const exams = [
+        ...Array(4).fill({ classGrading: { classGrade: 'اعلیٰ A' } }),
+        ...Array(3).fill({ classGrading: { classGrade: 'اعلیٰ B' } }),
+        ...Array(1).fill({ classGrading: { classGrade: 'اوسط' } }),
+        ...Array(2).fill({ classGrading: { classGrade: 'کمزور' } })
+      ];
+      const res = calculateInstituteGrading(exams);
+      expect(res.instituteGrade).toBe('اعلیٰ B');
+      expect(res.aClassPct).toBe(70);
+      expect(res.mClassPct).toBe(10);
+      expect(res.wClassPct).toBe(20);
+    });
+
+    it('classifies institute as اوسط when >= 50% classes are اعلیٰ and <= 25% are کمزور', () => {
+      // 4 classes: 2 اعلیٰ (50%), 1 اوسط (25%), 1 کمزور (25%)
+      const exams = [
+        { classGrading: { classGrade: 'اعلیٰ A' } },
+        { classGrading: { classGrade: 'اعلیٰ B' } },
+        { classGrading: { classGrade: 'اوسط' } },
+        { classGrading: { classGrade: 'کمزور' } }
+      ];
+      const res = calculateInstituteGrading(exams);
+      expect(res.instituteGrade).toBe('اوسط');
+      expect(res.aClassPct).toBe(50);
+      expect(res.mClassPct).toBe(25);
+      expect(res.wClassPct).toBe(25);
+    });
+
+    it('classifies institute as کمزور when < 50% classes are اعلیٰ', () => {
+      // 5 classes: 2 اعلیٰ (40%), 2 اوسط (40%), 1 کمزور (20%)
+      const exams = [
+        { classGrading: { classGrade: 'اعلیٰ A' } },
+        { classGrading: { classGrade: 'اعلیٰ B' } },
+        { classGrading: { classGrade: 'اوسط' } },
+        { classGrading: { classGrade: 'اوسط' } },
+        { classGrading: { classGrade: 'کمزور' } }
+      ];
+      const res = calculateInstituteGrading(exams);
+      expect(res.instituteGrade).toBe('کمزور');
+      expect(res.aClassPct).toBe(40);
+    });
+
+    it('classifies institute as کمزور when > 25% classes are کمزور', () => {
+      // 4 classes: 3 اعلیٰ (75%), 0 اوسط, 1 کمزور (25%) -> wait 1/4 = 25% is <= 25%.
+      // 3 classes: 2 اعلیٰ (66.7%), 1 کمزور (33.3%) -> 33.3% > 25%
+      const exams = [
+        { classGrading: { classGrade: 'اعلیٰ A' } },
+        { classGrading: { classGrade: 'اعلیٰ A' } },
+        { classGrading: { classGrade: 'کمزور' } }
+      ];
+      const res = calculateInstituteGrading(exams);
+      expect(res.instituteGrade).toBe('کمزور');
+      expect(res.wClassPct).toBe(33.3);
+    });
+
+    it('handles empty exams array', () => {
+      const res = calculateInstituteGrading([]);
+      expect(res.instituteGrade).toBe('—');
+      expect(res.totalClasses).toBe(0);
     });
   });
 });

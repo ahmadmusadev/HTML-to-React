@@ -6,7 +6,7 @@ import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import SubjectAnalysisModal from '../components/SubjectAnalysisModal';
-import { calculateClassGrading, getIndividualStudentGrade } from '../utils/classGrading';
+import { calculateClassGrading, calculateInstituteGrading, getIndividualStudentGrade } from '../utils/classGrading';
 import './Entry.css';
 
 // Constants from edit.html
@@ -1430,11 +1430,28 @@ export default function Entry() {
     const exams = monthlyExams.filter(r => r.month === irMonth && String(r.year) === String(irYear));
     if (!exams.length) { setIrResultsData('empty'); return; }
     
-    const totalStudents = exams.reduce((s, e) => s + e.students.length, 0);
-    const overallAvg = exams.reduce((s, e) => s + e.students.reduce((ss, st) => ss + (st.pct || 0), 0), 0) / totalStudents;
-    const allStudents = exams.flatMap(e => e.students || []);
-    const instituteGrading = calculateClassGrading(allStudents);
-    setIrResultsData({ month: irMonth, year: irYear, exams, totalStudents, overallAvg, instituteGrading });
+    const totalStudents = exams.reduce((s, e) => s + (e.students ? e.students.length : 0), 0);
+    const overallAvg = totalStudents > 0
+      ? exams.reduce((s, e) => s + (e.students || []).reduce((ss, st) => ss + (st.pct || 0), 0), 0) / totalStudents
+      : 0;
+    
+    // Evaluate each class first
+    const evaluatedExams = exams.map(exam => ({
+      ...exam,
+      classGrading: calculateClassGrading(exam.students || [])
+    }));
+
+    // Evaluate whole institution based on all classes
+    const instituteGrading = calculateInstituteGrading(evaluatedExams);
+
+    setIrResultsData({
+      month: irMonth,
+      year: irYear,
+      exams: evaluatedExams,
+      totalStudents,
+      overallAvg,
+      instituteGrading
+    });
   };
 
   return (
@@ -2419,43 +2436,90 @@ export default function Entry() {
                 </div>
 
                 <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "20px" }}>
-                  <div className="ir-stat-card ir-stat-green">
+                  <div className="ir-stat-card ir-stat-green" style={{ flex: "1", minWidth: "140px" }}>
                     <div style={{ fontSize: "0.85rem", color: "#15803d" }}>کل کلاسز</div>
                     <div style={{ fontSize: "2rem", fontWeight: "800", color: "#15803d" }}>{irResultsData.exams.length}</div>
                   </div>
-                  <div className="ir-stat-card ir-stat-blue">
+                  <div className="ir-stat-card ir-stat-blue" style={{ flex: "1", minWidth: "140px" }}>
                     <div style={{ fontSize: "0.85rem", color: "#1d4ed8" }}>کل طلباء</div>
                     <div style={{ fontSize: "2rem", fontWeight: "800", color: "#1d4ed8" }}>{irResultsData.totalStudents}</div>
                   </div>
-                  <div className="ir-stat-card ir-stat-amber">
+                  <div className="ir-stat-card ir-stat-amber" style={{ flex: "1", minWidth: "140px" }}>
                     <div style={{ fontSize: "0.85rem", color: "#b45309" }}>مجموعی اوسط</div>
                     <div style={{ fontSize: "2rem", fontWeight: "800", color: "#b45309" }}>{irResultsData.overallAvg.toFixed(1)}%</div>
-                    <div style={{ fontSize: "0.9rem", fontWeight: "700", color: irResultsData.instituteGrading?.classGradeColor || "#b45309" }}>
-                      {irResultsData.instituteGrading?.classGrade ? `درجہ: ${irResultsData.instituteGrading.classGrade}` : meGrade(irResultsData.overallAvg).g}
+                  </div>
+                  <div className="ir-stat-card" style={{ flex: "1", minWidth: "160px", background: "var(--bg-card, #f8fafc)", border: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>ادارے کا مجموعی درجہ</div>
+                    <div style={{ fontSize: "1.8rem", fontWeight: "800", color: irResultsData.instituteGrading?.instituteGradeColor || "var(--accent)" }}>
+                      {irResultsData.instituteGrading?.instituteGrade || '—'}
                     </div>
                   </div>
                 </div>
 
-                <h4 style={{ color: "var(--accent)", margin: "0 0 10px 0" }}>کلاس وار نتیجہ</h4>
+                {/* ادارہ جاتی درجہ بندی کا خلاصہ (تمام کلاسوں کے تناسب سے) */}
+                {irResultsData.instituteGrading && irResultsData.instituteGrading.totalClasses > 0 && (
+                  <div style={{ background: "var(--bg-card, #f8fafc)", border: "1px solid var(--border)", borderRadius: "10px", padding: "14px 18px", marginBottom: "20px" }}>
+                    <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "var(--accent)", marginBottom: "8px" }}>
+                      کلاسوں کی بنیاد پر پورے ادارے کی درجہ بندی کا خلاصہ:
+                    </div>
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "0.88rem" }}>
+                      <span style={{ padding: "4px 10px", borderRadius: "6px", background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", fontWeight: "700" }}>
+                        اعلیٰ کلاسیں (اعلیٰ A اور B): {irResultsData.instituteGrading.aClassCount} ({irResultsData.instituteGrading.aClassPct}%)
+                      </span>
+                      <span style={{ padding: "4px 10px", borderRadius: "6px", background: "#fffbeb", color: "#b45309", border: "1px solid #fde68a", fontWeight: "700" }}>
+                        اوسط کلاسیں: {irResultsData.instituteGrading.mClassCount} ({irResultsData.instituteGrading.mClassPct}%)
+                      </span>
+                      <span style={{ padding: "4px 10px", borderRadius: "6px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", fontWeight: "700" }}>
+                        کمزور کلاسیں: {irResultsData.instituteGrading.wClassCount} ({irResultsData.instituteGrading.wClassPct}%)
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <h4 style={{ color: "var(--accent)", margin: "0 0 10px 0" }}>کلاس وار نتیجہ و تجزیہ</h4>
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
                     <thead>
                       <tr className="report-table-header">
-                        <th style={{ padding: "10px 14px" }}>کلاس</th><th style={{ padding: "10px" }}>طلباء</th><th style={{ padding: "10px" }}>اوسط</th><th style={{ padding: "10px" }}>گریڈ</th><th style={{ padding: "10px" }}>نمایاں طالب علم</th>
+                        <th style={{ padding: "10px 12px" }}>کلاس</th>
+                        <th style={{ padding: "10px" }}>طلباء</th>
+                        <th style={{ padding: "10px" }}>اوسط</th>
+                        <th style={{ padding: "10px" }}>درجہ کلاس</th>
+                        <th style={{ padding: "10px" }}>اعلیٰ طلبہ (80٪+)</th>
+                        <th style={{ padding: "10px" }}>اوسط طلبہ (60-79٪)</th>
+                        <th style={{ padding: "10px" }}>کمزور طلبہ (60٪ سے کم)</th>
+                        <th style={{ padding: "10px" }}>نمایاں طالب علم</th>
                       </tr>
                     </thead>
                     <tbody>
                       {irResultsData.exams.map((exam, i) => {
-                        const avg = exam.students.reduce((s, r) => s + (r.pct || 0), 0) / exam.students.length;
-                        const clsGrading = calculateClassGrading(exam.students);
-                        const best = exam.students.reduce((a, b) => (a.pct || 0) >= (b.pct || 0) ? a : b, exam.students[0]);
+                        const avg = exam.students && exam.students.length > 0
+                          ? exam.students.reduce((s, r) => s + (r.pct || 0), 0) / exam.students.length
+                          : 0;
+                        const clsGrading = exam.classGrading || calculateClassGrading(exam.students || []);
+                        const best = exam.students && exam.students.length > 0
+                          ? exam.students.reduce((a, b) => (a.pct || 0) >= (b.pct || 0) ? a : b, exam.students[0])
+                          : null;
                         return (
-                          <tr key={i}>
-                            <td style={{ textAlign: "right", fontWeight: "700", padding: "10px 14px" }}>{exam.className}</td>
-                            <td style={{ textAlign: "center", padding: "10px" }}>{exam.students.length}</td>
+                          <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                            <td style={{ textAlign: "right", fontWeight: "700", padding: "10px 12px" }}>{exam.className}</td>
+                            <td style={{ textAlign: "center", padding: "10px" }}>{exam.students ? exam.students.length : 0}</td>
                             <td style={{ textAlign: "center", padding: "10px", fontWeight: "700" }}>{avg.toFixed(1)}%</td>
-                            <td style={{ textAlign: "center", padding: "10px", fontWeight: "800", color: clsGrading.classGradeColor }}>{clsGrading.classGrade}</td>
-                            <td style={{ textAlign: "right", padding: "10px" }}>{best?.name || '—'} ({best?.pct || 0}%)</td>
+                            <td style={{ textAlign: "center", padding: "10px", fontWeight: "800", color: clsGrading.classGradeColor }}>
+                              <span style={{ padding: "2px 8px", borderRadius: "4px", background: "var(--bg-card, #f8fafc)", border: "1px solid var(--border)" }}>
+                                {clsGrading.classGrade}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: "center", padding: "10px", color: "#15803d", fontWeight: "600" }}>
+                              {clsGrading.aCount} ({clsGrading.aPct}%)
+                            </td>
+                            <td style={{ textAlign: "center", padding: "10px", color: "#b45309", fontWeight: "600" }}>
+                              {clsGrading.mCount} ({clsGrading.mPct}%)
+                            </td>
+                            <td style={{ textAlign: "center", padding: "10px", color: "#dc2626", fontWeight: "600" }}>
+                              {clsGrading.wCount} ({clsGrading.wPct}%)
+                            </td>
+                            <td style={{ textAlign: "right", padding: "10px" }}>{best ? `${best.name || '—'} (${best.pct || 0}%)` : '—'}</td>
                           </tr>
                         )
                       })}

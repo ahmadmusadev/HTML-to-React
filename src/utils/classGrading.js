@@ -200,3 +200,93 @@ export function calculateClassGrading(students = []) {
     total: validCount
   };
 }
+
+/**
+ * Calculates overall institution classification from an array of class exams.
+ * Same standard applied at the institution level based on class distribution:
+ * (1) اعلیٰ کلاسیں >= 65%, کمزور کلاسیں <= 10% => اعلیٰ A
+ * (2) اعلیٰ کلاسیں >= 65%, کمزور کلاسیں <= 20% => اعلیٰ B
+ * (3) اعلیٰ کلاسیں >= 50%, کمزور کلاسیں <= 25% => اوسط
+ * (4) اگر اعلیٰ کلاسیں < 50% ہوں یا کمزور کلاسیں > 25% ہوں => کمزور
+ * 
+ * @param {Array} exams Array of monthly exam objects, each with students or classGrading.
+ */
+export function calculateInstituteGrading(exams = []) {
+  if (!Array.isArray(exams) || exams.length === 0) {
+    return {
+      instituteGrade: '—',
+      instituteGradeColor: 'inherit',
+      aClassCount: 0,
+      mClassCount: 0,
+      wClassCount: 0,
+      aClassPct: 0,
+      mClassPct: 0,
+      wClassPct: 0,
+      totalClasses: 0
+    };
+  }
+
+  let aClassCount = 0; // اعلیٰ A اور اعلیٰ B
+  let mClassCount = 0; // اوسط
+  let wClassCount = 0; // کمزور
+
+  exams.forEach((exam) => {
+    const classGrading = exam.classGrading || calculateClassGrading(exam.students || []);
+    const g = classGrading.classGrade;
+    if (g === 'اعلیٰ A' || g === 'اعلیٰ B') {
+      aClassCount++;
+    } else if (g === 'اوسط') {
+      mClassCount++;
+    } else if (g === 'کمزور') {
+      wClassCount++;
+    }
+  });
+
+  const totalClasses = exams.length;
+  if (totalClasses === 0) {
+    return {
+      instituteGrade: '—',
+      instituteGradeColor: 'inherit',
+      aClassCount: 0,
+      mClassCount: 0,
+      wClassCount: 0,
+      aClassPct: 0,
+      mClassPct: 0,
+      wClassPct: 0,
+      totalClasses: 0
+    };
+  }
+
+  const aClassPct = (aClassCount / totalClasses) * 100;
+  const mClassPct = (mClassCount / totalClasses) * 100;
+  const wClassPct = (wClassCount / totalClasses) * 100;
+
+  let instituteGrade = 'کمزور';
+  let instituteGradeColor = '#dc2626';
+
+  if (aClassPct < 50 || wClassPct > 25) {
+    instituteGrade = 'کمزور';
+    instituteGradeColor = '#dc2626';
+  } else if (aClassPct >= 65 && wClassPct <= 10) {
+    instituteGrade = 'اعلیٰ A';
+    instituteGradeColor = '#15803d';
+  } else if (aClassPct >= 65 && wClassPct <= 20) {
+    instituteGrade = 'اعلیٰ B';
+    instituteGradeColor = '#166534';
+  } else if (aClassPct >= 50 && wClassPct <= 25) {
+    instituteGrade = 'اوسط';
+    instituteGradeColor = '#b45309';
+  }
+
+  return {
+    instituteGrade,
+    instituteGradeColor,
+    aClassCount,
+    mClassCount,
+    wClassCount,
+    aClassPct: Number(aClassPct.toFixed(1)),
+    mClassPct: Number(mClassPct.toFixed(1)),
+    wClassPct: Number(wClassPct.toFixed(1)),
+    totalClasses
+  };
+}
