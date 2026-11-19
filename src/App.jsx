@@ -569,7 +569,7 @@ function App() {
   const [theme, setTheme] = useState('light');
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('hifz-theme');
+    const savedTheme = typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem('hifz-theme') : null;
     const hasMatchMedia = typeof window !== 'undefined' && typeof window.matchMedia === 'function';
     const prefersDark = hasMatchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     
@@ -585,7 +585,8 @@ function App() {
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e) => {
-      if (!localStorage.getItem('hifz-theme')) {
+      const stored = typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem('hifz-theme') : null;
+      if (!stored) {
         setTheme(e.matches ? 'dark' : 'light');
       }
     };
@@ -607,7 +608,9 @@ function App() {
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
-    localStorage.setItem('hifz-theme', newTheme);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('hifz-theme', newTheme);
+    }
   };
 
   return (
