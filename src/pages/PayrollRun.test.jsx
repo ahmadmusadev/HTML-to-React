@@ -325,8 +325,8 @@ describe('PayrollRun Component - Stage 5 Monthly Payroll', () => {
       expect(screen.queryByLabelText(/پیشگی کٹوتی برائے/)).not.toBeInTheDocument();
       expect(screen.queryByLabelText(/دیگر کٹوتی برائے/)).not.toBeInTheDocument();
 
-      // Figures displayed as text
-      expect(screen.getByText('500')).toBeInTheDocument();
+      // Figures displayed as text in row and footer
+      expect(screen.getAllByText('500').length).toBeGreaterThanOrEqual(1);
     });
 
     it('allows marking payment and unmarking payment', async () => {
@@ -1067,6 +1067,66 @@ describe('PayrollRun Component - Stage 5 Monthly Payroll', () => {
       });
 
       vi.useRealTimers();
+    });
+
+    it('renders column-wise totals across all columns in tfoot even with a single teacher', async () => {
+      const draftRun = {
+        id: VALID_RUN_ID,
+        madrasa_id: VALID_MADRASA_ID,
+        month: '2026-11',
+        status: 'draft'
+      };
+      const storedItems = [
+        {
+          id: 'item-1',
+          run_id: VALID_RUN_ID,
+          staff_id: 'staff-1',
+          base_salary: 12000,
+          payable_working_days: 26,
+          present_days: 18.5,
+          absent_days: 5,
+          paid_leave_days: 2.5,
+          unpaid_leave_days: 0,
+          late_minutes_charged: 30,
+          early_minutes_charged: 21,
+          absence_deduction: 2307.69,
+          unpaid_leave_deduction: 0,
+          time_deduction: 49.55,
+          bonus: 0,
+          advance_deduction: 0,
+          other_deduction: 0,
+          net_salary: 9642.76,
+          notes: '',
+          payment_status: 'unpaid'
+        }
+      ];
+
+      vi.spyOn(payrollRunsApi, 'fetchRunByMonth').mockResolvedValue(draftRun);
+      vi.spyOn(payrollRunsApi, 'fetchRunItems').mockResolvedValue(storedItems);
+
+      render(
+        <PayrollRun
+          staffList={[MOCK_STAFF[0]]}
+          activeMadrasaId={VALID_MADRASA_ID}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('میزان (کل مجموعہ)')).toBeInTheDocument();
+      });
+
+      const tfoot = screen.getByText('میزان (کل مجموعہ)').closest('tfoot');
+      expect(tfoot).toBeInTheDocument();
+
+      // Verify that every numerical column has its total in tfoot
+      expect(tfoot.textContent).toContain('12,000'); // base salary
+      expect(tfoot.textContent).toContain('26'); // payable days
+      expect(tfoot.textContent).toContain('18.5'); // present
+      expect(tfoot.textContent).toContain('5'); // absent
+      expect(tfoot.textContent).toContain('2.5'); // paid leave
+      expect(tfoot.textContent).toContain('51'); // total late + early minutes (30 + 21)
+      expect(tfoot.textContent).toContain('2,307.69'); // absence deduction
+      expect(tfoot.textContent).toContain('49.55'); // time deduction
     });
   });
 
