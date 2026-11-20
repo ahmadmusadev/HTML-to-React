@@ -347,6 +347,40 @@
   border-radius: 4px;
 }
 
+.payroll-run-actions-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.payroll-run-action-btn {
+  width: 58px;
+  min-width: 58px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0 8px;
+  box-sizing: border-box;
+  text-align: center;
+  border: 1.5px solid #94a3b8 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  transition: all 0.2s ease;
+}
+
+.payroll-run-action-btn:hover:not(:disabled) {
+  background: #f8fafc !important;
+  border-color: #64748b !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12) !important;
+}
+
 /* Actions Footer Bar */
 .payroll-run-actions-bar {
   display: flex;
@@ -570,6 +604,19 @@
 
 [data-theme="dark"] .payroll-run-btn-secondary:hover:not(:disabled) {
   background: #27272a !important;
+}
+
+[data-theme="dark"] .payroll-run-action-btn {
+  border: none !important;
+  box-shadow: none !important;
+  background: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .payroll-run-action-btn:hover:not(:disabled) {
+  background: #3f3f46 !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme="dark"] .payroll-run-banner-warning {

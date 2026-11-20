@@ -987,18 +987,26 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                           <strong>{Number(item.net_salary || 0).toLocaleString('en-US')}</strong>
                         </td>
 
-                        {/* Detail Modal Opener */}
+                        {/* Detail Modal Opener & Slip Print */}
                         <td>
-                          <button
-                            type="button"
-                            className="payroll-run-btn-secondary payroll-run-btn-sm"
-                            onClick={() => setDetailItem({ ...item, staff_name: staffName, staff_code: staffCode })}
-                          >
-                            تفصیل
-                          </button>
-                          {currentRun.status === 'finalized' && (
-                            <button type="button" className="payroll-run-btn-secondary payroll-run-btn-sm" onClick={() => handleOpenPrint({ type: 'slip', staffId: item.staff_id })}>سلپ</button>
-                          )}
+                          <div className="payroll-run-actions-cell">
+                            <button
+                              type="button"
+                              className="payroll-run-btn-secondary payroll-run-btn-sm payroll-run-action-btn"
+                              onClick={() => setDetailItem({ ...item, staff_name: staffName, staff_code: staffCode })}
+                            >
+                              تفصیل
+                            </button>
+                            {currentRun.status === 'finalized' && (
+                              <button
+                                type="button"
+                                className="payroll-run-btn-secondary payroll-run-btn-sm payroll-run-action-btn"
+                                onClick={() => handleOpenPrint({ type: 'slip', staffId: item.staff_id })}
+                              >
+                                سلپ
+                              </button>
+                            )}
+                          </div>
                         </td>
 
                         {/* Payment Status (Finalized only) */}
