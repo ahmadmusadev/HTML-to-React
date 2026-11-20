@@ -894,7 +894,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                   <th>خالص تنخواہ</th>
                   <th>تفصیل</th>
                   {currentRun.status === 'finalized' && <th>ادائیگی کی صورتحال</th>}
-                  <th>نوٹس</th>
+                  <th className="payroll-run-notes-th">نوٹس</th>
                 </tr>
               </thead>
               <tbody>
@@ -1056,16 +1056,18 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                         {/* Notes */}
                         <td>
                           {isDraft ? (
-                            <input
-                              type="text"
-                              className="payroll-table-notes-input"
-                              value={noteVal}
-                              onChange={(e) => handleNoteChange(item.staff_id, e.target.value)}
-                              placeholder="کوئی نوٹ لکھیں"
-                              aria-label={`نوٹ برائے ${staffName}`}
-                            />
+                            <div className="payroll-notes-cell-wrap">
+                              <input
+                                type="text"
+                                className="payroll-table-notes-input"
+                                value={noteVal}
+                                onChange={(e) => handleNoteChange(item.staff_id, e.target.value)}
+                                placeholder="کوئی نوٹ لکھیں"
+                                aria-label={`نوٹ برائے ${staffName}`}
+                              />
+                            </div>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div className="payroll-notes-cell-wrap">
                               <input
                                 type="text"
                                 className="payroll-table-notes-input"
@@ -1076,7 +1078,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                               />
                               <button
                                 type="button"
-                                className="payroll-run-btn-secondary payroll-run-btn-sm"
+                                className="payroll-run-btn-secondary payroll-run-btn-sm payroll-run-action-btn"
                                 disabled={actionLoading}
                                 onClick={() => handleSaveNote(item.id, item.staff_id)}
                               >
