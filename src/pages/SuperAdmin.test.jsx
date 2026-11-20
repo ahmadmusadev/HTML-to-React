@@ -336,5 +336,15 @@ describe('SuperAdmin Component', () => {
       expect(screen.getByText('جامعہ عثمانیہ')).toBeInTheDocument();
     });
   });
+
+  it('renders the Super Admin dashboard header with correct title and subtitle', async () => {
+    render(<SuperAdmin />);
+
+    const heading = screen.getByRole('heading', { level: 2, name: /سپر ایڈمن کنٹرول ڈیش بورڈ/ });
+    expect(heading).toBeInTheDocument();
+    expect(heading.closest('.super-admin-title-area')).toBeInTheDocument();
+    expect(screen.getByText('تمام رجسٹرڈ مدارس اور منتظمین کی مرکزی نگرانی و نیا اندراج')).toBeInTheDocument();
+  });
 });
+
 
