@@ -984,30 +984,32 @@ export default function DailyPerformanceReport() {
         </div>
       )}
 
-      {/* 4. Footer & Signature Block */}
-      <div className="daily-report-footer">
-        <div className="daily-report-signature-grid">
-          <div className="daily-report-signature-box">
-            <div className="daily-report-signature-line" />
-            <div className="daily-report-signature-text">دستخط استادِ محترم</div>
-            <div className="daily-report-signature-sub">
-              {currentClassObj?.teacher ? `محترم ${currentClassObj.teacher}` : 'نام و دستخط'}
-            </div>
-          </div>
-          <div className="daily-report-signature-box">
-            <div className="daily-report-signature-line" />
-            <div className="daily-report-signature-text">دستخط ناظم تعلیمات / مہتمم</div>
-            <div className="daily-report-signature-sub">جامعہ / ادارہ ہذا</div>
-          </div>
-          {reportMode === 'student_individual' && (
+      {/* 4. Footer & Signature Block (Render only when records exist) */}
+      {!loading && distinctDates.length > 0 && (
+        <div className="daily-report-footer">
+          <div className="daily-report-signature-grid">
             <div className="daily-report-signature-box">
               <div className="daily-report-signature-line" />
-              <div className="daily-report-signature-text">دستخط سرپرست / والدین</div>
-              <div className="daily-report-signature-sub">برائے اطلاع و ملاحظہ</div>
+              <div className="daily-report-signature-text">دستخط استادِ محترم</div>
+              <div className="daily-report-signature-sub">
+                {currentClassObj?.teacher ? `محترم ${currentClassObj.teacher}` : 'نام و دستخط'}
+              </div>
             </div>
-          )}
+            <div className="daily-report-signature-box">
+              <div className="daily-report-signature-line" />
+              <div className="daily-report-signature-text">دستخط ناظم تعلیمات / مہتمم</div>
+              <div className="daily-report-signature-sub">جامعہ / ادارہ ہذا</div>
+            </div>
+            {reportMode === 'student_individual' && (
+              <div className="daily-report-signature-box">
+                <div className="daily-report-signature-line" />
+                <div className="daily-report-signature-text">دستخط سرپرست / والدین</div>
+                <div className="daily-report-signature-sub">برائے اطلاع و ملاحظہ</div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

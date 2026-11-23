@@ -916,48 +916,50 @@ export default function DailyAcademicPerformance({ initialView = 'entry' }) {
         )}
       </div>
 
-      {/* 4. Footer & Signature Section */}
-      <div className="daily-perf-footer">
-        {/* Statistics Bar */}
-        <div className="daily-perf-stats-grid">
-          <div className="daily-perf-stat-card">
-            <div className="daily-perf-stat-label">کل طلبہ</div>
-            <div className="daily-perf-stat-value">{stats.total}</div>
-          </div>
-          <div className="daily-perf-stat-card">
-            <div className="daily-perf-stat-label">سبق سنانے والے</div>
-            <div className="daily-perf-stat-value">{stats.sabaq}</div>
-          </div>
-          <div className="daily-perf-stat-card">
-            <div className="daily-perf-stat-label">سبقی سنانے والے</div>
-            <div className="daily-perf-stat-value">{stats.sabqi}</div>
-          </div>
-          <div className="daily-perf-stat-card">
-            <div className="daily-perf-stat-label">منزل سنانے والے</div>
-            <div className="daily-perf-stat-value">{stats.manzil}</div>
-          </div>
-          <div className="daily-perf-stat-card">
-            <div className="daily-perf-stat-label">مطالعہ کرنے والے</div>
-            <div className="daily-perf-stat-value">{stats.mutalaah}</div>
-          </div>
-        </div>
-
-        {/* Signature Line Section */}
-        <div className="daily-perf-signature-grid">
-          <div className="daily-perf-signature-box">
-            <div className="daily-perf-signature-line" />
-            <div className="daily-perf-signature-text">دستخط استادِ محترم</div>
-            <div className="daily-perf-signature-sub">
-              {currentClassObj?.teacher ? `محترم ${currentClassObj.teacher}` : 'نام و دستخط'}
+      {/* 4. Footer & Signature Section (Render only when students exist) */}
+      {!loading && classStudents.length > 0 && (
+        <div className="daily-perf-footer">
+          {/* Statistics Bar */}
+          <div className="daily-perf-stats-grid">
+            <div className="daily-perf-stat-card">
+              <div className="daily-perf-stat-label">کل طلبہ</div>
+              <div className="daily-perf-stat-value">{stats.total}</div>
+            </div>
+            <div className="daily-perf-stat-card">
+              <div className="daily-perf-stat-label">سبق سنانے والے</div>
+              <div className="daily-perf-stat-value">{stats.sabaq}</div>
+            </div>
+            <div className="daily-perf-stat-card">
+              <div className="daily-perf-stat-label">سبقی سنانے والے</div>
+              <div className="daily-perf-stat-value">{stats.sabqi}</div>
+            </div>
+            <div className="daily-perf-stat-card">
+              <div className="daily-perf-stat-label">منزل سنانے والے</div>
+              <div className="daily-perf-stat-value">{stats.manzil}</div>
+            </div>
+            <div className="daily-perf-stat-card">
+              <div className="daily-perf-stat-label">مطالعہ کرنے والے</div>
+              <div className="daily-perf-stat-value">{stats.mutalaah}</div>
             </div>
           </div>
-          <div className="daily-perf-signature-box">
-            <div className="daily-perf-signature-line" />
-            <div className="daily-perf-signature-text">دستخط ناظم تعلیمات / مہتمم</div>
-            <div className="daily-perf-signature-sub">جامعہ / مدرسہ ہذا</div>
+
+          {/* Signature Line Section */}
+          <div className="daily-perf-signature-grid">
+            <div className="daily-perf-signature-box">
+              <div className="daily-perf-signature-line" />
+              <div className="daily-perf-signature-text">دستخط استادِ محترم</div>
+              <div className="daily-perf-signature-sub">
+                {currentClassObj?.teacher ? `محترم ${currentClassObj.teacher}` : 'نام و دستخط'}
+              </div>
+            </div>
+            <div className="daily-perf-signature-box">
+              <div className="daily-perf-signature-line" />
+              <div className="daily-perf-signature-text">دستخط ناظم تعلیمات / مہتمم</div>
+              <div className="daily-perf-signature-sub">جامعہ / مدرسہ ہذا</div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 5. AI Vision Sheet Scanner Modal (Screen only) */}
       {isUploadModalOpen && (
