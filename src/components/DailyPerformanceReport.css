@@ -1,0 +1,725 @@
+/* ==============================================================================
+   Periodic Academic Performance Report (میعادی تعلیمی رپورٹ) Styles
+   Strict adherence to AGENTS.md:
+   - No emojis or decorative icons
+   - Full Light Mode and Dark Mode contrast
+   - Mobile responsiveness
+   - Strict RTL layout
+   - Black & White A4 Print Standard
+   ============================================================================== */
+
+.daily-report-wrapper {
+  width: 100%;
+  direction: rtl;
+  font-family: inherit;
+  color: var(--text, #1e293b);
+}
+
+/* Control Card & Filter Toolbar */
+.daily-report-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.daily-report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  padding-bottom: 12px;
+}
+
+.daily-report-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.daily-report-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 4px;
+}
+
+.daily-report-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.daily-report-btn {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border, #cbd5e1);
+  background: var(--bg-card, #f8fafc);
+  color: var(--text, #334155);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.daily-report-btn:hover:not(:disabled) {
+  background: var(--bg-hover, #f1f5f9);
+  border-color: var(--border-hover, #94a3b8);
+}
+
+.daily-report-btn-secondary {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+.daily-report-btn-secondary:hover:not(:disabled) {
+  background: #0369a1;
+  border-color: #0369a1;
+}
+
+.daily-report-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Filters Layout */
+.daily-report-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: flex-start;
+}
+
+.daily-report-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.daily-report-field-class {
+  min-width: 200px;
+  max-width: 260px;
+}
+
+.daily-report-field-student {
+  min-width: 200px;
+  max-width: 260px;
+}
+
+.daily-report-field-period {
+  min-width: 175px;
+  max-width: 215px;
+}
+
+.daily-report-field-date {
+  width: 140px;
+}
+
+.daily-report-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text, #334155);
+}
+
+.daily-report-select,
+.daily-report-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #cbd5e1);
+  background: var(--bg-input, #ffffff);
+  color: var(--text, #0f172a);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.daily-report-select {
+  cursor: pointer;
+}
+
+.daily-report-select:focus,
+.daily-report-input:focus {
+  border-color: var(--accent, #0284c7);
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+/* Mode Toggle */
+.daily-report-mode-toggle {
+  display: flex;
+  gap: 8px;
+  background: transparent;
+  border: none;
+}
+
+.daily-report-mode-btn {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 6px;
+  background: var(--bg-card, #f8fafc);
+  color: var(--text, #334155);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.daily-report-mode-btn:hover:not(.active) {
+  background: var(--bg-hover, #f1f5f9);
+  border-color: var(--border-hover, #94a3b8);
+}
+
+.daily-report-mode-btn.active {
+  background: var(--accent, #0f766e);
+  color: #ffffff;
+  border-color: var(--accent, #0f766e);
+}
+
+/* Active Range Banner */
+.daily-report-active-range {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-muted, #475569);
+}
+
+/* KPI Summary Cards (Mode B) */
+.daily-report-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.daily-report-kpi-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 12px 14px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.daily-report-kpi-label {
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.daily-report-kpi-val {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+}
+
+.daily-report-kpi-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 3px;
+}
+
+/* Table Area */
+.daily-report-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg-card, #ffffff);
+  margin-bottom: 20px;
+}
+
+.daily-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.875rem;
+  min-width: 860px;
+}
+
+.daily-report-table th {
+  background: var(--bg-th, #f8fafc);
+  color: var(--text, #1e293b);
+  font-weight: 700;
+  padding: 12px 10px;
+  border-bottom: 2px solid var(--border, #cbd5e1);
+  white-space: nowrap;
+}
+
+.daily-report-table td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  vertical-align: middle;
+}
+
+.daily-report-table tr:hover {
+  background: var(--bg-hover, #f8fafc);
+}
+
+.daily-report-std-name {
+  font-weight: 700;
+  color: var(--text, #0f172a);
+}
+
+.daily-report-std-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 2px;
+}
+
+.daily-report-missed-tag {
+  font-size: 0.78rem;
+  color: #dc2626;
+  margin-top: 2px;
+}
+
+/* Status Pills */
+.daily-report-status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.daily-status-pass {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.daily-status-fail {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.daily-status-neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+/* Badges for Grade */
+.daily-report-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.daily-grade-mumtaz {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.daily-grade-jayyid-jiddan {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #93c5fd;
+}
+
+.daily-grade-jayyid {
+  background: #fefce8;
+  color: #a16207;
+  border: 1px solid #fde047;
+}
+
+.daily-grade-maqbool {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fdba74;
+}
+
+.daily-grade-weak {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+/* Footer & Signature Section */
+.daily-report-footer {
+  margin-top: 20px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.daily-report-signature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 24px;
+  padding-top: 12px;
+}
+
+.daily-report-signature-box {
+  text-align: center;
+  padding: 8px 14px;
+}
+
+.daily-report-signature-line {
+  border-bottom: 1px solid var(--text, #334155);
+  height: 36px;
+  margin-bottom: 8px;
+}
+
+.daily-report-signature-text {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+}
+
+.daily-report-signature-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 2px;
+}
+
+/* Empty State */
+.daily-report-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted, #64748b);
+  font-size: 0.95rem;
+}
+
+/* Print-only elements hidden on screen */
+.daily-report-print-only {
+  display: none !important;
+}
+
+/* ==============================================================================
+   Dark Mode Overrides (Strict adherence to AGENTS.md Rule 2)
+   ============================================================================== */
+body.dark .daily-report-wrapper,
+[data-theme='dark'] .daily-report-wrapper {
+  color: #f4f4f5;
+}
+
+body.dark .daily-report-card,
+body.dark .daily-report-kpi-card,
+body.dark .daily-report-table-wrap,
+body.dark .daily-report-footer,
+[data-theme='dark'] .daily-report-card,
+[data-theme='dark'] .daily-report-kpi-card,
+[data-theme='dark'] .daily-report-table-wrap,
+[data-theme='dark'] .daily-report-footer {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+body.dark .daily-report-title,
+[data-theme='dark'] .daily-report-title {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+body.dark .daily-report-std-name,
+body.dark .daily-report-kpi-val,
+body.dark .daily-report-signature-text,
+[data-theme='dark'] .daily-report-std-name,
+[data-theme='dark'] .daily-report-kpi-val,
+[data-theme='dark'] .daily-report-signature-text {
+  color: #fafafa;
+}
+
+body.dark .daily-report-subtitle,
+body.dark .daily-report-std-sub,
+body.dark .daily-report-kpi-label,
+body.dark .daily-report-kpi-sub,
+body.dark .daily-report-active-range,
+body.dark .daily-report-signature-sub,
+[data-theme='dark'] .daily-report-subtitle,
+[data-theme='dark'] .daily-report-std-sub,
+[data-theme='dark'] .daily-report-kpi-label,
+[data-theme='dark'] .daily-report-kpi-sub,
+[data-theme='dark'] .daily-report-active-range,
+[data-theme='dark'] .daily-report-signature-sub {
+  color: #a1a1aa;
+}
+
+body.dark .daily-report-table th,
+[data-theme='dark'] .daily-report-table th {
+  background: #27272a;
+  color: #fafafa;
+  border-color: #3f3f46;
+}
+
+body.dark .daily-report-table td,
+[data-theme='dark'] .daily-report-table td {
+  border-color: #27272a;
+  color: #f4f4f5;
+}
+
+body.dark .daily-report-table tr:hover,
+[data-theme='dark'] .daily-report-table tr:hover {
+  background: #27272a;
+}
+
+body.dark .daily-report-select,
+body.dark .daily-report-input,
+[data-theme='dark'] .daily-report-select,
+[data-theme='dark'] .daily-report-input {
+  background: #09090b;
+  border-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+body.dark .daily-report-btn,
+[data-theme='dark'] .daily-report-btn {
+  background: #27272a;
+  border-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+body.dark .daily-report-mode-toggle,
+[data-theme='dark'] .daily-report-mode-toggle {
+  background: transparent;
+  border: none;
+}
+
+body.dark .daily-report-mode-btn,
+[data-theme='dark'] .daily-report-mode-btn {
+  background: #18181b;
+  border-color: #27272a;
+  color: #f4f4f5;
+}
+
+body.dark .daily-report-mode-btn:hover:not(.active),
+[data-theme='dark'] .daily-report-mode-btn:hover:not(.active) {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+
+body.dark .daily-report-mode-btn.active,
+[data-theme='dark'] .daily-report-mode-btn.active {
+  background: var(--accent, #0f766e);
+  border-color: var(--accent, #0f766e);
+  color: #ffffff;
+}
+
+body.dark .daily-report-signature-line,
+[data-theme='dark'] .daily-report-signature-line {
+  border-bottom-color: #71717a;
+}
+
+/* Dark mode badges & pills */
+body.dark .daily-status-pass,
+[data-theme='dark'] .daily-status-pass {
+  background: #064e3b;
+  border-color: #047857;
+  color: #86efac;
+}
+
+body.dark .daily-status-fail,
+[data-theme='dark'] .daily-status-fail {
+  background: #451a1a;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+body.dark .daily-status-neutral,
+[data-theme='dark'] .daily-status-neutral {
+  background: #27272a;
+  border-color: #3f3f46;
+  color: #d4d4d8;
+}
+
+body.dark .daily-grade-mumtaz,
+[data-theme='dark'] .daily-grade-mumtaz {
+  background: #064e3b;
+  border-color: #047857;
+  color: #86efac;
+}
+
+body.dark .daily-grade-jayyid-jiddan,
+[data-theme='dark'] .daily-grade-jayyid-jiddan {
+  background: #1e3a8a;
+  border-color: #1d4ed8;
+  color: #93c5fd;
+}
+
+body.dark .daily-grade-jayyid,
+[data-theme='dark'] .daily-grade-jayyid {
+  background: #713f12;
+  border-color: #a16207;
+  color: #fef08a;
+}
+
+body.dark .daily-grade-maqbool,
+[data-theme='dark'] .daily-grade-maqbool {
+  background: #7c2d12;
+  border-color: #c2410c;
+  color: #fed7aa;
+}
+
+body.dark .daily-grade-weak,
+[data-theme='dark'] .daily-grade-weak {
+  background: #451a1a;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+/* ==============================================================================
+   Print Standards (Strict adherence to AGENTS.md: A4, Black & White Only)
+   ============================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 8mm 10mm 8mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .daily-report-no-print {
+    display: none !important;
+  }
+
+  .daily-report-print-only {
+    display: block !important;
+  }
+
+  .daily-report-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    direction: rtl !important;
+  }
+
+  .daily-report-card,
+  .daily-report-table-wrap,
+  .daily-report-footer,
+  .daily-report-kpi-card {
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .daily-report-print-header {
+    display: block !important;
+    text-align: center;
+    border-bottom: 2px solid #000000 !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .daily-report-print-title {
+    font-size: 1.3rem !important;
+    font-weight: 800 !important;
+    margin: 0 0 4px 0 !important;
+    color: #000000 !important;
+  }
+
+  .daily-report-print-meta {
+    display: flex !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    font-size: 0.85rem !important;
+    margin-top: 4px !important;
+    color: #000000 !important;
+  }
+
+  .daily-report-kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 8px !important;
+    margin-top: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .daily-report-kpi-card {
+    border: 1px solid #000000 !important;
+    padding: 4px !important;
+  }
+
+  .daily-report-kpi-label,
+  .daily-report-kpi-val,
+  .daily-report-kpi-sub {
+    color: #000000 !important;
+    font-size: 0.8rem !important;
+  }
+
+  .daily-report-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    border: 1.5px solid #000000 !important;
+  }
+
+  .daily-report-table th {
+    background: #f1f5f9 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    padding: 6px 4px !important;
+    font-size: 0.82rem !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+  }
+
+  .daily-report-table td {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    padding: 6px 4px !important;
+    font-size: 0.8rem !important;
+    vertical-align: middle !important;
+  }
+
+  .daily-report-status-pill,
+  .daily-report-badge {
+    background: transparent !important;
+    border: none !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    font-weight: 700 !important;
+  }
+
+  .daily-report-signature-grid {
+    border-top: 1px solid #000000 !important;
+    margin-top: 18px !important;
+    padding-top: 10px !important;
+  }
+
+  .daily-report-signature-line {
+    border-bottom: 1px solid #000000 !important;
+    height: 32px !important;
+  }
+
+  .daily-report-signature-text,
+  .daily-report-signature-sub {
+    color: #000000 !important;
+    font-size: 0.82rem !important;
+  }
+}

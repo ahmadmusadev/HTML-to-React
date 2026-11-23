@@ -168,7 +168,7 @@
 
 .payroll-run-table {
   width: 100%;
-  min-width: 1300px;
+  min-width: 1450px;
   border-collapse: collapse;
   font-size: 0.9rem;
   text-align: right;
@@ -226,19 +226,35 @@
 }
 
 .payroll-table-notes-input {
-  width: 150px;
-  padding: 6px 8px;
+  flex: 1;
+  width: 240px;
+  min-width: 200px;
+  height: 32px;
+  padding: 6px 12px;
   border: 1px solid var(--border, #cbd5e1);
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 0.88rem;
   background: var(--input-bg, #ffffff);
   color: var(--text, #1e293b);
   outline: none;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .payroll-table-notes-input:focus {
   border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.payroll-notes-cell-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 290px;
+}
+
+.payroll-run-notes-th {
+  min-width: 300px;
 }
 
 .payroll-date-input {
@@ -345,6 +361,40 @@
   padding: 4px 10px;
   font-size: 0.82rem;
   border-radius: 4px;
+}
+
+.payroll-run-actions-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.payroll-run-action-btn {
+  width: 58px;
+  min-width: 58px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0 8px;
+  box-sizing: border-box;
+  text-align: center;
+  border: 1.5px solid #94a3b8 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  transition: all 0.2s ease;
+}
+
+.payroll-run-action-btn:hover:not(:disabled) {
+  background: #f8fafc !important;
+  border-color: #64748b !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12) !important;
 }
 
 /* Actions Footer Bar */
@@ -570,6 +620,19 @@
 
 [data-theme="dark"] .payroll-run-btn-secondary:hover:not(:disabled) {
   background: #27272a !important;
+}
+
+[data-theme="dark"] .payroll-run-action-btn {
+  border: none !important;
+  box-shadow: none !important;
+  background: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .payroll-run-action-btn:hover:not(:disabled) {
+  background: #3f3f46 !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme="dark"] .payroll-run-banner-warning {

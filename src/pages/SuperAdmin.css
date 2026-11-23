@@ -21,10 +21,17 @@
 }
 
 .super-admin-title-area h2 {
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
   font-size: 1.45rem;
-  color: var(--text, #1e293b);
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   font-weight: 800;
+  background: linear-gradient(135deg, var(--accent, #0d3b66) 0%, var(--accent-light, #1b4965) 100%) !important;
+  border-radius: var(--radius, 10px);
+  padding: 12px 22px;
+  box-shadow: 0 3px 10px rgba(13, 59, 102, 0.2);
+  letter-spacing: 0.2px;
+  display: inline-block;
 }
 
 .super-admin-title-area p {
@@ -354,6 +361,18 @@
   background: #18181b !important;
   border-color: #27272a !important;
   color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .super-admin-title-area h2 {
+  background: linear-gradient(135deg, #1f1f23 0%, #0d0d0f 100%) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: 1px solid #3f3f46 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] .super-admin-title-area p {
+  color: #cbd5e1 !important;
 }
 
 [data-theme="dark"] .super-admin-stat-badge {

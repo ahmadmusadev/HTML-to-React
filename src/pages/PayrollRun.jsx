@@ -646,6 +646,76 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
   // Totals from stored items
   const totals = useMemo(() => totalsFromRows(runItems), [runItems]);
 
+  // Column-wise totals for table footer
+  const columnTotals = useMemo(() => {
+    if (!runItems || runItems.length === 0) {
+      return {
+        base_salary: 0,
+        payable_days: 0,
+        present_days: 0,
+        absent_days: 0,
+        paid_leave_days: 0,
+        unpaid_leave_days: 0,
+        late_early_minutes: 0,
+        absence_deduction: 0,
+        unpaid_leave_deduction: 0,
+        time_deduction: 0,
+        bonus: 0,
+        advance_deduction: 0,
+        other_deduction: 0,
+        net_salary: 0,
+      };
+    }
+
+    return runItems.reduce(
+      (acc, item) => {
+        const adj = adjustments[item.staff_id] || {
+          bonus: String(item.bonus || 0),
+          advance_deduction: String(item.advance_deduction || 0),
+          other_deduction: String(item.other_deduction || 0),
+        };
+
+        const bonusVal = Number(adj.bonus !== undefined ? adj.bonus : (item.bonus || 0)) || 0;
+        const advVal = Number(adj.advance_deduction !== undefined ? adj.advance_deduction : (item.advance_deduction || 0)) || 0;
+        const othVal = Number(adj.other_deduction !== undefined ? adj.other_deduction : (item.other_deduction || 0)) || 0;
+
+        acc.base_salary += Number(item.base_salary || 0);
+        acc.payable_days += Number(item.payable_working_days || 0);
+        acc.present_days += Number(item.present_days || 0);
+        acc.absent_days += Number(item.absent_days || 0);
+        acc.paid_leave_days += Number(item.paid_leave_days || 0);
+        acc.unpaid_leave_days += Number(item.unpaid_leave_days || 0);
+        acc.late_early_minutes +=
+          Number(item.late_minutes_charged || 0) + Number(item.early_minutes_charged || 0);
+        acc.absence_deduction += Number(item.absence_deduction || 0);
+        acc.unpaid_leave_deduction += Number(item.unpaid_leave_deduction || 0);
+        acc.time_deduction += Number(item.time_deduction || 0);
+        acc.bonus += bonusVal;
+        acc.advance_deduction += advVal;
+        acc.other_deduction += othVal;
+        acc.net_salary += Number(item.net_salary || 0);
+
+        return acc;
+      },
+      {
+        base_salary: 0,
+        payable_days: 0,
+        present_days: 0,
+        absent_days: 0,
+        paid_leave_days: 0,
+        unpaid_leave_days: 0,
+        late_early_minutes: 0,
+        absence_deduction: 0,
+        unpaid_leave_deduction: 0,
+        time_deduction: 0,
+        bonus: 0,
+        advance_deduction: 0,
+        other_deduction: 0,
+        net_salary: 0,
+      }
+    );
+  }, [runItems, adjustments]);
+
   // Can create run for selected month?
   const createCheck = useMemo(() => {
     if (!savedSettings) {
@@ -894,7 +964,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                   <th>خالص تنخواہ</th>
                   <th>تفصیل</th>
                   {currentRun.status === 'finalized' && <th>ادائیگی کی صورتحال</th>}
-                  <th>نوٹس</th>
+                  <th className="payroll-run-notes-th">نوٹس</th>
                 </tr>
               </thead>
               <tbody>
@@ -987,18 +1057,26 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                           <strong>{Number(item.net_salary || 0).toLocaleString('en-US')}</strong>
                         </td>
 
-                        {/* Detail Modal Opener */}
+                        {/* Detail Modal Opener & Slip Print */}
                         <td>
-                          <button
-                            type="button"
-                            className="payroll-run-btn-secondary payroll-run-btn-sm"
-                            onClick={() => setDetailItem({ ...item, staff_name: staffName, staff_code: staffCode })}
-                          >
-                            تفصیل
-                          </button>
-                          {currentRun.status === 'finalized' && (
-                            <button type="button" className="payroll-run-btn-secondary payroll-run-btn-sm" onClick={() => handleOpenPrint({ type: 'slip', staffId: item.staff_id })}>سلپ</button>
-                          )}
+                          <div className="payroll-run-actions-cell">
+                            <button
+                              type="button"
+                              className="payroll-run-btn-secondary payroll-run-btn-sm payroll-run-action-btn"
+                              onClick={() => setDetailItem({ ...item, staff_name: staffName, staff_code: staffCode })}
+                            >
+                              تفصیل
+                            </button>
+                            {currentRun.status === 'finalized' && (
+                              <button
+                                type="button"
+                                className="payroll-run-btn-secondary payroll-run-btn-sm payroll-run-action-btn"
+                                onClick={() => handleOpenPrint({ type: 'slip', staffId: item.staff_id })}
+                              >
+                                سلپ
+                              </button>
+                            )}
+                          </div>
                         </td>
 
                         {/* Payment Status (Finalized only) */}
@@ -1048,16 +1126,18 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                         {/* Notes */}
                         <td>
                           {isDraft ? (
-                            <input
-                              type="text"
-                              className="payroll-table-notes-input"
-                              value={noteVal}
-                              onChange={(e) => handleNoteChange(item.staff_id, e.target.value)}
-                              placeholder="کوئی نوٹ لکھیں"
-                              aria-label={`نوٹ برائے ${staffName}`}
-                            />
+                            <div className="payroll-notes-cell-wrap">
+                              <input
+                                type="text"
+                                className="payroll-table-notes-input"
+                                value={noteVal}
+                                onChange={(e) => handleNoteChange(item.staff_id, e.target.value)}
+                                placeholder="کوئی نوٹ لکھیں"
+                                aria-label={`نوٹ برائے ${staffName}`}
+                              />
+                            </div>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div className="payroll-notes-cell-wrap">
                               <input
                                 type="text"
                                 className="payroll-table-notes-input"
@@ -1068,7 +1148,7 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
                               />
                               <button
                                 type="button"
-                                className="payroll-run-btn-secondary payroll-run-btn-sm"
+                                className="payroll-run-btn-secondary payroll-run-btn-sm payroll-run-action-btn"
                                 disabled={actionLoading}
                                 onClick={() => handleSaveNote(item.id, item.staff_id)}
                               >
@@ -1085,18 +1165,23 @@ export default function PayrollRun({ staffList = [], activeMadrasaId, isMadrasaM
               <tfoot>
                 <tr>
                   <td colSpan={2}>میزان (کل مجموعہ)</td>
+                  <td>{Number(columnTotals.base_salary || 0).toLocaleString('en-US')}</td>
+                  <td>{columnTotals.payable_days % 1 === 0 ? columnTotals.payable_days : Number(columnTotals.payable_days.toFixed(2))}</td>
+                  <td>{columnTotals.present_days % 1 === 0 ? columnTotals.present_days : Number(columnTotals.present_days.toFixed(2))}</td>
+                  <td>{columnTotals.absent_days % 1 === 0 ? columnTotals.absent_days : Number(columnTotals.absent_days.toFixed(2))}</td>
+                  <td>{columnTotals.paid_leave_days % 1 === 0 ? columnTotals.paid_leave_days : Number(columnTotals.paid_leave_days.toFixed(2))}</td>
+                  <td>{columnTotals.unpaid_leave_days % 1 === 0 ? columnTotals.unpaid_leave_days : Number(columnTotals.unpaid_leave_days.toFixed(2))}</td>
+                  <td>{columnTotals.late_early_minutes}</td>
+                  <td>{Number(columnTotals.absence_deduction.toFixed(2)).toLocaleString('en-US')}</td>
+                  <td>{Number(columnTotals.unpaid_leave_deduction.toFixed(2)).toLocaleString('en-US')}</td>
+                  <td>{Number(columnTotals.time_deduction.toFixed(2)).toLocaleString('en-US')}</td>
+                  <td>{Number(columnTotals.bonus.toFixed(2)).toLocaleString('en-US')}</td>
+                  <td>{Number(columnTotals.advance_deduction.toFixed(2)).toLocaleString('en-US')}</td>
+                  <td>{Number(columnTotals.other_deduction.toFixed(2)).toLocaleString('en-US')}</td>
+                  <td><strong>{Number((totals.net_total || columnTotals.net_salary || 0)).toLocaleString('en-US')}</strong></td>
                   <td>-</td>
+                  {currentRun.status === 'finalized' && <td>-</td>}
                   <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td>-</td>
-                  <td colSpan={6} style={{ textAlign: 'left' }}>
-                    کل خالص رقم:
-                  </td>
-                  <td>{Number(totals.net_total || 0).toLocaleString('en-US')}</td>
-                  <td colSpan={currentRun.status === 'finalized' ? 3 : 2}>-</td>
                 </tr>
               </tfoot>
             </table>

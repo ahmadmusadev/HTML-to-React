@@ -3145,6 +3145,120 @@ export function MadrasaProvider({ children }) {
     }
   };
 
+  const fetchDailyAcademicRecordsFromSupabase = async (filters = {}, madrasaId = activeMadrasaId) => {
+    if (!isValidUUID(madrasaId)) {
+      const localCustom = loadMadrasaData('hf_daily_academic_records_v1', madrasaId) || [];
+      let filtered = localCustom;
+      if (filters.date) filtered = filtered.filter(r => r.date === filters.date);
+      if (filters.classId) filtered = filtered.filter(r => r.class_id === filters.classId);
+      if (filters.studentId) filtered = filtered.filter(r => r.student_id === filters.studentId);
+      if (filters.startDate && filters.endDate) {
+        filtered = filtered.filter(r => r.date >= filters.startDate && r.date <= filters.endDate);
+      }
+      return filtered;
+    }
+
+    try {
+      let query = supabase
+        .from('daily_academic_records')
+        .select('*, students(id, name, roll_number, father_name, class_id)')
+        .eq('madrasa_id', madrasaId);
+
+      if (filters.date) {
+        query = query.eq('date', filters.date);
+      }
+      if (filters.classId) {
+        query = query.eq('class_id', filters.classId);
+      }
+      if (filters.studentId) {
+        query = query.eq('student_id', filters.studentId);
+      }
+      if (filters.startDate && filters.endDate) {
+        query = query.gte('date', filters.startDate).lte('date', filters.endDate);
+      }
+
+      query = query.order('created_at', { ascending: true });
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.warn('[MadrasaContext] Error fetching daily academic records from Supabase:', e);
+      const localCustom = loadMadrasaData('hf_daily_academic_records_v1', madrasaId) || [];
+      let filtered = localCustom;
+      if (filters.date) filtered = filtered.filter(r => r.date === filters.date);
+      if (filters.classId) filtered = filtered.filter(r => r.class_id === filters.classId);
+      if (filters.studentId) filtered = filtered.filter(r => r.student_id === filters.studentId);
+      if (filters.startDate && filters.endDate) {
+        filtered = filtered.filter(r => r.date >= filters.startDate && r.date <= filters.endDate);
+      }
+      return filtered;
+    }
+  };
+
+  const saveDailyAcademicRecordsToSupabase = async (recordsArray, madrasaId = activeMadrasaId) => {
+    const isRemote = isValidUUID(madrasaId);
+    const records = Array.isArray(recordsArray) ? recordsArray : [recordsArray];
+    if (!records.length) return [];
+
+    const payload = records.map(r => ({
+      madrasa_id: madrasaId,
+      student_id: r.student_id || r.studentUuid,
+      class_id: r.class_id || r.classId || null,
+      date: r.date,
+      sabaq: Boolean(r.sabaq),
+      sabqi: Boolean(r.sabqi),
+      manzil: Boolean(r.manzil),
+      manzil_para: r.manzil_para ? Number(r.manzil_para) : null,
+      manzil_amount: r.manzil_amount || null,
+      sami_name: r.sami_name || null,
+      kaifiyat_checked: Boolean(r.kaifiyat_checked),
+      kaifiyat_text: r.kaifiyat_text || null,
+      mutalaah: Boolean(r.mutalaah),
+      updated_at: new Date().toISOString()
+    }));
+
+    if (isRemote) {
+      try {
+        const { data, error } = await supabase
+          .from('daily_academic_records')
+          .upsert(payload, { onConflict: 'student_id,date' })
+          .select('*, students(id, name, roll_number, father_name, class_id)');
+
+        if (error) throw error;
+
+        try {
+          const cached = loadMadrasaData('hf_daily_academic_records_v1', madrasaId) || [];
+          const updatedMap = new Map();
+          cached.forEach(c => updatedMap.set(`${c.student_id}_${c.date}`, c));
+          (data || payload).forEach(d => updatedMap.set(`${d.student_id}_${d.date}`, d));
+          saveMadrasaData('hf_daily_academic_records_v1', Array.from(updatedMap.values()), madrasaId);
+        } catch (syncErr) {
+          console.warn('Failed to sync daily academic records to local cache:', syncErr);
+        }
+
+        return data;
+      } catch (e) {
+        console.warn('Supabase save daily academic records error, fallback to local:', e.message || e);
+        const cached = loadMadrasaData('hf_daily_academic_records_v1', madrasaId) || [];
+        const updatedMap = new Map();
+        cached.forEach(c => updatedMap.set(`${c.student_id}_${c.date}`, c));
+        payload.forEach(d => updatedMap.set(`${d.student_id}_${d.date}`, { ...d, id: d.id || `local_${Date.now()}_${Math.random()}` }));
+        const merged = Array.from(updatedMap.values());
+        saveMadrasaData('hf_daily_academic_records_v1', merged, madrasaId);
+        return merged;
+      }
+    } else {
+      const cached = loadMadrasaData('hf_daily_academic_records_v1', madrasaId) || [];
+      const updatedMap = new Map();
+      cached.forEach(c => updatedMap.set(`${c.student_id}_${c.date}`, c));
+      payload.forEach(d => updatedMap.set(`${d.student_id}_${d.date}`, { ...d, id: d.id || `local_${Date.now()}_${Math.random()}` }));
+      const merged = Array.from(updatedMap.values());
+      saveMadrasaData('hf_daily_academic_records_v1', merged, madrasaId);
+      return merged;
+    }
+  };
+
   return (
     <MadrasaContext.Provider value={{
       madrasas,
@@ -3211,6 +3325,8 @@ export function MadrasaProvider({ children }) {
       fetchHifzCompletionFormForStudent,
       saveHifzCompletionFormToSupabase,
       deleteHifzCompletionFormFromSupabase,
+      fetchDailyAcademicRecordsFromSupabase,
+      saveDailyAcademicRecordsToSupabase,
       isMadrasaDisabled: activeMadrasa?.status === 'disabled'
     }}>
       {children}
