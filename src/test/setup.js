@@ -27,7 +27,13 @@ if (!globalThis.sessionStorage || typeof globalThis.sessionStorage.clear !== 'fu
 }
 
 // Automatically cleanup after each test
-afterEach(() => {
-  cleanup();
-});
+if (typeof afterEach === 'function') {
+  try {
+    afterEach(() => {
+      cleanup();
+    });
+  } catch (_) {
+    // Already handled by testing-library
+  }
+}
 

@@ -22,6 +22,10 @@ Before considering a UI change complete:
 - Ensure no text becomes invisible, too faint, or visually confusing in either mode.
 - Do not solve a light-mode problem by creating a dark-mode problem, or vice versa.
 - Preserve the existing theme system rather than introducing unnecessary independent colors.
+- **Success, Error & Notification Alerts Styling in Both Modes**:
+  - Every alert, notification, toast, banner, or confirmation message (such as "کامیابی سے محفوظ ہو گیا" or error notices) MUST have dedicated, distinct color styling for Light Mode and Dark Mode.
+  - **Light Mode Alerts**: Use soft light-tinted backgrounds with dark text and pastel borders (e.g., success: background `#f0fdf4`, border `#bbf7d0`, text `#166534`).
+  - **Dark Mode Alerts**: Never leave bright white or pale-pastel backgrounds in dark mode. Use deep, subtle dark tones with high-contrast readable light text and muted borders (e.g., success: background `#064e3b`, border `#047857`, text `#86efac` / `#6ee7b7`; error: background `#451a1a`, border `#7f1d1d`, text `#fca5a5`). Ensure alert banners blend harmoniously into dark mode without glaring white patches.
 
 ### 3. Mobile Responsiveness
 

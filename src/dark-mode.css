@@ -268,6 +268,26 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   color: #6ee7b7 !important;
 }
 
+[data-theme="dark"] .alert-success,
+body.dark .alert-success,
+[data-theme="dark"] .daily-perf-alert-success,
+body.dark .daily-perf-alert-success {
+  background-color: #064e3b !important;
+  border-color: #047857 !important;
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .alert-error,
+[data-theme="dark"] .alert-danger,
+body.dark .alert-error,
+body.dark .alert-danger,
+[data-theme="dark"] .daily-perf-alert-error,
+body.dark .daily-perf-alert-error {
+  background-color: #451a1a !important;
+  border-color: #7f1d1d !important;
+  color: #fca5a5 !important;
+}
+
 [data-theme="dark"] .profile-modal-label {
   color: #f4f4f5 !important;
 }

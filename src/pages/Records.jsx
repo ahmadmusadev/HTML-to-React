@@ -4,6 +4,7 @@ import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import { isValidUUID } from '../lib/supabaseClient';
 import StudentParaRecords from '../components/StudentParaRecords';
 import CumulativeHifzForm from '../components/CumulativeHifzForm';
+import DailyAcademicPerformance from '../components/DailyAcademicPerformance';
 
 export const mapSupabaseToUi = (row, studentLookup = {}) => {
   if (!row) return null;
@@ -229,9 +230,18 @@ export default function Records() {
         >
           مجموعی حفظ کارکردگی فارم
         </button>
+        <button
+          type="button"
+          className={`records-subtab-btn ${subTab === 'dailyPerformance' ? 'active' : ''}`}
+          onClick={() => setSubTab('dailyPerformance')}
+        >
+          روزانہ و میعادی تعلیمی کارکردگی
+        </button>
       </div>
 
-      {subTab === 'cumulativeForm' ? (
+      {subTab === 'dailyPerformance' ? (
+        <DailyAcademicPerformance initialView="report" />
+      ) : subTab === 'cumulativeForm' ? (
         <CumulativeHifzForm />
       ) : subTab === 'paraRecords' ? (
         <StudentParaRecords />

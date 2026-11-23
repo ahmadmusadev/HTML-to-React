@@ -6,6 +6,7 @@ import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import SubjectAnalysisModal from '../components/SubjectAnalysisModal';
+import DailyAcademicPerformance from '../components/DailyAcademicPerformance';
 import { calculateClassGrading, calculateInstituteGrading, getIndividualStudentGrade, getGradeBadgeClass } from '../utils/classGrading';
 import './Entry.css';
 
@@ -224,7 +225,7 @@ export const calculateWorkingDays = (year, monthIndex) => {
   return days;
 };
 
-export default function Entry() {
+export default function Entry({ initialTab = null }) {
   const {
     activeMadrasa,
     activeMadrasaId,
@@ -246,7 +247,16 @@ export default function Entry() {
     fetchStudentAttendanceFromSupabase
   } = useMadrasa();
 
-  const [activeTab, setActiveTab] = useState('monthly');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (initialTab) return initialTab;
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        const p = new URLSearchParams(window.location.search).get('tab');
+        if (p) return p;
+      }
+    } catch (_) {}
+    return 'monthly';
+  });
   
   const [records, setRecords] = useState([]);
   const [studentsList, setStudentsList] = useState([]);
@@ -1458,6 +1468,7 @@ export default function Entry() {
     <div className="tab-content">
       <div className="adm-type-grid no-print" style={{ marginBottom: "20px" }}>
         {[
+          { id: 'daily_performance', label: 'روزانہ تعلیمی کارکردگی' },
           { id: 'monthly', label: 'اندراج ماہانہ جائزہ' },
           { id: 'monthly_literacy', label: 'اندراج ماہانہ خواندگی' },
           { id: 'hifz', label: 'ششماہی و سالانہ خواندگی' },
@@ -1470,6 +1481,13 @@ export default function Entry() {
           </button>
         ))}
       </div>
+
+      {/* 0. Daily Academic Performance */}
+      {activeTab === 'daily_performance' && (
+        <div id="entrySection-daily-performance">
+          <DailyAcademicPerformance />
+        </div>
+      )}
 
       {/* 1. Monthly Exam Entry */}
       {activeTab === 'monthly' && (
