@@ -481,7 +481,6 @@ export function MainLayout({ theme, toggleTheme }) {
             <NavLink to="/super-admin" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>سپر ایڈمن</NavLink>
           )}
           <NavLink to="/" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>ڈیش بورڈ</NavLink>
-          <NavLink to="/tasks-reminders" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>زیرِ غور و یادداشت</NavLink>
           <NavLink to="/admissions" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>داخلہ جات</NavLink>
           <NavLink to="/fees" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>فیس ریکارڈ</NavLink>
           <NavLink to="/entry" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>جائزہ جات</NavLink>
@@ -495,6 +494,7 @@ export function MainLayout({ theme, toggleTheme }) {
           {showAiUstad && (
             <NavLink to="/ai-listen" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
           )}
+          <NavLink to="/tasks-reminders" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>زیرِ غور و یادداشت</NavLink>
         </nav>
 
         {madrasaError && (
