@@ -255,7 +255,7 @@
   width: 100%;
   border-collapse: collapse;
   text-align: right;
-  font-size: 13.5px;
+  font-size: 15px;
   direction: rtl;
 }
 
@@ -263,14 +263,16 @@
   background-color: var(--card-inner, #f1f5f9);
   color: var(--text, #1e293b);
   font-weight: 700;
-  padding: 12px 14px;
+  font-size: 15px;
+  padding: 7px 9px;
   border: 1px solid var(--border, #cbd5e1);
   border-bottom: 2px solid #94a3b8;
   white-space: nowrap;
 }
 
 .tasks-table td {
-  padding: 12px 14px;
+  padding: 7px 9px;
+  font-size: 15px;
   border: 1px solid var(--border, #cbd5e1);
   vertical-align: middle;
 }
@@ -288,27 +290,29 @@
 }
 
 .task-main-title {
-  font-weight: 600;
+  font-size: 15.5px;
+  font-weight: 700;
   color: var(--text, #0f172a);
-  margin-bottom: 3px;
+  margin-bottom: 2px;
+  line-height: 1.35;
 }
 
 .task-main-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted, #64748b);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 /* Badges */
 .tasks-badge {
   display: inline-block;
-  padding: 4px 9px;
+  padding: 3px 8px;
   border-radius: 6px;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 700;
   text-align: center;
   white-space: nowrap;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .badge-overdue {
@@ -389,9 +393,9 @@
   background: var(--card-inner, #f8fafc);
   border: 1px solid var(--border, #cbd5e1);
   color: var(--text, #334155);
-  padding: 5px 10px;
+  padding: 4px 8px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;

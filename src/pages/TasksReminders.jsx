@@ -474,14 +474,14 @@ export default function TasksReminders() {
           <table className="tasks-table">
             <thead>
               <tr>
-                <th style={{ width: '45px' }}>نمبر شمار</th>
+                <th style={{ width: '65px', textAlign: 'center' }}>نمبر شمار</th>
                 <th>عنوان و تفصیل</th>
-                <th style={{ width: '110px' }}>نوعیت</th>
-                <th style={{ width: '100px' }}>زمرہ</th>
-                <th style={{ width: '120px' }}>مقررہ تاریخ</th>
-                <th style={{ width: '140px' }}>موجودہ کیفیت</th>
-                <th style={{ width: '90px' }}>ترجیح</th>
-                <th style={{ width: '180px' }}>کارروائی</th>
+                <th style={{ width: '115px', textAlign: 'center' }}>نوعیت</th>
+                <th style={{ width: '90px', textAlign: 'center' }}>زمرہ</th>
+                <th style={{ width: '120px', textAlign: 'center' }}>مقررہ تاریخ</th>
+                <th style={{ width: '150px', textAlign: 'center' }}>موجودہ کیفیت</th>
+                <th style={{ width: '95px', textAlign: 'center' }}>ترجیح</th>
+                <th style={{ width: '175px', textAlign: 'center' }}>کارروائی</th>
               </tr>
             </thead>
             <tbody>
@@ -499,40 +499,40 @@ export default function TasksReminders() {
                   </td>
 
                   {/* Col 3: Automated vs Custom */}
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     <span className={`tasks-badge ${task.is_automated ? 'badge-type-auto' : 'badge-type-custom'}`}>
                       {task.is_automated ? 'خودکار تنظیمی' : 'ذاتی / اضافی'}
                     </span>
                   </td>
 
                   {/* Col 4: Category */}
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     <span className="tasks-badge badge-priority-normal">
                       {task.categoryLabel}
                     </span>
                   </td>
 
                   {/* Col 5: Due Date */}
-                  <td style={{ whiteSpace: 'nowrap', direction: 'ltr', textAlign: 'right' }}>
+                  <td style={{ whiteSpace: 'nowrap', direction: 'ltr', textAlign: 'center', fontWeight: '600' }}>
                     {task.due_date}
                   </td>
 
                   {/* Col 6: Status Badge */}
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     <span className={`tasks-badge ${task.badgeClass}`}>
                       {task.statusLabel}
                     </span>
                   </td>
 
                   {/* Col 7: Priority */}
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     <span className={`tasks-badge ${task.priority === 'high' ? 'badge-priority-high' : task.priority === 'low' ? 'badge-priority-low' : 'badge-priority-normal'}`}>
                       {task.priorityLabel}
                     </span>
                   </td>
 
                   {/* Col 8: Actions */}
-                  <td>
+                  <td style={{ textAlign: 'center' }}>
                     <div className="tasks-action-group">
                       {task.is_automated ? (
                         <button
