@@ -18,6 +18,7 @@ import AiListen from './pages/AiListen';
 import Fees from './pages/Fees';
 import Attendance from './pages/Attendance';
 import Payroll from './pages/Payroll';
+import TasksReminders from './pages/TasksReminders';
 import Login from './pages/Login';
 import SuperAdmin from './pages/SuperAdmin';
 import ForgotPassword from './pages/ForgotPassword';
@@ -493,6 +494,7 @@ export function MainLayout({ theme, toggleTheme }) {
           {showAiUstad && (
             <NavLink to="/ai-listen" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>اے آئی استاد</NavLink>
           )}
+          <NavLink to="/tasks-reminders" onClick={() => setIsMobileNavOpen(false)} className={({isActive}) => isActive ? "tab-button active" : "tab-button"}>زیرِ غور و یادداشت</NavLink>
         </nav>
 
         {madrasaError && (
@@ -537,6 +539,7 @@ export function MainLayout({ theme, toggleTheme }) {
           <Routes>
             <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdmin /></ProtectedRoute>} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/tasks-reminders" element={<ProtectedRoute><TasksReminders /></ProtectedRoute>} />
             <Route path="/admissions" element={<ProtectedRoute><Admissions /></ProtectedRoute>} />
             <Route path="/entry" element={<ProtectedRoute><Entry /></ProtectedRoute>} />
             <Route path="/daily-performance" element={<ProtectedRoute><Records initialSubTab="dailyPerformance" /></ProtectedRoute>} />

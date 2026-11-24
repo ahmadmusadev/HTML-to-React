@@ -107,7 +107,7 @@
     
     h2 { 
       font-size: 1.25rem; 
-      color: #fff; 
+      color: #ffffff !important; 
       background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
       padding: 13px 22px; 
       margin-top: 28px; 
