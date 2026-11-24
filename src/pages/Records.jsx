@@ -81,7 +81,7 @@ export const mapUiToSupabase = (data, madrasaId) => {
   };
 };
 
-export default function Records() {
+export default function Records({ initialSubTab = null }) {
   const {
     activeMadrasaId,
     loadMadrasaData,
@@ -92,7 +92,16 @@ export default function Records() {
   } = useMadrasa();
 
   const [records, setRecords] = useState([]);
-  const [subTab, setSubTab] = useState('paraRecords'); // 'paraRecords' | 'academicRecords'
+  const [subTab, setSubTab] = useState(() => {
+    if (initialSubTab) return initialSubTab;
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        const p = new URLSearchParams(window.location.search).get('subtab');
+        if (p) return p;
+      }
+    } catch (_) {}
+    return 'paraRecords';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);

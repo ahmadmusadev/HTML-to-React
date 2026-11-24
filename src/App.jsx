@@ -539,7 +539,7 @@ export function MainLayout({ theme, toggleTheme }) {
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/admissions" element={<ProtectedRoute><Admissions /></ProtectedRoute>} />
             <Route path="/entry" element={<ProtectedRoute><Entry /></ProtectedRoute>} />
-            <Route path="/daily-performance" element={<ProtectedRoute><Entry initialTab="daily_performance" /></ProtectedRoute>} />
+            <Route path="/daily-performance" element={<ProtectedRoute><Records initialSubTab="dailyPerformance" /></ProtectedRoute>} />
             <Route path="/records" element={<ProtectedRoute><Records /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
             <Route path="/payroll" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']}><Payroll /></ProtectedRoute>} />

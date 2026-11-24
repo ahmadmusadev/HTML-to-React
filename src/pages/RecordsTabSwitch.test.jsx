@@ -13,6 +13,10 @@ vi.mock('../components/CumulativeHifzForm', () => ({
   default: () => <div data-testid="mock-cumulative-form">مجموعی حفظ کارکردگی فارم اسکرین</div>
 }));
 
+vi.mock('../components/DailyAcademicPerformance', () => ({
+  default: ({ initialView }) => <div data-testid="mock-daily-perf">روزانہ تعلیمی کارکردگی اسکرین ({initialView})</div>
+}));
+
 describe('Records Tab Navigation', () => {
   const mockContextValue = {
     activeMadrasaId: 'm-1',
@@ -28,11 +32,12 @@ describe('Records Tab Navigation', () => {
     vi.spyOn(MadrasaContext, 'useMadrasa').mockReturnValue(mockContextValue);
   });
 
-  it('renders all three subtabs: پارہ بہ پارہ، ششماہی، اور مجموعی حفظ کارکردگی فارم', () => {
+  it('renders all four subtabs: پارہ بہ پارہ، ششماہی، مجموعی، اور روزانہ و میعادی تعلیمی کارکردگی', () => {
     render(<Records />);
     expect(screen.getByRole('button', { name: /پارہ بہ پارہ تکمیلِ حفظ/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ششماہی تعلیمی ریکارڈز و خلاصہ/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /مجموعی حفظ کارکردگی فارم/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /روزانہ و میعادی تعلیمی کارکردگی/ })).toBeInTheDocument();
   });
 
   it('switches to cumulative performance form when clicking its subtab button', () => {
@@ -41,6 +46,21 @@ describe('Records Tab Navigation', () => {
     fireEvent.click(cumulativeTabBtn);
 
     expect(screen.getByTestId('mock-cumulative-form')).toBeInTheDocument();
+    expect(screen.queryByTestId('mock-para-records')).not.toBeInTheDocument();
+  });
+
+  it('switches to daily performance tab when clicking its subtab button', () => {
+    render(<Records />);
+    const dailyTabBtn = screen.getByRole('button', { name: /روزانہ و میعادی تعلیمی کارکردگی/ });
+    fireEvent.click(dailyTabBtn);
+
+    expect(screen.getByTestId('mock-daily-perf')).toBeInTheDocument();
+    expect(screen.queryByTestId('mock-para-records')).not.toBeInTheDocument();
+  });
+
+  it('respects initialSubTab prop', () => {
+    render(<Records initialSubTab="dailyPerformance" />);
+    expect(screen.getByTestId('mock-daily-perf')).toBeInTheDocument();
     expect(screen.queryByTestId('mock-para-records')).not.toBeInTheDocument();
   });
 

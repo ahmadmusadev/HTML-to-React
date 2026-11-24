@@ -6,7 +6,6 @@ import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import SubjectAnalysisModal from '../components/SubjectAnalysisModal';
-import DailyAcademicPerformance from '../components/DailyAcademicPerformance';
 import { calculateClassGrading, calculateInstituteGrading, getIndividualStudentGrade, getGradeBadgeClass } from '../utils/classGrading';
 import './Entry.css';
 
@@ -1468,7 +1467,6 @@ export default function Entry({ initialTab = null }) {
     <div className="tab-content">
       <div className="adm-type-grid no-print" style={{ marginBottom: "20px" }}>
         {[
-          { id: 'daily_performance', label: 'روزانہ تعلیمی کارکردگی' },
           { id: 'monthly', label: 'اندراج ماہانہ جائزہ' },
           { id: 'monthly_literacy', label: 'اندراج ماہانہ خواندگی' },
           { id: 'hifz', label: 'ششماہی و سالانہ خواندگی' },
@@ -1481,13 +1479,6 @@ export default function Entry({ initialTab = null }) {
           </button>
         ))}
       </div>
-
-      {/* 0. Daily Academic Performance */}
-      {activeTab === 'daily_performance' && (
-        <div id="entrySection-daily-performance">
-          <DailyAcademicPerformance />
-        </div>
-      )}
 
       {/* 1. Monthly Exam Entry */}
       {activeTab === 'monthly' && (
