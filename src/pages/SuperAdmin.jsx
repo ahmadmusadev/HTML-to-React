@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { validateInvitePayload, extractEdgeFunctionError } from '../utils/accountInviteValidation';
+import { MADRASA_PLANS, getPlanDetails } from '../constants/defaults';
 import './SuperAdmin.css';
 
 export default function SuperAdmin() {
@@ -15,6 +16,8 @@ export default function SuperAdmin() {
   const [adminPhone, setAdminPhone] = useState('');
   const [madrasaDistrict, setMadrasaDistrict] = useState('');
   const [madrasaAddress, setMadrasaAddress] = useState('');
+  const [planName, setPlanName] = useState('free_maktab');
+  const [customMaxStudents, setCustomMaxStudents] = useState(50);
   const [currentUserEmail, setCurrentUserEmail] = useState('');
 
   const [createdAccount, setCreatedAccount] = useState(null);
@@ -38,6 +41,8 @@ export default function SuperAdmin() {
   const [editMadrasaName, setEditMadrasaName] = useState('');
   const [editMadrasaDistrict, setEditMadrasaDistrict] = useState('');
   const [editMadrasaAddress, setEditMadrasaAddress] = useState('');
+  const [editPlanName, setEditPlanName] = useState('free_maktab');
+  const [editMaxStudents, setEditMaxStudents] = useState(50);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -53,6 +58,8 @@ export default function SuperAdmin() {
     setEditAdminPhone(adminProfile?.phone || m.phone || '');
     setEditMadrasaDistrict(m.district || '');
     setEditMadrasaAddress(m.address || '');
+    setEditPlanName(m.plan_name || 'free_maktab');
+    setEditMaxStudents(m.max_students || 50);
     setEditError('');
   };
 
@@ -98,6 +105,13 @@ export default function SuperAdmin() {
       }
       if (editMadrasaAddress.trim() !== (editingMadrasa.address || '')) {
         madrasaUpdates.address = editMadrasaAddress.trim() || null;
+      }
+      if (editPlanName && editPlanName !== editingMadrasa.plan_name) {
+        madrasaUpdates.plan_name = editPlanName;
+      }
+      const parsedEditMax = Number(editMaxStudents);
+      if (!isNaN(parsedEditMax) && parsedEditMax > 0 && parsedEditMax !== editingMadrasa.max_students) {
+        madrasaUpdates.max_students = parsedEditMax;
       }
 
       if (Object.keys(madrasaUpdates).length > 0) {
@@ -191,13 +205,13 @@ export default function SuperAdmin() {
     }
   };
 
-  // Fetch all madrasas and their associated admins
+  // Fetch all madrasas and their associated admins and students
   const loadMadrasas = async () => {
     setLoadingList(true);
     try {
       const { data, error } = await supabase
         .from('madrasas')
-        .select('*, profiles(id, full_name, role, phone)')
+        .select('*, profiles(id, full_name, role, phone), students(id, status)')
         .order('created_at', { ascending: false });
 
       if (!error && data) {
@@ -230,6 +244,10 @@ export default function SuperAdmin() {
     setErrors({});
     setCreatedAccount(null);
 
+    const finalMax = planName === 'custom_unlimited'
+      ? (Number(customMaxStudents) > 0 ? Number(customMaxStudents) : 500)
+      : (planName === 'standard_madrasa' ? 150 : (planName === 'large_jamia' ? 300 : 50));
+
     const payload = {
       madrasaName,
       fullName: adminFullName,
@@ -237,7 +255,9 @@ export default function SuperAdmin() {
       role: 'admin',
       phone: adminPhone,
       district: madrasaDistrict,
-      address: madrasaAddress
+      address: madrasaAddress,
+      planName,
+      maxStudents: finalMax
     };
 
     const validation = validateInvitePayload(payload);
@@ -292,6 +312,18 @@ export default function SuperAdmin() {
         throw new Error(data.error);
       }
 
+      // Ensure madrasa has the plan and max_students persisted in database
+      if (data?.madrasaId) {
+        try {
+          await supabase
+            .from('madrasas')
+            .update({ plan_name: planName, max_students: finalMax })
+            .eq('id', data.madrasaId);
+        } catch (mUpdateErr) {
+          console.warn('Could not post-update madrasa plan:', mUpdateErr);
+        }
+      }
+
       setCreatedAccount({
         email: adminEmail,
         password: data?.password || '',
@@ -305,6 +337,8 @@ export default function SuperAdmin() {
       setAdminPhone('');
       setMadrasaDistrict('');
       setMadrasaAddress('');
+      setPlanName('free_maktab');
+      setCustomMaxStudents(50);
       await loadMadrasas();
     } catch (err) {
       console.error('Create admin error:', err);
@@ -528,6 +562,44 @@ export default function SuperAdmin() {
               />
               {errors.address && <span className="form-field-error">{errors.address}</span>}
             </div>
+
+            <div className="form-field-item">
+              <label htmlFor="selectMadrasaPlan">منظور شدہ پلان اور طلباء کوٹہ *</label>
+              <select
+                id="selectMadrasaPlan"
+                className="form-field-input"
+                value={planName}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPlanName(val);
+                  if (val === 'free_maktab') setCustomMaxStudents(50);
+                  else if (val === 'standard_madrasa') setCustomMaxStudents(150);
+                  else if (val === 'large_jamia') setCustomMaxStudents(300);
+                  else if (val === 'custom_unlimited') setCustomMaxStudents(500);
+                }}
+              >
+                <option value="free_maktab">ابتدائی / مکتب پلان (مفت) — زیادہ سے زیادہ 50 طلباء</option>
+                <option value="standard_madrasa">معیاری مدرسہ پلان — زیادہ سے زیادہ 150 طلباء</option>
+                <option value="large_jamia">بڑا جامعہ پلان — زیادہ سے زیادہ 300 طلباء</option>
+                <option value="custom_unlimited">ملٹی برانچ یا حسبِ ضرورت کوٹہ</option>
+              </select>
+            </div>
+
+            {planName === 'custom_unlimited' && (
+              <div className="form-field-item">
+                <label htmlFor="inputCustomMaxStudents">طلباء کی مخصوص حد (زیادہ سے زیادہ تعداد) *</label>
+                <input
+                  id="inputCustomMaxStudents"
+                  type="number"
+                  min="1"
+                  className="form-field-input"
+                  placeholder="مثال: 500"
+                  value={customMaxStudents}
+                  onChange={(e) => setCustomMaxStudents(e.target.value)}
+                  required
+                />
+              </div>
+            )}
           </div>
 
           <button
@@ -627,6 +699,7 @@ export default function SuperAdmin() {
                   <th>مہتمم / منتظم</th>
                   <th>ضلع</th>
                   <th>فون نمبر</th>
+                  <th>پلان و کوٹہ</th>
                   <th>حالت</th>
                   <th className="actions-col-header">اقدامات</th>
                   <th>تاریخ اندراج</th>
@@ -637,6 +710,11 @@ export default function SuperAdmin() {
                   const adminProfile = (m.profiles || []).find(p => p.role === 'admin');
                   const dateStr = m.created_at ? new Date(m.created_at).toLocaleDateString('ur-PK') : '—';
                   const isSuspended = m.status === 'disabled';
+                  const activeCount = (m.students || []).filter(s => s.status !== 'left' && s.status !== 'withdrawn').length;
+                  const maxLimit = Number(m.max_students || 50);
+                  const planInfo = getPlanDetails(m.plan_name, maxLimit);
+                  const isFull = activeCount >= maxLimit;
+                  const isNearLimit = !isFull && activeCount >= (maxLimit * 0.85);
 
                   return (
                     <tr key={m.id}>
@@ -660,6 +738,12 @@ export default function SuperAdmin() {
                       </td>
                       <td>{m.district || '—'}</td>
                       <td>{adminProfile?.phone || m.phone || '—'}</td>
+                      <td>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{planInfo.name}</div>
+                        <div className={`quota-pill ${isFull ? 'quota-full' : (isNearLimit ? 'quota-warning' : 'quota-ok')}`}>
+                          طلباء: {activeCount} / {maxLimit}
+                        </div>
+                      </td>
                       <td>
                         <span className={`madrasa-status-pill ${isSuspended ? 'status-disabled' : 'status-active'}`}>
                           {isSuspended ? 'معطل' : 'فعال'}
@@ -776,7 +860,7 @@ export default function SuperAdmin() {
                   />
                 </div>
 
-                <div className="form-field-item" style={{ marginBottom: '8px' }}>
+                <div className="form-field-item" style={{ marginBottom: '14px' }}>
                   <label htmlFor="editMadrasaAddressInput">تفصیلی ایڈریس</label>
                   <input
                     id="editMadrasaAddressInput"
@@ -787,6 +871,43 @@ export default function SuperAdmin() {
                     onChange={(e) => setEditMadrasaAddress(e.target.value)}
                   />
                 </div>
+
+                <div className="form-field-item" style={{ marginBottom: '14px' }}>
+                  <label htmlFor="editMadrasaPlanSelect">منظور شدہ پلان اور طلباء کوٹہ *</label>
+                  <select
+                    id="editMadrasaPlanSelect"
+                    className="form-field-input"
+                    value={editPlanName}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditPlanName(val);
+                      if (val === 'free_maktab') setEditMaxStudents(50);
+                      else if (val === 'standard_madrasa') setEditMaxStudents(150);
+                      else if (val === 'large_jamia') setEditMaxStudents(300);
+                      else if (val === 'custom_unlimited') setEditMaxStudents(500);
+                    }}
+                  >
+                    <option value="free_maktab">ابتدائی / مکتب پلان (مفت) — زیادہ سے زیادہ 50 طلباء</option>
+                    <option value="standard_madrasa">معیاری مدرسہ پلان — زیادہ سے زیادہ 150 طلباء</option>
+                    <option value="large_jamia">بڑا جامعہ پلان — زیادہ سے زیادہ 300 طلباء</option>
+                    <option value="custom_unlimited">ملٹی برانچ یا حسبِ ضرورت کوٹہ</option>
+                  </select>
+                </div>
+
+                {editPlanName === 'custom_unlimited' && (
+                  <div className="form-field-item" style={{ marginBottom: '8px' }}>
+                    <label htmlFor="editCustomMaxStudentsInput">طلباء کی مخصوص حد (زیادہ سے زیادہ تعداد) *</label>
+                    <input
+                      id="editCustomMaxStudentsInput"
+                      type="number"
+                      min="1"
+                      className="form-field-input"
+                      value={editMaxStudents}
+                      onChange={(e) => setEditMaxStudents(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="modal-actions">

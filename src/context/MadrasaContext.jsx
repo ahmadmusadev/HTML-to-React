@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase, isValidUUID } from '../lib/supabaseClient';
-import { DEFAULT_CLASSES } from '../constants/defaults';
+import { DEFAULT_CLASSES, MADRASA_PLANS, getPlanDetails } from '../constants/defaults';
 import { useAuth } from './AuthContext';
 import {
   enqueueWrite,
@@ -31,6 +31,98 @@ export function MadrasaProvider({ children }) {
   });
 
   const [pendingSyncCount, setPendingSyncCount] = useState(() => getQueue().length);
+  const [activeStudentsCount, setActiveStudentsCount] = useState(0);
+
+  // Fetch count of currently active students for quota management
+  const fetchActiveStudentsCount = useCallback(async (madrasaId = activeMadrasaId) => {
+    if (!madrasaId) {
+      setActiveStudentsCount(0);
+      return 0;
+    }
+    if (!isValidUUID(madrasaId)) {
+      try {
+        const local = loadMadrasaData('hf_records_v1', madrasaId);
+        const count = (local?.records || []).filter(
+          r => r.status !== 'left' && r.status !== 'withdrawn' && !r.isWithdrawn
+        ).length;
+        setActiveStudentsCount(count);
+        return count;
+      } catch {
+        return 0;
+      }
+    }
+    try {
+      const { count, error } = await supabase
+        .from('students')
+        .select('id', { count: 'exact', head: true })
+        .eq('madrasa_id', madrasaId)
+        .not('status', 'in', '("left","withdrawn")');
+
+      if (!error && typeof count === 'number') {
+        setActiveStudentsCount(count);
+        return count;
+      }
+    } catch (err) {
+      console.warn('[MadrasaContext] Error fetching active student count:', err);
+    }
+    return activeStudentsCount;
+  }, [activeMadrasaId, activeStudentsCount]);
+
+  // Check if adding `additionalCount` students is permitted under the current quota
+  const checkStudentQuota = useCallback(async (additionalCount = 1, madrasaId = activeMadrasaId) => {
+    const mId = madrasaId || activeMadrasaId;
+    let targetMadrasa = (mId === activeMadrasaId) ? activeMadrasa : null;
+
+    if (!targetMadrasa && isValidUUID(mId)) {
+      try {
+        const { data } = await supabase.from('madrasas').select('*').eq('id', mId).single();
+        if (data) targetMadrasa = data;
+      } catch {}
+    }
+
+    const maxLimit = Number(targetMadrasa?.max_students || 50);
+    const plan = targetMadrasa?.plan_name || 'free_maktab';
+
+    let currentCount = activeStudentsCount;
+    if (isValidUUID(mId)) {
+      try {
+        const { count, error } = await supabase
+          .from('students')
+          .select('id', { count: 'exact', head: true })
+          .eq('madrasa_id', mId)
+          .not('status', 'in', '("left","withdrawn")');
+
+        if (!error && typeof count === 'number') {
+          currentCount = count;
+          if (mId === activeMadrasaId) {
+            setActiveStudentsCount(count);
+          }
+        }
+      } catch (err) {
+        console.warn('[MadrasaContext] Live count failed during quota check:', err);
+      }
+    } else {
+      const local = loadMadrasaData('hf_records_v1', mId);
+      currentCount = (local?.records || []).filter(
+        r => r.status !== 'left' && r.status !== 'withdrawn' && !r.isWithdrawn
+      ).length;
+    }
+
+    const remaining = Math.max(0, maxLimit - currentCount);
+    const allowed = (currentCount + additionalCount) <= maxLimit;
+    const message = allowed
+      ? ''
+      : `آپ کے ادارے کی منظور شدہ حد (${maxLimit} طلباء) مکمل ہو چکی ہے۔ مزید طلباء کے اندراج کے لیے برائے کرم اپنا پلان اپ گریڈ فرمائیں۔`;
+
+    return {
+      allowed,
+      currentCount,
+      maxStudents: maxLimit,
+      remaining,
+      planName: plan,
+      message
+    };
+  }, [activeMadrasaId, activeMadrasa, activeStudentsCount]);
 
   // Fetch active madrasa record from Supabase
   const fetchActiveMadrasa = async (mId) => {
@@ -102,6 +194,7 @@ export function MadrasaProvider({ children }) {
 
     if (activeMadrasaId) {
       fetchActiveMadrasa(activeMadrasaId);
+      fetchActiveStudentsCount(activeMadrasaId);
     } else {
       if (role === 'super_admin') {
         setActiveMadrasa({ id: null, name: 'جامعہ حفظ منیجر — پورٹل' });
@@ -241,7 +334,12 @@ export function MadrasaProvider({ children }) {
   const fetchStudentsFromSupabase = async (madrasaId = activeMadrasaId) => {
     if (!isValidUUID(madrasaId)) {
       const local = loadMadrasaData('hf_records_v1', madrasaId);
-      return local?.records || [];
+      const list = local?.records || [];
+      if (madrasaId === activeMadrasaId) {
+        const count = list.filter(r => r.status !== 'left' && r.status !== 'withdrawn' && !r.isWithdrawn).length;
+        setActiveStudentsCount(count);
+      }
+      return list;
     }
 
     try {
@@ -251,7 +349,12 @@ export function MadrasaProvider({ children }) {
         .eq('madrasa_id', madrasaId);
 
       if (error) throw error;
-      return data || [];
+      const list = data || [];
+      if (madrasaId === activeMadrasaId) {
+        const count = list.filter(r => r.status !== 'left' && r.status !== 'withdrawn' && !r.isWithdrawn).length;
+        setActiveStudentsCount(count);
+      }
+      return list;
     } catch (e) {
       console.error('[MadrasaContext] Error fetching students from Supabase:', e);
       throw (e instanceof Error ? e : new Error(e?.message || FETCH_ERROR_URDU));
@@ -859,6 +962,10 @@ export function MadrasaProvider({ children }) {
         saveMadrasaData('hf_records_v1', localData, madrasaId);
       } catch (err) {}
 
+      if (madrasaId === activeMadrasaId) {
+        setActiveStudentsCount(prev => Math.max(0, prev - 1));
+      }
+
       return true;
     } catch (e) {
       console.error('[MadrasaContext] Error deleting student:', e);
@@ -867,6 +974,12 @@ export function MadrasaProvider({ children }) {
   };
 
   const addStudentToSupabase = async (studentData, madrasaId = activeMadrasaId) => {
+    // 1. Quota check before adding
+    const quota = await checkStudentQuota(1, madrasaId);
+    if (!quota.allowed) {
+      throw new Error(quota.message);
+    }
+
     const isRemote = isValidUUID(madrasaId);
 
     if (isRemote) {
@@ -911,6 +1024,10 @@ export function MadrasaProvider({ children }) {
           console.warn('Failed to sync to local cache:', syncErr);
         }
 
+        if (madrasaId === activeMadrasaId) {
+          setActiveStudentsCount(prev => prev + 1);
+        }
+
         return data;
       } catch (e) {
         console.error('Supabase add student error:', e.message || e);
@@ -928,12 +1045,22 @@ export function MadrasaProvider({ children }) {
       const localData = loadMadrasaData('hf_records_v1', madrasaId) || { records: [] };
       localData.records = [...(localData.records || []), localRecord];
       saveMadrasaData('hf_records_v1', localData, madrasaId);
+      if (madrasaId === activeMadrasaId) {
+        setActiveStudentsCount(prev => prev + 1);
+      }
       return localRecord;
     }
   };
 
   const addBulkStudentsToSupabase = async (studentsArray = [], madrasaId = activeMadrasaId, onProgress = null) => {
     if (!studentsArray || studentsArray.length === 0) return [];
+
+    // 1. Quota check before bulk adding
+    const quota = await checkStudentQuota(studentsArray.length, madrasaId);
+    if (!quota.allowed) {
+      throw new Error(`آپ کے ادارے کی منظور شدہ حد (${quota.maxStudents} طلباء) کے مطابق صرف ${quota.remaining} نشستیں باقی ہیں، جبکہ فائل میں ${studentsArray.length} طلباء شامل ہیں۔ برائے کرم اپنا پلان اپ گریڈ فرمائیں۔`);
+    }
+
     const isRemote = isValidUUID(madrasaId);
 
     if (isRemote) {
@@ -998,6 +1125,10 @@ export function MadrasaProvider({ children }) {
           console.warn('[MadrasaContext] Failed to sync bulk students to local cache:', syncErr);
         }
 
+        if (madrasaId === activeMadrasaId) {
+          setActiveStudentsCount(prev => prev + insertedResults.length);
+        }
+
         return insertedResults;
       } catch (e) {
         console.error('[MadrasaContext] Supabase bulk add students error:', e.message || e);
@@ -1018,6 +1149,10 @@ export function MadrasaProvider({ children }) {
 
       if (typeof onProgress === 'function') {
         onProgress(localRecords.length, localRecords.length);
+      }
+
+      if (madrasaId === activeMadrasaId) {
+        setActiveStudentsCount(prev => prev + localRecords.length);
       }
 
       return localRecords;
@@ -1093,6 +1228,7 @@ export function MadrasaProvider({ children }) {
           .single();
 
         if (error) throw error;
+        setActiveStudentsCount(prev => Math.max(0, prev - 1));
         return data;
       } catch (e) {
         console.error('Supabase withdraw student error:', e.message || e);
@@ -1104,6 +1240,7 @@ export function MadrasaProvider({ children }) {
         r.id === id ? { ...r, status: 'left', withdrawal_date: withdrawalDate, withdrawal_reason: withdrawalReason } : r
       );
       saveMadrasaData('hf_records_v1', localData, activeMadrasaId);
+      setActiveStudentsCount(prev => Math.max(0, prev - 1));
       return { id, status: 'left', withdrawal_date: withdrawalDate, withdrawal_reason: withdrawalReason };
     }
   };
@@ -3264,6 +3401,12 @@ export function MadrasaProvider({ children }) {
       madrasas,
       activeMadrasaId,
       activeMadrasa,
+      planName: activeMadrasa?.plan_name || 'free_maktab',
+      maxStudents: Number(activeMadrasa?.max_students || 50),
+      planDetails: getPlanDetails(activeMadrasa?.plan_name, activeMadrasa?.max_students),
+      activeStudentsCount,
+      fetchActiveStudentsCount,
+      checkStudentQuota,
       activeLogo,
       logos,
       uploadLogo,

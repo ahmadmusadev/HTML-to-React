@@ -24,7 +24,10 @@ export default function BulkStudentImportExport({
   activeMadrasa = null,
   activeMadrasaId = '',
   addBulkStudentsToSupabase,
-  onViewClass
+  onViewClass,
+  maxStudents = 50,
+  planDetails = null,
+  checkStudentQuota = null
 }) {
   const fileInputId = useId();
   // Main mode: 'import' or 'export' (persisted in localStorage)
@@ -401,18 +404,29 @@ export default function BulkStudentImportExport({
     });
     setDuplicateAnalysis(dupAnalysis);
 
+    let finalPayloads = payloads;
     if (duplicateAction === 'skip' && dupAnalysis.fileDuplicates.length > 0) {
       let roll = nextRoll;
-      const cleanWithRolls = dupAnalysis.cleanPayloads.map((p) => {
+      finalPayloads = dupAnalysis.cleanPayloads.map((p) => {
         const item = { ...p, roll_number: String(roll).padStart(2, '0') };
         roll++;
         return item;
       });
-      setPreviewPayloads(cleanWithRolls);
-    } else {
-      setPreviewPayloads(payloads);
     }
 
+    // Quota validation: ensure total active students won't exceed quota limit
+    const existingActiveCount = records.filter(
+      r => !r.isWithdrawn && r.status !== 'left' && r.status !== 'withdrawn'
+    ).length;
+    const effectiveLimit = Number(maxStudents || activeMadrasa?.max_students || 50);
+    const availableSeats = Math.max(0, effectiveLimit - existingActiveCount);
+
+    if (finalPayloads.length > availableSeats) {
+      setMappingError(`آپ کے ادارے کی منظور شدہ حد (${effectiveLimit} طلباء) کے مطابق صرف ${availableSeats} نشستیں باقی ہیں، جبکہ فائل میں ${finalPayloads.length} طلباء موجود ہیں۔ کوٹہ سے زائد طلباء کا اندراج ممکن نہیں ہے۔ براہِ کرم اپنا پلان اپ گریڈ فرمائیں یا فائل میں طلباء کی تعداد کم کریں۔`);
+      return;
+    }
+
+    setPreviewPayloads(finalPayloads);
     setImportStep(3); // Confirmation dialog
   };
 
@@ -420,6 +434,18 @@ export default function BulkStudentImportExport({
   const handleExecuteImport = async () => {
     if (!addBulkStudentsToSupabase) {
       alert('ڈیٹا بیس فنکشن دستیاب نہیں ہے۔');
+      return;
+    }
+
+    // Re-verify quota before final write
+    const existingActiveCount = records.filter(
+      r => !r.isWithdrawn && r.status !== 'left' && r.status !== 'withdrawn'
+    ).length;
+    const effectiveLimit = Number(maxStudents || activeMadrasa?.max_students || 50);
+    const availableSeats = Math.max(0, effectiveLimit - existingActiveCount);
+
+    if (previewPayloads.length > availableSeats) {
+      alert(`آپ کے ادارے کی منظور شدہ حد (${effectiveLimit} طلباء) کے مطابق صرف ${availableSeats} نشستیں باقی ہیں۔ براہِ کرم اپنا پلان اپ گریڈ فرمائیں۔`);
       return;
     }
 
@@ -690,6 +716,33 @@ export default function BulkStudentImportExport({
               <span className="bulk-io-step-label">رجسٹریشن نمبر اور تصدیق</span>
             </div>
           </div>
+
+          {/* Institution Quota Status Bar */}
+          {(() => {
+            const activeCount = records.filter(r => !r.isWithdrawn && r.status !== 'left' && r.status !== 'withdrawn').length;
+            const limit = Number(maxStudents || activeMadrasa?.max_students || 50);
+            const remaining = Math.max(0, limit - activeCount);
+            const isFull = activeCount >= limit;
+
+            return (
+              <div className={`bulk-io-quota-strip ${isFull ? 'quota-strip-full' : ''}`}>
+                <div className="bulk-io-quota-item">
+                  <span className="bulk-io-quota-label">منظور شدہ کوٹہ:</span>
+                  <span className="bulk-io-quota-val">{limit} طلباء ({planDetails?.name || 'موجودہ پلان'})</span>
+                </div>
+                <div className="bulk-io-quota-item">
+                  <span className="bulk-io-quota-label">موجودہ فعال طلباء:</span>
+                  <span className="bulk-io-quota-val">{activeCount} طلباء</span>
+                </div>
+                <div className="bulk-io-quota-item">
+                  <span className="bulk-io-quota-label">دستیاب گنجائش:</span>
+                  <span className={`bulk-io-quota-val ${isFull ? 'quota-val-danger' : (remaining <= 5 ? 'quota-val-warning' : 'quota-val-success')}`}>
+                    {isFull ? 'کوٹہ مکمل (مزید اندراج ممکن نہیں)' : `${remaining} نشستیں دستیاب`}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           {mappingError && (
             <div className="bulk-io-alert error">
@@ -986,6 +1039,13 @@ export default function BulkStudentImportExport({
                     <span className="bulk-io-detail-key">کل طلباء برائے اندراج:</span>
                     <span className="bulk-io-detail-val">
                       <strong>{previewPayloads.length}</strong> طلباء
+                    </span>
+                  </div>
+
+                  <div className="bulk-io-confirm-detail-row">
+                    <span className="bulk-io-detail-key">کوٹہ اور نشستیں:</span>
+                    <span className="bulk-io-detail-val">
+                      منظور شدہ حد: {Number(maxStudents || activeMadrasa?.max_students || 50)} طلباء (امپورٹ کے بعد: {records.filter(r => !r.isWithdrawn && r.status !== 'left' && r.status !== 'withdrawn').length + previewPayloads.length} / {Number(maxStudents || activeMadrasa?.max_students || 50)})
                     </span>
                   </div>
 

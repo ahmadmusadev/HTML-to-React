@@ -261,6 +261,12 @@ export default function Admissions() {
     activeMadrasaId,
     activeMadrasa,
     activeLogo,
+    maxStudents,
+    planName,
+    planDetails,
+    activeStudentsCount,
+    fetchActiveStudentsCount,
+    checkStudentQuota,
     fetchClassesFromSupabase,
     classesList: contextClassesList,
     setClassesList: setContextClassesList,
@@ -278,6 +284,7 @@ export default function Admissions() {
   const [activeTab, setActiveTab] = useState('new');
   const [bulkIoClassId, setBulkIoClassId] = useState('');
   const [records, setRecords] = useState([]);
+  const [quotaErrorMsg, setQuotaErrorMsg] = useState('');
   const [classesList, setClassesList] = useState(() => (
     contextClassesList && contextClassesList.length > 0 ? contextClassesList : []
   ));
@@ -632,6 +639,16 @@ export default function Admissions() {
   };
 
   const openAddStudentToClass = (classId) => {
+    // Check quota before opening modal
+    const currentActiveCount = records.filter(r => !r.isWithdrawn && r.status !== 'left' && r.status !== 'withdrawn').length;
+    const limit = Number(maxStudents || activeMadrasa?.max_students || 50);
+    if (currentActiveCount >= limit) {
+      const err = `آپ کے ادارے کی منظور شدہ حد (${limit} طلباء) مکمل ہو چکی ہے۔ مزید طلباء کے اندراج کے لیے برائے کرم اپنا پلان اپ گریڈ فرمائیں۔`;
+      setQuotaErrorMsg(err);
+      alert(err);
+      return;
+    }
+
     setAddStudentClassId(classId);
     setAddStudentName('');
     setAddStudentFatherName('');
@@ -652,6 +669,18 @@ export default function Admissions() {
       alert('طالب علم کا نام درج کرنا لازمی ہے۔');
       return;
     }
+
+    // Verify quota
+    if (checkStudentQuota) {
+      const quota = await checkStudentQuota(1, activeMadrasaId);
+      if (!quota.allowed) {
+        const err = `آپ کے ادارے کی منظور شدہ حد (${quota.maxStudents} طلباء) مکمل ہو چکی ہے۔ مزید طلباء کے اندراج کے لیے برائے کرم اپنا پلان اپ گریڈ فرمائیں۔`;
+        setQuotaErrorMsg(err);
+        alert(err);
+        return;
+      }
+    }
+
     setClassActionLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -669,9 +698,13 @@ export default function Admissions() {
       setRecords(prev => [...prev, newUi]);
       setIsAddStudentModalOpen(false);
       setExpandedClassId(addStudentClassId);
+      setQuotaErrorMsg('');
       alert('طالب علم کامیابی سے کلاس میں شامل کر دیا گیا ہے۔');
     } catch (err) {
       console.error('Add student to class error:', err);
+      if (err.message && err.message.includes('منظور شدہ حد')) {
+        setQuotaErrorMsg(err.message);
+      }
       alert(err.message || 'طالب علم شامل کرنے میں خرابی پیش آئی۔');
     } finally {
       setClassActionLoading(false);
@@ -814,12 +847,25 @@ export default function Admissions() {
   const saveAdmission = async () => {
     if(!formData.admName.trim() || !formData.admRegNo) { alert("براہ کرم طالب علم کا نام درج کریں۔"); return; }
     
+    // Check student quota limit before inserting
+    if (checkStudentQuota) {
+      const quota = await checkStudentQuota(1, activeMadrasaId);
+      if (!quota.allowed) {
+        const err = `آپ کے ادارے کی منظور شدہ حد (${quota.maxStudents} طلباء) مکمل ہو چکی ہے۔ مزید طلباء کے اندراج کے لیے برائے کرم اپنا پلان اپ گریڈ فرمائیں۔`;
+        setQuotaErrorMsg(err);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        alert(err);
+        return;
+      }
+    }
+
     try {
       const payload = mapUiToSupabase(formData);
       const insertedRow = await addStudentToSupabase(payload, activeMadrasaId);
       const newUiRecord = mapSupabaseToUi(insertedRow);
       
       setRecords(prev => [...prev, newUiRecord]);
+      setQuotaErrorMsg('');
       alert("داخلہ کامیابی سے محفوظ ہو چکا ہے۔");
       setFormData(initialFormData);
       setWizardStep(1);
@@ -827,6 +873,10 @@ export default function Admissions() {
       handleTabChange('all');
     } catch (err) {
       console.error('Save admission error:', err);
+      if (err.message && err.message.includes('منظور شدہ حد')) {
+        setQuotaErrorMsg(err.message);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       alert(`داخلہ محفوظ نہیں ہو سکا!\n${err.message || 'سرور سے رابطہ قائم نہیں ہو سکا یا ڈیٹا میں خرابی ہے۔'}`);
     }
   };
@@ -1003,12 +1053,54 @@ export default function Admissions() {
         })}
       </div>
 
+      {quotaErrorMsg && (
+        <div className="quota-exceeded-banner no-print" role="alert">
+          <div className="quota-exceeded-content">
+            <strong>منظور شدہ حد مکمل:</strong> {quotaErrorMsg}
+          </div>
+          <button
+            type="button"
+            className="quota-exceeded-close"
+            onClick={() => setQuotaErrorMsg('')}
+            title="بند کریں"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {fetchError && (
         <div className="no-print" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>{fetchError}</span>
           <button onClick={() => setFetchError(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#856404' }}>✕</button>
         </div>
       )}
+
+      {activeTab === 'new' && (() => {
+        const activeCount = records.filter(r => !r.isWithdrawn && r.status !== 'left' && r.status !== 'withdrawn').length;
+        const limit = Number(maxStudents || activeMadrasa?.max_students || 50);
+        const remainingSeats = Math.max(0, limit - activeCount);
+        const isQuotaFull = activeCount >= limit;
+
+        return (
+          <div className={`quota-summary-strip no-print ${isQuotaFull ? 'quota-strip-full' : ''}`}>
+            <div className="quota-summary-item">
+              <span className="quota-summary-label">منظور شدہ پلان:</span>
+              <span className="quota-summary-value">{planDetails?.name || 'ابتدائی / مکتب پلان (مفت)'}</span>
+            </div>
+            <div className="quota-summary-item">
+              <span className="quota-summary-label">داخل شدہ فعال طلباء:</span>
+              <span className="quota-summary-value">{activeCount} / {limit}</span>
+            </div>
+            <div className="quota-summary-item">
+              <span className="quota-summary-label">باقی گنجائش:</span>
+              <span className={`quota-summary-value ${isQuotaFull ? 'quota-val-danger' : (remainingSeats <= 5 ? 'quota-val-warning' : 'quota-val-success')}`}>
+                {isQuotaFull ? 'کوٹہ مکمل ہو چکا ہے' : `${remainingSeats} نشستیں دستیاب`}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
 
       {activeTab === 'new' && (
         <div id="newAdmissionFormContainer" className="no-print">
@@ -2332,6 +2424,9 @@ export default function Admissions() {
           activeMadrasa={activeMadrasa}
           activeMadrasaId={activeMadrasaId}
           addBulkStudentsToSupabase={addBulkStudentsToSupabase}
+          maxStudents={maxStudents}
+          planDetails={planDetails}
+          checkStudentQuota={checkStudentQuota}
           onViewClass={(clsId) => {
             setExpandedClassId(clsId);
             setActiveTab('classes');
