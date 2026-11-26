@@ -1363,3 +1363,66 @@
   }
 }
 
+/* --- BULK IMPORT QUOTA STRIP --- */
+.bulk-io-quota-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 12px;
+  background-color: var(--card-inner, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  padding: 12px 18px;
+  border-radius: 10px;
+  margin: 16px 0 20px 0;
+}
+
+.bulk-io-quota-strip.quota-strip-full {
+  border-color: #fca5a5;
+  background-color: #fef2f2;
+}
+
+.bulk-io-quota-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+
+.bulk-io-quota-label {
+  color: var(--muted, #64748b);
+  font-weight: 600;
+}
+
+.bulk-io-quota-val {
+  font-weight: 800;
+  color: var(--text, #1e293b);
+}
+
+[data-theme="dark"] .bulk-io-quota-strip {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] .bulk-io-quota-strip.quota-strip-full {
+  background-color: #451a1a !important;
+  border-color: #7f1d1d !important;
+}
+
+[data-theme="dark"] .bulk-io-quota-label {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .bulk-io-quota-val {
+  color: #f4f4f5 !important;
+}
+
+@media (max-width: 640px) {
+  .bulk-io-quota-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+}
+

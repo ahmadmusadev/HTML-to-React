@@ -91,7 +91,11 @@ serve(async (req) => {
       madrasaId: rawMadrasaId,
       phone: rawPhone,
       district: rawDistrict,
-      address: rawAddress
+      address: rawAddress,
+      planName: rawPlanName,
+      plan_name: rawPlanNameAlt,
+      maxStudents: rawMaxStudents,
+      max_students: rawMaxStudentsAlt
     } = body;
 
     const email = (rawEmail || '').trim().toLowerCase();
@@ -165,6 +169,12 @@ serve(async (req) => {
       if (district) madrasaInsertData.district = district;
       if (address) madrasaInsertData.address = address;
       if (phone) madrasaInsertData.phone = phone;
+      const finalPlanName = (rawPlanName || rawPlanNameAlt || '').trim();
+      if (finalPlanName) madrasaInsertData.plan_name = finalPlanName;
+      const parsedMaxStudents = Number(rawMaxStudents || rawMaxStudentsAlt);
+      if (!isNaN(parsedMaxStudents) && parsedMaxStudents > 0) {
+        madrasaInsertData.max_students = parsedMaxStudents;
+      }
 
       const { data: newMadrasa, error: madrasaInsertErr } = await supabaseAdmin
         .from('madrasas')
