@@ -1,558 +1,46 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './AiChatbot.css';
+import {
+  SUGGESTED_PROMPTS,
+  KNOWLEDGE_BASE,
+  normalizeUrduText,
+  analyzeKnowledgeQuery,
+  findBestKnowledgeMatch,
+} from './aiRehnumaKnowledge';
 
-// Preset suggested questions for quick access
-const SUGGESTED_PROMPTS = [
-  { id: 'adm', text: 'نئے طالب علم کا نیا داخلہ کیسے کریں؟' },
-  { id: 'entry', text: 'روزانہ کا سبق، سبقی اور منزل کیسے درج کریں؟' },
-  { id: 'fee', text: 'طالب علم کی ماہانہ فیس کا ریکارڈ کیسے اپڈیٹ کریں؟' },
-  { id: 'staff', text: 'کلاس یا مدرسے کے استاد کا نیا اکاؤنٹ کیسے بنائیں؟' },
-  { id: 'att', text: 'روزانہ کی حاضری کا طریقہ کار کیا ہے؟' },
-];
+export {
+  SUGGESTED_PROMPTS,
+  KNOWLEDGE_BASE,
+  normalizeUrduText,
+  analyzeKnowledgeQuery,
+  findBestKnowledgeMatch,
+};
 
-// Urdu Text Normalizer for Intent and Keyword Extraction
-export function normalizeUrduText(text) {
-  if (!text || typeof text !== 'string') return '';
-  return text
-    .toLowerCase()
-    .replace(/[؟?!\.,،:؛\-_()[\]{}"'`~\\/]/g, ' ')
-    .replace(/[يى]/g, 'ی')
-    .replace(/[ك]/g, 'ک')
-    .replace(/[ةۃۀ]/g, 'ہ')
-    .replace(/[ؤ]/g, 'و')
-    .replace(/[إأآٱ]/g, 'ا')
-    .replace(/[\u064B-\u065F\u0670]/g, '') // remove tashkeel
-    .replace(/\bطلبہ\b/g, 'طلباء') // unify talaba to talabaa
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-// Structured Software Knowledge Base Engine (30+ Domain Workflows)
-export const KNOWLEDGE_BASE = [
-  {
-    id: 'students_list',
-    topic: 'تمام طلباء کی فہرست و ڈائریکٹری (Students List)',
-    primaryKeywords: ['طلباء کی فہرست', 'طلبہ کی فہرست', 'تمام طلباء', 'تمام طلبہ', 'طلباء کی لسٹ', 'طلبہ کی لسٹ', 'طلباء لسٹ', 'طلبہ لسٹ', 'طلباء ڈائریکٹری', 'طلبہ ڈائریکٹری', 'طلباء کا ریکارڈ', 'طلبہ کا ریکارڈ', 'طالب علموں کی لسٹ', 'طلباء فہرست', 'طلبہ فہرست', 'مجموعی فہرست', 'students list', 'all students'],
-    primaryPhrases: [
-      'تمام طلبہ کی مجموعی فہرست کہاں سے دیکھیں',
-      'تمام طلباء کی مجموعی فہرست کہاں سے دیکھیں',
-      'تمام طلبہ کی مجموعی فہرست کہاں سے دیکھیں۔',
-      'تمام طلبہ کی فہرست کہاں ہے',
-      'تمام طلباء کی فہرست کہاں ہے',
-      'تمام طلبہ کی فہرست',
-      'تمام طلباء کی فہرست',
-      'طلباء کی فہرست کہاں سے دیکھیں',
-      'طلبہ کی فہرست کہاں سے دیکھیں',
-      'تمام طلباء کی لسٹ',
-      'تمام طلبہ کی لسٹ',
-      'مجموعی فہرست کہاں سے دیکھیں'
-    ],
-    secondaryKeywords: ['فہرست', 'لسٹ', 'مجموعی فہرست', 'تلاش', 'کوائف'],
-    priority: 25,
-    response: `**تمام طلباء کی مجموعی فہرست دیکھنے کا طریقہ:**
-1. مینو بار سے **'داخلہ جات'** (Admissions) ٹیب پر کلک کریں۔
-2. صفحے کے نیچے **'داخلہ فہرست / تمام طلباء کا ریکارڈ'** کا مکمل ٹیبل موجود ہے۔
-3. یہاں آپ مدرسے کے تمام فعال و غیر فعال طلباء کے نام، والد کا نام، رول نمبر، کلاس اور رابطہ نمبر دیکھ سکتے ہیں۔
-4. کسی بھی طالب علم کو فوری تلاش کرنے کے لیے اوپر دیے گئے سرچ باکس میں نام یا داخلہ نمبر لکھیں۔
-5. کلاس وار طلباء دیکھنے کے لیے کلاسز کے مینو سے متعلقہ کلاس پر کلک کریں۔`
-  },
-  {
-    id: 'student_edit',
-    topic: 'طالب علم کے کوائف میں ترمیم (Edit Student Info)',
-    primaryKeywords: ['کوائف ایڈٹ', 'طالب علم ایڈٹ', 'معلومات ایڈٹ', 'نام درست', 'ولدیت درست', 'کوائف درست', 'تبدیلی کوائف', 'edit student'],
-    primaryPhrases: ['طالب علم کے کوائف کیسے ایڈٹ کریں', 'طالب علم کی معلومات تبدیل کرنا', 'طالب علم کا نام درست کرنا'],
-    priority: 15,
-    response: `**طالب علم کے کوائف میں تبدیلی اور ترمیم کرنے کا طریقہ:**
-1. مینو سے **'داخلہ جات'** (Admissions) ٹیب میں جائیں۔
-2. نیچے طالب علموں کی فہرست میں مطلوبہ طالب علم تلاش کریں۔
-3. طالب علم کے نام کے سامنے موجود **'ترمیم' (Edit)** بٹن پر کلک کریں۔
-4. داخلہ فارم میں نام، والد کا نام، کلاس، موبائل نمبر یا رہائشی حیثیت میں مطلوبہ درستگی کریں۔
-5. **'محفوظ کریں'** کا بٹن دبا کر نیا ریکارڈ اپڈیٹ کر دیں۔`
-  },
-  {
-    id: 'fee_paid_list',
-    topic: 'فیس دہندگان کی فہرست (Paid Students List)',
-    primaryKeywords: ['دہندہ رپورٹ', 'دہندگان', 'فیس جمع کروا دی', 'ادا شدہ فیس', 'فیس ادا کرنے والے', 'paid students'],
-    primaryPhrases: ['فیس دہندگان کی لسٹ', 'جنہوں نے فیس جمع کروائی', 'دہندہ طلباء کی فہرست'],
-    priority: 15,
-    response: `**فیس دہندگان (Paid Students) کی فہرست دیکھنے کا طریقہ:**
-1. **'فیس ریکارڈ'** (Fees) ٹیب پر جائیں۔
-2. اوپر موجود **'دہندہ رپورٹ'** (Paid Report) بٹن پر کلک کریں۔
-3. مطلوبہ مہینہ اور سال منتخب کریں۔
-4. ان تمام طلباء کی مکمل فہرست بمع رسید نمبر، تاریخ اور ادا شدہ رقم ظاہر ہو جائے گی جنہوں نے فیس ادا کر دی ہے۔`
-  },
-  {
-    id: 'admissions',
-    topic: 'داخلہ جات (Admissions)',
-    primaryKeywords: ['داخلہ', 'نیا داخلہ', 'داخلہ جات', 'داخلہ فارم', 'داخلہ نمبر', 'نیا طالب علم', 'رجسٹریشن', 'داخل کرنا', 'admit', 'admission', 'register'],
-    primaryPhrases: ['نئے طالب علم کا نیا داخلہ کیسے کریں', 'نئے طالب علم کا داخلہ', 'داخلہ کیسے کریں', 'نیا داخلہ فارم'],
-    negativeKeywords: ['خارج', 'اخراج', 'منسوخ', 'منسوخی', 'کینسل', 'نکالنا', 'ٹرانسفر', 'منتقلی', 'تبدیل', 'شناختی کارڈ', 'فیس', 'حاضری', 'رزلٹ', 'کارڈ پرنٹ'],
-    secondaryKeywords: ['رول نمبر', 'کلاس انتخاب', 'سرپرست', 'مقیم'],
-    priority: 5,
-    response: `**نئے طالب علم کے داخلہ کا طریقہ کار:**
-1. مینو بار سے **'داخلہ جات'** (Admissions) ٹیب منتخب کریں۔
-2. **'نیا داخلہ'** فارم میں طالب علم کا پورا نام، والد کا نام، اور فون نمبر درج کریں۔
-3. رول نمبر، داخلہ نمبر اور متعلقہ کلاس منتخب کریں۔
-4. رہائشی صورتحال (مقیم / غیر مقیم) منتخب کریں۔
-5. **'داخلہ محفوظ کریں'** کا بٹن دبائیں۔ طالب علم کا ریکارڈ فوری شامل ہو جائے گا۔`
-  },
-  {
-    id: 'student_withdrawal',
-    topic: 'طالب علم کا اخراج و منسوخی داخلہ (Student Withdrawal)',
-    primaryKeywords: ['اخراج', 'خارج', 'خارج کرنا', 'منسوخ', 'منسوخی', 'داخلہ منسوخ', 'داخلہ کینسل', 'طالب علم نکالنا', 'نام خارج', 'طالب علم خارج', 'طالب علم ڈیلیٹ', 'فارغ', 'فراغت', 'withdraw', 'cancellation'],
-    primaryPhrases: ['طالب علم کا اخراج', 'داخلہ خارج کیسے کریں', 'طالب علم کو خارج کرنا', 'داخلہ منسوخ کرنا', 'نام خارج کرنا', 'اخراج کا طریقہ'],
-    secondaryKeywords: ['وجہ اخراج', 'اخراج کی تاریخ', 'غیر فعال'],
-    priority: 15,
-    response: `**طالب علم کے اخراج (منسوخی داخلہ) کا طریقہ کار:**
-1. مینو سے **'داخلہ جات'** (Admissions) ٹیب میں جائیں۔
-2. نیچے موجود **'طالب علم کا اخراج'** (Student Withdrawal) سیکشن کھولیں۔
-3. طالب علم کا داخلہ نمبر (Reg No) درج کر کے کوائف لوڈ کریں۔
-4. اخراج کی تاریخ، سبب (مثلاً: نقل مکانی، فراغت، عدم دلچسپی) اور ضروری ریمارکس درج کریں۔
-5. **'اخراج کی توثیق کریں'** پر کلک کریں۔ طالب علم کا داخلہ منسوخ ہو کر ریکارڈ غیر فعال لسٹ میں محفوظ ہو جائے گا۔`
-  },
-  {
-    id: 'class_transfer',
-    topic: 'طلباء کی کلاس منتقلی (Class Transfer)',
-    primaryKeywords: ['کلاس منتقلی', 'کلاس ٹرانسفر', 'کلاس تبدیل', 'دوسری کلاس میں بھیجنا', 'کلاس بدلنا', 'ٹرانسفر', 'شعبہ تبدیل', 'transfer class'],
-    primaryPhrases: ['کلاس منتقلی کا طریقہ', 'کلاس تبدیل کیسے کریں', 'طالب علم کو دوسری کلاس میں منتقل', 'کلاس ٹرانسفر'],
-    secondaryKeywords: ['نئی کلاس', 'استاد تفویض'],
-    priority: 15,
-    response: `**طالب علم کو دوسری کلاس میں منتقل (Transfer) کرنے کا طریقہ:**
-1. **'داخلہ جات'** یا **'کلاسز لسٹ'** والے حصے میں جائیں۔
-2. مطلوبہ طالب علم کے نام کے آگے موجود **'کلاس منتقلی'** (Transfer) آپشن پر کلک کریں۔
-3. موجودہ کلاس کے بجائے نئی مطلوبہ کلاس اور نئے استاد کا انتخاب کریں۔
-4. **'منتقلی محفوظ کریں'** پر کلک کریں۔ طالب علم تمام پچھلے تعلیمی و فیس ریکارڈ سمیت نئی کلاس میں منتقل ہو جائے گا۔`
-  },
-  {
-    id: 'classes_management',
-    topic: 'کلاسز کا انتظام اور نئی کلاس (Classes Management)',
-    primaryKeywords: ['نئی کلاس', 'کلاس شامل', 'کلاس بنائیں', 'کلاس کا نام', 'کلاس ایڈٹ', 'استاد تفویض', 'کلاس ڈیلیٹ', 'شعبہ جات', 'classes'],
-    primaryPhrases: ['نئی کلاس کیسے بنائیں', 'کلاس شامل کرنے کا طریقہ', 'کلاس کا نام بدلنا'],
-    negativeKeywords: ['منتقلی', 'ٹرانسفر'],
-    secondaryKeywords: ['درجہ', 'شعبہ', 'کلاس لسٹ'],
-    priority: 10,
-    response: `**نئی کلاس بنانے اور کلاسز کے انتظام کا طریقہ:**
-1. سیٹنگز یا کلاسز والے سیکشن میں جا کر **'تمام کلاسز'** کا منظر دیکھیں۔
-2. **'نئی کلاس شامل کریں'** پر کلک کر کے کلاس کا نام (مثلاً: شعبہ حفظ اول، تجوید کلاس) درج کریں۔
-3. متعلقہ نگران استاد کا انتخاب کریں تاکہ وہ اس کلاس کے نگران بن سکیں۔
-4. **'کلاس محفوظ کریں'** کا بٹن دبائیں۔ آپ کسی بھی وقت کلاس کا نام اور استاد ایڈٹ کر سکتے ہیں۔`
-  },
-  {
-    id: 'fees',
-    topic: 'فیس ریکارڈ (Fees Management)',
-    primaryKeywords: ['فیس', 'ماہانہ فیس', 'فیس ریکارڈ', 'فیس جمع', 'فیس وصولی', 'فیس ادائیگی', 'فیس اپڈیٹ', 'مالیات', 'fee', 'fees', 'payment'],
-    primaryPhrases: ['طالب علم کی ماہانہ فیس کا ریکارڈ کیسے اپڈیٹ کریں', 'فیس کا ریکارڈ', 'فیس اپڈیٹ', 'ماہانہ فیس', 'فیس جمع کیسے کریں', 'فیس کیسے جمع کریں'],
-    negativeKeywords: ['نادہندہ', 'نادہندگان', 'بقایا', 'بقایا جات', 'فیس رسید', 'رسید پرنٹ', 'a5 رسید', 'چالان پرنٹ'],
-    secondaryKeywords: ['نقد', 'بینک', 'آن لائن'],
-    priority: 5,
-    response: `**فیس کا ریکارڈ اور رسید جاری کرنے کا طریقہ:**
-1. مینو میں **'فیس ریکارڈ'** (Fees) ٹیب کھولیں۔
-2. طالب علم کا نام یا رول نمبر تلاش کریں۔
-3. وصول شدہ فیس کی رقم، متعلقہ مہینہ اور ادائیگی کی تاریخ درج کریں۔
-4. ادائیگی کا طریقہ (نقد / بینک / آن لائن) منتخب کریں۔
-5. **'فیس جمع کریں'** پر کلک کریں اور ضرورت پڑنے پر پرنٹ رسید پر کلک کر کے رسید ڈاؤن لوڈ کریں۔`
-  },
-  {
-    id: 'fee_defaulters',
-    topic: 'فیس نادہندگان اور بقایا جات (Fee Defaulters & Arrears)',
-    primaryKeywords: ['نادہندہ', 'نادہندگان', 'بقایا جات', 'بقایا فیس', 'فیس نہیں دی', 'غیر ادا شدہ', 'کتنی فیس باقی ہے', 'فیس رپورٹ', 'unpaid', 'defaulters', 'arrears'],
-    primaryPhrases: ['فیس نادہندگان کی رپورٹ', 'بقایا فیس کیسے دیکھیں', 'نادہندہ طلباء', 'فیس بقایا جات'],
-    secondaryKeywords: ['لسٹ', 'رپورٹ'],
-    priority: 15,
-    response: `**فیس نادہندگان اور بقایا جات دیکھنے کا طریقہ:**
-1. **'فیس ریکارڈ'** (Fees) ٹیب پر جائیں۔
-2. اوپر دیے گئے بٹنز میں سے **'نادہندہ رپورٹ'** (Unpaid Report) منتخب کریں۔
-3. متعلقہ مہینہ اور سال منتخب کریں۔
-4. سسٹم ان تمام طلباء کی مکمل فہرست بقایا جات سمیت سامنے لے آئے گا جنہوں نے فیس جمع نہیں کروائی۔
-5. آپ اس فہرست کو پرنٹ کر کے نوٹس بورڈ یا والدین کو یاد دہانی کے لیے استعمال کر سکتے ہیں۔`
-  },
-  {
-    id: 'fee_receipt',
-    topic: 'فیس رسید پرنٹنگ (Fee Receipt Printing)',
-    primaryKeywords: ['فیس رسید', 'رسید پرنٹ', 'رسید دوبارہ', 'چالان پرنٹ', 'a5 رسید', 'رسید پرنٹنگ', 'receipt print', 'voucher'],
-    primaryPhrases: ['فیس رسید پرنٹ کرنے کا طریقہ', 'رسید کیسے نکالیں', 'دوبارہ رسید پرنٹ', 'رسید پرنٹ'],
-    secondaryKeywords: ['انوائس', 'پرنٹ واؤچر'],
-    priority: 15,
-    response: `**فیس رسید پرنٹ کرنے کا طریقہ:**
-1. **'فیس ریکارڈ'** ٹیب میں فیس جمع ہوتے ہی پرنٹ ونڈو خودکار کھل جاتی ہے۔
-2. اگر پرانی رسید دوبارہ نکالنی ہو تو **'رسید بنائیں / دوبارہ پرنٹ'** کے ٹیب پر جائیں۔
-3. طالب علم کا شناختی نمبر یا انوائس نمبر درج کریں تاکہ رسید اسکرین پر آ جائے۔
-4. **'پرنٹ رسید'** پر کلک کریں۔ سسٹم خودکار طور پر A5 لینڈ سکیپ فارمیٹ میں معیاری دو کالم رسید پیش کر دے گا۔`
-  },
-  {
-    id: 'entry',
-    topic: 'جائزہ جات (Daily Hifz Entry)',
-    primaryKeywords: ['سبق', 'سبقی', 'منزل', 'جائزہ', 'جائزہ جات', 'تلاوت', 'پارہ', 'سطور', 'حفظ', 'sabaq', 'sabqi', 'manzil', 'entry'],
-    primaryPhrases: ['روزانہ کا سبق، سبقی اور منزل کیسے درج کریں', 'سبق، سبقی اور منزل', 'سبق درج', 'روزانہ کا سبق'],
-    negativeKeywords: ['ششماہی', 'ماہانہ جائزہ', 'پارہ تکمیل'],
-    secondaryKeywords: ['دور', 'تجوید'],
-    priority: 5,
-    response: `**روزانہ کا سبق، سبقی اور منزل درج کرنے کا طریقہ:**
-1. نیویگیشن بار سے **'جائزہ جات'** (Entry) ٹیب پر کلک کریں۔
-2. مطلوبہ کلاس اور طالب علم کا نام منتخب کریں۔
-3. **سبق (Sabaq):** موجودہ پڑھا گیا پارہ اور سطور درج کریں۔
-4. **سبقی (Sabqi):** پچھلے یاد شدہ پارے کا نمبر درج کریں۔
-5. **منزل (Manzil):** دور یا پچھلی منزل کا جائزہ منتخب کریں۔
-6. **'ریکارڈ محفوظ کریں'** کا بٹن دبا کر اینٹری مکمل کریں۔`
-  },
-  {
-    id: 'half_yearly_hifz',
-    topic: 'ششماہی اور ماہانہ جائزہ ریکارڈ (Half-Yearly Hifz)',
-    primaryKeywords: ['ششماہی', 'ماہانہ جائزہ', 'ششماہی ریکارڈ', 'کلاس رپورٹ جائزہ', 'پارہ مکمل', 'حفظ جائزہ'],
-    primaryPhrases: ['ششماہی ریکارڈ کیسے درج کریں', 'ماہانہ جائزہ کا طریقہ', 'ششماہی جائزہ'],
-    secondaryKeywords: ['سالانہ ریکارڈ', 'حفظ رپورٹ'],
-    priority: 15,
-    response: `**ششماہی اور ماہانہ تعلیمی جائزے کا طریقہ:**
-1. مینو سے **'جائزہ جات'** (Entry) ٹیب کھولیں۔
-2. اوپر موجود ٹیبز میں سے **'ششماہی ریکارڈ'** یا **'ماہانہ جائزہ'** منتخب کریں۔
-3. کلاس، تعلیمی سال اور متعلقہ ششماہی کا انتخاب کریں۔
-4. ہر طالب علم کے یاد کردہ پارے، صفحات کی تعداد اور استاد کے ریمارکس درج کریں۔
-5. **'کلاس جائزہ رپورٹ'** پر کلک کر کے پوری کلاس کی ششماہی کارکردگی رپورٹ پرنٹ کریں۔`
-  },
-  {
-    id: 'attendance',
-    topic: 'حاضری ریکارڈ (Attendance System)',
-    primaryKeywords: ['حاضری', 'حاضر', 'غیر حاضر', 'رخصت', 'حاضری ریکارڈ', 'حاضری شیٹ', 'حاضری مارک', 'attendance', 'present', 'absent', 'leave'],
-    primaryPhrases: ['روزانہ کی حاضری کا طریقہ کار کیا ہے', 'روزانہ کی حاضری', 'حاضری کا طریقہ', 'حاضری کیسے لگائیں'],
-    negativeKeywords: ['اسٹاف حاضری', 'استاد کی حاضری', 'اساتذہ حاضری', 'چیک ان', 'چیک آؤٹ', 'حاضری رپورٹ', 'حاضری خلاصہ'],
-    secondaryKeywords: ['تاریخ', 'طالب علم حاضری'],
-    priority: 5,
-    response: `**روزانہ کی حاضری مارک کرنے کا طریقہ:**
-1. مینو سے **'حاضری'** (Attendance) ٹیب پر جائیں۔
-2. متعلقہ تاریخ اور کلاس منتخب کریں۔
-3. تمام طلباء کے نام کے سامنے **حاضر (Present)**، **غیر حاضر (Absent)**، یا **رخصت (Leave)** پر نشان لگائیں۔
-4. اساتذہ اور عملے کی حاضری کے لیے اوپر دیے گئے 'اسٹاف حاضری' سوئچ کا استعمال کریں۔
-5. **'حاضری محفوظ کریں'** کا بٹن دبائیں۔`
-  },
-  {
-    id: 'staff_attendance',
-    topic: 'اساتذہ و عملے کی حاضری اور ٹائمنگ (Staff Attendance)',
-    primaryKeywords: ['اسٹاف حاضری', 'استاد کی حاضری', 'اساتذہ حاضری', 'چیک ان', 'چیک آؤٹ', 'عملہ حاضری', 'استاد لیٹ', 'حاضری اسٹاف', 'staff attendance', 'check in', 'check out'],
-    primaryPhrases: ['اسٹاف کی حاضری کا طریقہ', 'اساتذہ کی حاضری کیسے لگائیں', 'چیک ان چیک آؤٹ'],
-    secondaryKeywords: ['شفٹ', 'ٹائمنگ', 'لیٹ'],
-    priority: 15,
-    response: `**اساتذہ اور اسٹاف کی حاضری لگانے کا طریقہ:**
-1. **'حاضری'** (Attendance) ٹیب کھولیں اور اوپر **'اسٹاف حاضری'** کا بٹن دبائیں۔
-2. تاریخ اور شفٹ (صبح / شام) منتخب کریں۔
-3. ہر استاد کی حاضری کی صورتحال (حاضر / رخصت / غیر حاضر) کے ساتھ ان کا چیک ان اور چیک آؤٹ وقت درج کریں۔
-4. تاخیر کی صورت میں سسٹم خودکار لیٹ منٹس کا حساب رکھتا ہے۔
-5. **'اسٹاف حاضری محفوظ کریں'** پر کلک کریں۔`
-  },
-  {
-    id: 'attendance_summary',
-    topic: 'ماہانہ حاضری خلاصہ و رجسٹر (Attendance Summary & Reports)',
-    primaryKeywords: ['حاضری خلاصہ', 'حاضری رپورٹ', 'ماہانہ حاضری', 'حاضری شیٹ', 'حاضری رجسٹر', 'حاضری پرنٹ'],
-    primaryPhrases: ['حاضری کا خلاصہ کیسے دیکھیں', 'ماہانہ حاضری رپورٹ', 'حاضری رجسٹر پرنٹ'],
-    secondaryKeywords: ['کل حاضری', 'فیصد'],
-    priority: 15,
-    response: `**ماہانہ حاضری رپورٹ اور خلاصہ دیکھنے کا طریقہ:**
-1. **'حاضری'** (Attendance) ٹیب کھولیں۔
-2. اوپر موجود **'خلاصہ رپورٹ'** (Summary) یا **'کلاس رپورٹ'** پر جائیں۔
-3. کلاس اور مطلوبہ مہینہ منتخب کریں۔
-4. کلاس کے تمام طلباء کی کل حاضریوں، غیر حاضریوں اور رخصتوں کا تفصیلی چارٹ ظاہر ہو جائے گا۔
-5. **'پرنٹ رپورٹ'** کے ذریعے ماہانہ حاضری رجسٹر پرنٹ کریں۔`
-  },
-  {
-    id: 'staff',
-    topic: 'اسٹاف و اساتذہ (Staff Management)',
-    primaryKeywords: ['استاد', 'اساتذہ', 'ٹیچر', 'اسٹاف', 'عملہ', 'استاد اکاؤنٹ', 'عہدہ', 'ناظم', 'قاری', 'staff', 'teacher', 'employee'],
-    primaryPhrases: ['کلاس یا مدرسے کے استاد کا نیا اکاؤنٹ کیسے بنائیں', 'استاد کا نیا اکاؤنٹ', 'نیا استاد', 'نیا استاد شامل کریں'],
-    negativeKeywords: ['اسٹاف حاضری', 'استاد کی حاضری', 'چیک ان', 'تنخواہ'],
-    secondaryKeywords: ['موبائل نمبر', 'کلاس تفویض', 'شفٹ'],
-    priority: 5,
-    response: `**نئے استاد یا اسٹاف رکن کا اکاؤنٹ بنانے کا طریقہ:**
-1. مینو میں **'اسٹاف'** (Staff) ٹیب پر جائیں۔
-2. **'نیا استاد شامل کریں'** والے فارم میں استاد کا پورا نام، موبائل نمبر اور عہدہ (مثلاً: مدرسِ حفظ، ناظم، قاری) درج کریں۔
-3. استاد کے سپرد کی جانے والی کلاس منتخب کریں۔
-4. **'استاد کا ریکارڈ محفوظ کریں'** پر کلک کریں۔`
-  },
-  {
-    id: 'exams',
-    topic: 'امتحانات اور نتائج (Exams & Results)',
-    primaryKeywords: ['امتحان', 'امتحانات', 'رزلٹ', 'نمبر', 'نتائج', 'گریڈ', 'امتحانی', 'امتحان نمبر', 'exam', 'exams', 'result', 'marks', 'test'],
-    primaryPhrases: ['امتحانات اور نتائج کے اندراج کا طریقہ', 'امتحان کا طریقہ', 'امتحان کے نمبر درج'],
-    negativeKeywords: ['رزلٹ کارڈ', 'نتیجہ پرنٹ', 'گزٹ پرنٹ', 'کارڈ پرنٹ'],
-    secondaryKeywords: ['ششماہی', 'سالانہ', 'ماہانہ ٹیسٹ'],
-    priority: 5,
-    response: `**امتحانات اور نتائج کے اندراج کا طریقہ:**
-1. مینو سے **'امتحانات'** (Exams) ٹیب کھولیں۔
-2. امتحان کی قسم (مثلاً: ماہانہ ٹیسٹ، ششماہی، یا سالانہ امتحان) منتخب کریں۔
-3. طالب علم کے حفظ، تجوید اور رفتار کے حاصل کردہ نمبرز داخل کریں۔
-4. سسٹم ازخود فیصدی اور گریڈ کی حساب کتاب کرے گا جس کے بعد رزلٹ کارڈ پرنٹ کیا جا سکتا ہے۔`
-  },
-  {
-    id: 'exam_result_print',
-    topic: 'امتحانی رزلٹ کارڈ و گزٹ پرنٹنگ (Result Cards Printing)',
-    primaryKeywords: ['رزلٹ کارڈ', 'نتیجہ پرنٹ', 'گزٹ', 'امتحان پرنٹ', 'کشف الدرجات', 'نتیجہ شیٹ', 'result card', 'gazette'],
-    primaryPhrases: ['رزلٹ کارڈ کیسے پرنٹ کریں', 'امتحان کا نتیجہ پرنٹ کرنا', 'کلاس رزلٹ گزٹ', 'رزلٹ کارڈ پرنٹ'],
-    negativeKeywords: ['شناختی کارڈ', 'فیس رسید'],
-    secondaryKeywords: ['مارکس شیٹ', 'پوزیشن'],
-    priority: 15,
-    response: `**امتحانی رزلٹ کارڈ اور گزٹ پرنٹ کرنے کا طریقہ:**
-1. مینو سے **'امتحانات'** (Exams) ٹیب کھولیں۔
-2. انفرادی رزلٹ کارڈ کے لیے: رول نمبر یا طالب علم منتخب کر کے **'رزلٹ کارڈ پرنٹ کریں'** کا بٹن دبائیں۔
-3. پوری کلاس کے لیے: امتحان اور کلاس منتخب کر کے **'کلاس گزٹ پرنٹ کریں'** پر کلک کریں۔
-4. باضابطہ مہر، استاد کے دستخط اور پوزیشن کے ساتھ رزلٹ کارڈ پرنٹ کے لیے تیار ہو جائے گا۔`
-  },
-  {
-    id: 'records_id_card',
-    topic: 'طالب علم کا شناختی کارڈ (Student ID Card)',
-    primaryKeywords: ['شناختی کارڈ', 'اسٹوڈنٹ کارڈ', 'آئی ڈی کارڈ', 'id card', 'طالب علم کارڈ', 'بچے کا کارڈ', 'کارڈ پرنٹ'],
-    primaryPhrases: ['طالب علم شناختی کارڈ', 'طالب علم کا شناختی کارڈ کیسے پرنٹ کریں', 'اسٹوڈنٹ کارڈ بنانے کا طریقہ', 'طالب علم شناختی کارڈ پرنٹ'],
-    negativeKeywords: ['رزلٹ کارڈ', 'امتحان رزلٹ'],
-    secondaryKeywords: ['بلڈ گروپ', 'تصویر'],
-    priority: 15,
-    response: `**طالب علم کا شناختی کارڈ (Student ID Card) بنانے اور پرنٹ کرنے کا طریقہ:**
-1. مینو سے **'تعلیمی ریکارڈز'** (Records) ٹیب پر جائیں۔
-2. طالب علم کا نام یا داخلہ نمبر تلاش کریں۔
-3. طالب علم کی پروفائل کے ساتھ موجود **'طالب علم شناختی کارڈ'** بٹن پر کلک کریں۔
-4. شناختی کارڈ خودکار طور پر طالب علم کے نام، تصویر، کلاس، بلڈ گروپ اور ایمرجنسی رابطے کے ساتھ تیار ہو جائے گا۔
-5. 'پرنٹ' پر کلک کر کے کارڈ کا پرنٹ لے لیں۔`
-  },
-  {
-    id: 'records_certificate',
-    topic: 'تعلیمی سند اور سرٹیفکیٹ (Certificate of Hifz)',
-    primaryKeywords: ['سند', 'سرٹیفکیٹ', 'تعلیمی سند', 'فراغت کی سند', 'حفظ کی سند', 'certificate', 'degree'],
-    primaryPhrases: ['تعلیمی سند کیسے نکالیں', 'حفظ کی سند پرنٹ کرنا', 'سرٹیفکیٹ جاری کرنا', 'حفظ کی سند'],
-    secondaryKeywords: ['اعزازی گریڈ', 'تکمیل'],
-    priority: 15,
-    response: `**حفظ کی تعلیمی سند اور سرٹیفکیٹ حاصل کرنے کا طریقہ:**
-1. مینو سے **'تعلیمی ریکارڈز'** (Records) ٹیب پر جائیں۔
-2. متعلقہ طالب علم کی مکمل تعلیمی پروفائل کھولیں۔
-3. **'تعلیمی سند'** یا **'سرٹیفکیٹ'** کے بٹن پر کلک کریں۔
-4. سند میں طالب علم کا نام، والد کا نام، حفظ مکمل کرنے کا دورانیہ اور خصوصی تعریفی کلمات خودکار درج ہو جائیں گے۔
-5. اسے پرنٹ کر کے ادارے کی مہر اور دستخط کے ساتھ جاری کریں۔`
-  },
-  {
-    id: 'records',
-    topic: 'تعلیمی ریکارڈز (Records & Credentials)',
-    primaryKeywords: ['تعلیمی ریکارڈ', 'تعلیمی ریکارڈز', 'گراف', 'ہسٹری', 'کارکردگی', 'records', 'student history'],
-    primaryPhrases: ['تعلیمی ریکارڈز', 'طالب علم شناختی کارڈ', 'طالب علم تعلیمی ریکارڈ'],
-    negativeKeywords: ['شناختی کارڈ', 'سند', 'سرٹیفکیٹ'],
-    secondaryKeywords: ['سالانہ حاضری', 'کارکردگی'],
-    priority: 5,
-    response: `**تعلیمی ریکارڈز اور کارڈز حاصل کرنے کا طریقہ:**
-1. **'تعلیمی ریکارڈز'** (Records) ٹیب کھولیں۔
-2. طالب علم کا مکمل سبق ہسٹری، سالانہ حاضری فیصد، اور تعلیمی ترقی کا گراف دیکھیں۔
-3. **'طالب علم شناختی کارڈ'** یا **'تعلیمی سند'** بٹن پر کلک کر کے پرنٹ ایبل کارڈ حاصل کریں۔`
-  },
-  {
-    id: 'ai-listen',
-    topic: 'اے آئی استاد (AI Quran Listener)',
-    primaryKeywords: ['صوتی', 'مائیکروفون', 'تجوید', 'مخارج', 'اے آئی استاد', 'تلاوت سننا', 'ai-listen', 'listen', 'recitation'],
-    primaryPhrases: ['اے آئی استاد', 'تلاوت صوتی', 'اے آئی استاد کا طریقہ'],
-    secondaryKeywords: ['اصلاح', 'تلاوت'],
-    priority: 10,
-    response: `**اے آئی استاد کے استعمال کا طریقہ:**
-1. **'اے آئی استاد'** (AI Listen) ٹیب پر جائیں۔
-2. مائیکروفون کی اجازت دیں اور طالب علم کو تلاوت کا حکم دیں۔
-3. AI سسٹم تلاوت کو سنے گا اور تجوید و مخارج سے متعلق رہنمائی فراہم کرے گا۔`
-  },
-  {
-    id: 'dashboard',
-    topic: 'ڈیش بورڈ اور تنظیم (Dashboard & Overview)',
-    primaryKeywords: ['ڈیش بورڈ', 'شاخ', 'لوگو', 'کیمپس', 'مجموعی جائزہ', 'مجموعی احصائیات', 'لوگو اپلوڈ', 'شاخ کا نام', 'dashboard', 'home', 'overview', 'branch', 'logo'],
-    primaryPhrases: ['ڈیش بورڈ کا جائزہ', 'شاخ کی تبدیلی', 'لوگو تبدیل', 'ڈیش بورڈ'],
-    negativeKeywords: ['فہرست', 'لسٹ', 'ڈائریکٹری', 'تمام طلباء', 'تمام طلبہ'],
-    secondaryKeywords: ['فعال کلاسز', 'احصائیات'],
-    priority: 5,
-    response: `**ڈیش بورڈ کا جائزہ:**
-1. **'ڈیش بورڈ'** (Dashboard) پر مدرسے کے کل طلباء، فعال کلاسز، اور حاضری کی شرح کے احصائیات ظاہر ہوتے ہیں۔
-2. ہیڈر کنٹرولز سے آپ مدرسے کا لوگو اپ لوڈ یا شاخ (Branch) کو تبدیل اور رینیم کر سکتے ہیں۔`
-  },
-  {
-    id: 'change_password',
-    topic: 'پاسورڈ تبدیل کرنا (Change Password)',
-    primaryKeywords: ['پاسورڈ تبدیل', 'پاسورڈ بدلنا', 'نیا پاسورڈ', 'پاسورڈ کیسے بدلیں', 'change password'],
-    primaryPhrases: ['پاسورڈ کیسے تبدیل کریں', 'پاسورڈ بدلنے کا طریقہ', 'پاسورڈ تبدیل'],
-    negativeKeywords: ['بھول گیا', 'ری سیٹ', 'forgot'],
-    secondaryKeywords: ['پرانا پاسورڈ', 'سیکیورٹی'],
-    priority: 15,
-    response: `**اپنا پاسورڈ تبدیل کرنے کا طریقہ:**
-1. اسکرین پر اوپر موجود پروفائل آئیکن (صارف کے نام) پر کلک کریں۔
-2. پاپ اپ ونڈو میں **'پاسورڈ تبدیل کریں'** والے حصے پر جائیں۔
-3. سیکیورٹی کے لیے اپنا پرانا (موجودہ) پاسورڈ درج کریں۔
-4. نیا پاسورڈ درج کریں (کم از کم 6 حروف) اور تصدیق کریں۔
-5. **'پاسورڈ محفوظ کریں'** پر کلک کریں۔`
-  },
-  {
-    id: 'forgot_password',
-    topic: 'پاسورڈ بھول جانا اور ری سیٹ (Forgot Password)',
-    primaryKeywords: ['پاسورڈ بھول', 'پاسورڈ یاد نہیں', 'پاسورڈ ری سیٹ', 'لاگ ان نہیں ہو رہا', 'forgot password', 'reset password'],
-    primaryPhrases: ['پاسورڈ بھول گیا ہوں', 'پاسورڈ کیسے ری سیٹ کریں', 'لاگ ان پاسورڈ بحال'],
-    secondaryKeywords: ['ای میل لنک', 'ریکوری'],
-    priority: 15,
-    response: `**بھولا ہوا پاسورڈ بحال (Reset) کرنے کا طریقہ:**
-1. لاگ ان پیج پر **'پاسورڈ بھول گئے؟'** کے لنک پر کلک کریں۔
-2. اپنا رجسٹرڈ ای میل ایڈریس درج کریں۔
-3. **'ری سیٹ لنک بھیجیں'** کا بٹن دبائیں۔
-4. آپ کے ای میل پر پاسورڈ ری سیٹ کرنے کا محفوظ لنک موصول ہو جائے گا جہاں سے آپ نیا پاسورڈ مقرر کر سکتے ہیں۔`
-  },
-  {
-    id: 'offline_sync',
-    topic: 'آف لائن موڈ اور انٹرنیٹ بحالی (Offline Sync)',
-    primaryKeywords: ['آف لائن', 'انٹرنیٹ نہیں', 'نیٹ بند', 'ڈیٹا ضائع', 'سنک', 'offline', 'sync', 'بغیر انٹرنیٹ'],
-    primaryPhrases: ['کیا بغیر انٹرنیٹ کے کام کر سکتے ہیں', 'آف لائن ڈیٹا کیسے محفوظ ہوتا ہے', 'نیٹ نہ ہو تو'],
-    secondaryKeywords: ['خودکار محفوظ', 'کلاؤڈ'],
-    priority: 15,
-    response: `**آف لائن موڈ اور خودکار سنک (Auto-Sync) کی معلومات:**
-1. یہ سوفٹ ویئر انٹرنیٹ نہ ہونے کی صورت میں بھی فیس اور ڈیٹا محفوظ کرنے کی سہولت رکھتا ہے۔
-2. جب انٹرنیٹ بند ہوتا ہے تو سسٹم تمام اندراج کو مقامی طور پر محفوظ کر کے اسکرین پر نوٹس دکھاتا ہے۔
-3. جیسے ہی انٹرنیٹ دوبارہ چالو ہوتا ہے، سسٹم ازخود سارا ڈیٹا کلاؤڈ پر ہم وقت ساز (Sync) کر دیتا ہے اور کوئی اندراج ضائع نہیں ہوتا۔`
-  },
-  {
-    id: 'theme_toggle',
-    topic: 'ڈارک اور لائٹ موڈ (Dark & Light Mode)',
-    primaryKeywords: ['ڈارک موڈ', 'لائٹ موڈ', 'تھیم', 'سیاہ موڈ', 'theme', 'dark mode', 'light mode'],
-    primaryPhrases: ['ڈارک موڈ کیسے کریں', 'تھیم کیسے تبدیل کریں', 'نائٹ موڈ'],
-    secondaryKeywords: ['روشن', 'سیاہ تھیم'],
-    priority: 15,
-    response: `**ڈارک اور لائٹ موڈ تبدیل کرنے کا طریقہ:**
-1. اسکرین کے اوپری ہیڈر بار میں دائیں جانب موجود تھیم آئیکن پر کلک کریں۔
-2. پورا سسٹم فوری طور پر ڈارک (سیاہ) یا لائٹ (روشن) موڈ میں منتقل ہو جائے گا۔
-3. دونوں موڈز میں تحریر اور تمام فارمز کی پڑھنے کی صلاحیت کو اعلی معیار پر رکھا گیا ہے۔`
-  },
-  {
-    id: 'super_admin',
-    topic: 'سپر ایڈمن کنٹرول (Super Admin Dashboard)',
-    primaryKeywords: ['سپر ایڈمن', 'نیا مدرسہ', 'نیا ادارہ', 'مہتمم اکاؤنٹ', 'مدرسہ ڈیلیٹ', 'مدرسہ معطل', 'super admin'],
-    primaryPhrases: ['نیا ادارہ کیسے بنائیں', 'سپر ایڈمن ڈیش بورڈ کا استعمال', 'سپر ایڈمن پینل کا استعمال'],
-    secondaryKeywords: ['اداروں کی فہرست', 'ادارہ ڈیلیٹ'],
-    priority: 15,
-    response: `**سپر ایڈمن ڈیش بورڈ کے استعمال کا طریقہ:**
-1. سپر ایڈمن اکاؤنٹ سے لاگ ان کرنے کے بعد مینو میں **'سپر ایڈمن'** کا خصوصی ٹیب ظاہر ہوتا ہے۔
-2. وہاں سے آپ **'نیا ادارہ شامل کریں'** پر کلک کر کے نئے مدرسے اور مہتمم کا اکاؤنٹ بنا سکتے ہیں۔
-3. اداروں کی لسٹ سے کسی بھی مدرسے کو عارضی معطل یا مستقل طور پر حذف کرنے کا مکمل اختیار موجود ہے۔`
-  },
-  {
-    id: 'search_student',
-    topic: 'طالب علم کو تلاش کرنا (Search Student)',
-    primaryKeywords: ['تلاش', 'سرچ', 'ڈھونڈنا', 'تلاش کریں', 'طالب علم تلاش', 'search student'],
-    primaryPhrases: ['طالب علم کیسے تلاش کریں', 'طالب علم ڈھونڈنے کا طریقہ'],
-    secondaryKeywords: ['رول نمبر تلاش', 'نام سے تلاش'],
-    priority: 15,
-    response: `**طالب علم کو تلاش (Search) کرنے کا طریقہ:**
-1. داخلہ جات، فیس، حاضری اور جائزہ جات کے ہر صفحے پر تلاش کا خانہ دیا گیا ہے۔
-2. آپ طالب علم کے **نام**، **والد کے نام**، **داخلہ نمبر** یا **رول نمبر** میں سے کوئی بھی ایک چیز لکھ کر فوراً مطلوبہ طالب علم کا ریکارڈ نکال سکتے ہیں۔`
-  },
-  {
-    id: 'greeting',
-    topic: 'خوش آمدید',
-    primaryKeywords: ['سلام', 'السلام', 'ہیلو', 'hello', 'hi', 'assalam', 'aoa', 'کون', 'رہنما'],
-    primaryPhrases: ['السلام علیکم', 'ہیلو', 'سلام'],
-    secondaryKeywords: ['تعارف', 'مدد'],
-    priority: 5,
-    response: `وعلیکم السلام ورحمۃ اللہ وبرکاتہ!
-میں مدرسہ منیجر کا **اے آئی رہنما** ہوں۔ میں آپ کو اس سافٹ ویئر کے تمام فیچرز (داخلہ جات، سبق جائزہ جات، فیس، حاضری، امتحانات، تعلیمی ریکارڈز، اور اسٹاف) استعمال کرنے میں رہنمائی فراہم کر سکتا ہوں۔`
-  },
-  {
-    id: 'help',
-    topic: 'عمومی مدد اور رہنمائی (Help & Overview)',
-    primaryKeywords: ['مدد', 'رہنمائی', 'سپورٹ', 'help', 'support', 'فیچرز'],
-    primaryPhrases: ['مدد چاہیے', 'سافٹ ویئر کے فیچرز کیا ہیں'],
-    secondaryKeywords: ['معلومات'],
-    priority: 5,
-    response: `**مدرسہ منیجر اے آئی رہنما - مکمل رہنمائی:**
-آپ اس سافٹ ویئر کے کسی بھی شعبے کے بارے میں براہ راست سوال پوچھ سکتے ہیں:
-1. **داخلہ جات:** نیا داخلہ، اخراج، کلاس منتقلی۔
-2. **فیس:** فیس وصولی، رسید پرنٹنگ، نادہندگان لسٹ۔
-3. **جائزہ جات:** روزانہ سبق، سبقی، منزل اور ششماہی جائزہ۔
-4. **حاضری:** طلباء و اساتذہ کی حاضری اور ماہانہ خلاصہ۔
-5. **امتحانات:** نمبرات، پوزیشن اور رزلٹ کارڈز۔
-6. **اسٹاف:** اساتذہ کے پروفائلز اور لاگ ان اکاؤنٹس۔
-7. **ریکارڈز:** شناختی کارڈ، اسناد اور تعلیمی تاریخ۔`
-  }
-];
-
-// Advanced Intent-Aware Domain Knowledge Matcher Function
-export function findBestKnowledgeMatch(queryText) {
-  if (!queryText || !queryText.trim()) return null;
-  const rawLower = queryText.toLowerCase().trim();
-  const normText = normalizeUrduText(queryText);
-
-  let bestMatch = null;
-  let maxScore = 0;
-
-  KNOWLEDGE_BASE.forEach(item => {
-    let score = 0;
-    let exactPhraseMatched = false;
-
-    // 1. Check exact phrase matches (Highest Weight: 60 pts)
-    if (item.primaryPhrases && item.primaryPhrases.length > 0) {
-      for (const phrase of item.primaryPhrases) {
-        const normPhrase = normalizeUrduText(phrase);
-        if (normPhrase && (normText.includes(normPhrase) || rawLower.includes(phrase.toLowerCase()))) {
-          score += 60;
-          exactPhraseMatched = true;
-          break;
-        }
-      }
-    }
-
-    // 2. Check negative disqualifier keywords (Avoid misrouting like 'خارج' to 'داخلہ')
-    if (item.negativeKeywords && item.negativeKeywords.length > 0) {
-      let hasNegative = false;
-      for (const neg of item.negativeKeywords) {
-        const normNeg = normalizeUrduText(neg);
-        if (normNeg && (normText.includes(normNeg) || rawLower.includes(neg.toLowerCase()))) {
-          hasNegative = true;
-          break;
-        }
-      }
-      if (hasNegative) {
-        if (!exactPhraseMatched) {
-          score -= 200; // Heavily penalize and disqualify
-        }
-      }
-    }
-
-    // 3. Check primary keywords (Weight: 15 pts per match)
-    if (item.primaryKeywords && item.primaryKeywords.length > 0) {
-      for (const kw of item.primaryKeywords) {
-        const normKw = normalizeUrduText(kw);
-        if (!normKw) continue;
-        if (normText.includes(normKw) || rawLower.includes(kw.toLowerCase())) {
-          score += 15;
-        }
-      }
-    }
-
-    // 4. Check secondary keywords (Weight: 4 pts per match)
-    if (item.secondaryKeywords && item.secondaryKeywords.length > 0) {
-      for (const skw of item.secondaryKeywords) {
-        const normSkw = normalizeUrduText(skw);
-        if (!normSkw) continue;
-        if (normText.includes(normSkw) || rawLower.includes(skw.toLowerCase())) {
-          score += 4;
-        }
-      }
-    }
-
-    // 5. Apply priority weight
-    if (score > 0 && item.priority) {
-      score += item.priority;
-    }
-
-    if (score > maxScore) {
-      maxScore = score;
-      bestMatch = item;
-    }
-  });
-
-  // Return match only if strict threshold met
-  return maxScore >= 12 ? bestMatch : null;
-}
-
-// Helper to query Gemini/OpenAI with strict software domain prompt
+// Helper to query Gemini/OpenAI with strict pure-Urdu domain prompt (never mentions AI Ustad)
 async function fetchLlmResponse(query) {
   const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-  const systemInstruction = `You are AI Rehnuma (اے آئی رہنما), an exclusive user-guide assistant for this Madrasa SaaS software.
-Scope: Help users navigate features like Admissions, Daily Hifz Sabaq Entry, Attendance, Fee Records, Staff Management, Exams & Results, Educational Records, and AI Listener.
-CRITICAL RULE: If the user asks anything outside this Madrasa management software domain (e.g. general knowledge, weather, cooking, external directions), politely decline in Urdu:
-"معذرت! یہ سوال مدرسہ منیجر سافٹ ویئر کے دائرہ کار سے باہر ہے۔ میں صرف اس سافٹ ویئر کے فیچرز اور استعمال کی رہنمائی فراہم کر سکتا ہوں۔"
-Do not guess or fabricate information outside the application features.`;
+  const systemInstruction = `You are AI Rehnuma (اے آئی رہنما), an exclusive user-guide assistant for the Jamia Hifz Manager (جامعہ حفظ منیجر) institution management application.
+Scope: Help users navigate and understand ONLY these active modules:
+1. Dashboard (ڈیش بورڈ)
+2. Admissions & Classes & Bulk Import/Export (داخلہ جات)
+3. Fee Records, Receipts & 5 Financial Reports (فیس ریکارڈ)
+4. Monthly Evaluations, Monthly Literacy, 4-Year Half-Yearly Hifz & Mizan (جائزہ جات)
+5. Student Attendance & Staff Two-Step Check-in/Check-out Attendance (حاضری)
+6. Exams Miqdar-e-Khwandgi & Class/Individual Results (امتحانات)
+7. Educational Records: Para-by-Para 30 Paras, Half-Yearly Summary, Cumulative Hifz Form & Daily Academic Performance (تعلیمی ریکارڈز)
+8. Staff Management & Teacher Account Creation (اسٹاف)
+9. Payroll Settings, Holidays, Opening Leave & Monthly Calculation (تنخواہ)
+10. Tasks & Reminders (زیرِ غور و یادداشت)
+11. Super Admin (سپر ایڈمن)
+12. Login, Profile, Logo, Password & Theme Settings
+
+CRITICAL RULES:
+- Respond ONLY in pure, authentic Urdu. Avoid English words, transliterated English words, and never use emojis.
+- NEVER mention AI Ustad or AI Listen (اے آئی استاد) anywhere.
+- If the user asks anything outside this Jamia Hifz Manager system domain, politely decline in pure Urdu:
+"معذرت! یہ سوال جامعہ حفظ منیجر نظامِ مدرسہ کے دائرہ کار سے باہر ہے۔ میں صرف اس نظام کی سہولیات اور استعمال سے متعلق رہنمائی فراہم کر سکتا ہوں۔"`;
 
   if (geminiKey) {
     try {
@@ -658,18 +146,18 @@ function getInitialDrawerPos() {
   };
 }
 
+const WELCOME_MESSAGE = {
+  id: 'welcome-1',
+  sender: 'bot',
+  text: 'السلام علیکم! میں آپ کا **اے آئی رہنما** ہوں۔ جامعہ حفظ منیجر نظامِ مدرسہ کے استعمال، شعبہ جات اور حسابی ضابطوں سے متعلق کوئی بھی سوال پوچھیے یا نیچے تجویز کردہ سوالات میں سے انتخاب کیجیے۔',
+  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+};
+
 export default function AiChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome-1',
-      sender: 'bot',
-      text: 'السلام علیکم! میں آپ کا **اے آئی رہنما** ہوں۔ سافٹ ویئر استعمال کرنے سے متعلق کوئی بھی سوال پوچھیے یا نیچے دیے گئے سوالات پر کلک کریں۔',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
+  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
 
   // Draggable state
   const [triggerPos, setTriggerPos] = useState(getInitialTriggerPos);
@@ -750,7 +238,7 @@ export default function AiChatbot() {
 
     // For drawer: ignore drag if clicked inside interactive controls or messages scroll container
     if (targetType === 'drawer') {
-      if (e.target.closest('button, input, textarea, .prompt-chip, a, .ai-chatbot-messages')) {
+      if (e.target.closest('button, input, textarea, .prompt-chip, .bot-suggestion-btn, a, .ai-chatbot-messages')) {
         return;
       }
     }
@@ -891,7 +379,7 @@ export default function AiChatbot() {
         if (targetY < 12) {
           targetY = Math.min(triggerPos.y + 54, winH - drawerH - 12);
         }
-        let targetX = triggerPos.x;
+        const targetX = triggerPos.x;
         const clamped = clampPosition(targetX, targetY, drawerW, drawerH);
         setDrawerPos(clamped);
       }
@@ -927,14 +415,45 @@ export default function AiChatbot() {
     }
   };
 
-  const handleSend = async (queryText) => {
-    const textToSend = typeof queryText === 'string' ? queryText : inputText;
-    if (!textToSend || !textToSend.trim()) return;
+  const appendBotReply = (replyText, suggestions = []) => {
+    setTimeout(() => {
+      const botMsg = {
+        id: 'bot-' + Date.now(),
+        sender: 'bot',
+        text: replyText,
+        suggestions,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botMsg]);
+      setIsTyping(false);
+    }, 320);
+  };
+
+  const handleSelectSuggestion = (suggestion) => {
+    const matchedItem = KNOWLEDGE_BASE.find(item => item.id === suggestion.id);
+    if (!matchedItem) return;
 
     const userMsg = {
       id: 'user-' + Date.now(),
       sender: 'user',
-      text: textToSend.trim(),
+      text: matchedItem.topic,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+    setIsTyping(true);
+    appendBotReply(matchedItem.response);
+  };
+
+  const handleSend = async (queryText) => {
+    const textToSend = typeof queryText === 'string' ? queryText : inputText;
+    if (!textToSend || !textToSend.trim()) return;
+
+    const trimmedQuery = textToSend.trim();
+    const userMsg = {
+      id: 'user-' + Date.now(),
+      sender: 'user',
+      text: trimmedQuery,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -942,33 +461,41 @@ export default function AiChatbot() {
     setInputText('');
     setIsTyping(true);
 
-    // Score-based knowledge matching logic
-    const matchedKnowledge = findBestKnowledgeMatch(textToSend);
-    let replyText = matchedKnowledge?.response;
-
-    // Fallback to LLM or explicit Domain Restriction message if outside scope
-    if (!replyText) {
-      const apiReply = await fetchLlmResponse(textToSend);
-      if (apiReply) {
-        replyText = apiReply;
-      } else {
-        replyText = `معذرت! یہ سوال مدرسہ منیجر سافٹ ویئر کے دائرہ کار سے باہر ہے۔ میں صرف اس سافٹ ویئر کے فیچرز اور استعمال سے متعلق سوالات کی رہنمائی فراہم کر سکتا ہوں۔
-
-برائے مہربانی سافٹ ویئر کے متعلقہ ٹیبز (داخلہ جات، جائزہ جات، فیس، حاضری، امتحانات، تعلیمی ریکارڈز، یا اسٹاف) کے بارے میں سوال پوچھیے۔`;
+    // Check if query exactly matches a suggested prompt with a known topicId
+    const matchedPrompt = SUGGESTED_PROMPTS.find(p => p.text === trimmedQuery && p.topicId);
+    if (matchedPrompt) {
+      const directItem = KNOWLEDGE_BASE.find(item => item.id === matchedPrompt.topicId);
+      if (directItem) {
+        appendBotReply(directItem.response);
+        return;
       }
     }
 
-    // Simulate typing delay for realistic interaction
-    setTimeout(() => {
-      const botMsg = {
-        id: 'bot-' + Date.now(),
-        sender: 'bot',
-        text: replyText,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, botMsg]);
-      setIsTyping(false);
-    }, 400);
+    // Analyze intent and confidence
+    const analysis = analyzeKnowledgeQuery(trimmedQuery);
+
+    if (analysis.status === 'matched' && analysis.bestMatch) {
+      appendBotReply(analysis.bestMatch.response);
+      return;
+    }
+
+    if (analysis.status === 'ambiguous' && analysis.suggestions.length > 0) {
+      const clarificationText = `آپ کا سوال تھوڑا عمومی یا غیر واضح ہے۔ برائے مہربانی نیچے دیے گئے قریبی موضوعات میں سے متعلقہ موضوع منتخب کریں یا اپنا سوال مزید واضح کر کے لکھیں:`;
+      const suggestionChips = analysis.suggestions.map(item => ({
+        id: item.id,
+        topic: item.topic
+      }));
+      appendBotReply(clarificationText, suggestionChips);
+      return;
+    }
+
+    // Fallback to LLM or strict pure-Urdu domain restriction message
+    const apiReply = await fetchLlmResponse(trimmedQuery);
+    const outOfScopeText = apiReply || `معذرت! یہ سوال جامعہ حفظ منیجر نظامِ مدرسہ کے دائرہ کار سے باہر ہے۔ میں صرف اس نظام کی سہولیات اور استعمال سے متعلق رہنمائی فراہم کر سکتا ہوں۔
+
+برائے مہربانی نظام کے متعلقہ شعبہ جات (ڈیش بورڈ، داخلہ جات، فیس ریکارڈ، جائزہ جات، حاضری، امتحانات، تعلیمی ریکارڈز، اسٹاف، تنخواہ، یا زیرِ غور و یادداشت) کے بارے میں سوال پوچھیے۔`;
+
+    appendBotReply(outOfScopeText);
   };
 
   const handleKeyDown = (e) => {
@@ -983,23 +510,26 @@ export default function AiChatbot() {
       {
         id: 'welcome-reset',
         sender: 'bot',
-        text: 'گفتگو کو ری سیٹ کر دیا گیا ہے۔ آپ نیا سوال پوچھ سکتے ہیں۔',
+        text: 'گفتگو صاف کر دی گئی ہے۔ اب آپ نظامِ مدرسہ سے متعلق نیا سوال پوچھ سکتے ہیں۔',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
   };
 
-  // Helper function to render formatted text without raw markdown asterisks
+  // Render **bold** and `inline code` cleanly without raw markdown characters
   const renderFormattedText = (text) => {
     if (!text) return null;
     const lines = text.split('\n');
     return lines.map((line, lineIdx) => {
-      const parts = line.split(/(\*\*.*?\*\*)/g);
+      const parts = line.split(/(\*\*.*?\*\*|`[^`]+`)/g);
       return (
         <React.Fragment key={lineIdx}>
           {parts.map((part, partIdx) => {
             if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
               return <strong key={partIdx}>{part.slice(2, -2)}</strong>;
+            }
+            if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+              return <code key={partIdx} className="chat-inline-code">{part.slice(1, -1)}</code>;
             }
             return part;
           })}
@@ -1029,7 +559,7 @@ export default function AiChatbot() {
           onPointerCancel={handlePointerUp}
           onClick={handleTriggerClick}
           title="اے آئی رہنما (کھینچ کر کہیں بھی منتقل کر سکتے ہیں)"
-          aria-label="Toggle AI Rehnuma Assistant"
+          aria-label="اے آئی رہنما کھولیں یا بند کریں"
         >
           <span className="chatbot-icon-wrapper">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1062,10 +592,10 @@ export default function AiChatbot() {
           <div
             className="ai-chatbot-header"
             onDoubleClick={handleResetPosition}
-            title="کھینچ کر کہیں بھی منتقل کریں (ڈبل کلک سے اصل جگہ ری سیٹ کریں)"
+            title="کھینچ کر کہیں بھی منتقل کریں (دو بار دبانے سے اصل جگہ بحال ہوگی)"
           >
             <div className="header-info">
-              <div className="drag-handle-grip" aria-hidden="true" title="کھینچ کر منتقل کریں (Drag to move)">
+              <div className="drag-handle-grip" aria-hidden="true" title="کھینچ کر منتقل کریں">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                   <circle cx="9" cy="6" r="2" />
                   <circle cx="15" cy="6" r="2" />
@@ -1082,7 +612,7 @@ export default function AiChatbot() {
               </div>
               <div>
                 <h3 className="bot-title">اے آئی رہنما</h3>
-                <span className="bot-status">آن لائن | تعلیمی رہنما</span>
+                <span className="bot-status">ہمہ وقت دستیاب | نظامِ مدرسہ رہنما</span>
               </div>
             </div>
 
@@ -1125,6 +655,20 @@ export default function AiChatbot() {
                   <div className="chat-bubble-text">
                     {renderFormattedText(msg.text)}
                   </div>
+                  {msg.suggestions && msg.suggestions.length > 0 && (
+                    <div className="bot-suggestions-container" role="group" aria-label="متعلقہ قریبی موضوعات">
+                      {msg.suggestions.map((sug) => (
+                        <button
+                          key={sug.id}
+                          type="button"
+                          className="bot-suggestion-btn"
+                          onClick={() => handleSelectSuggestion(sug)}
+                        >
+                          {sug.topic}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <span className="chat-timestamp">{msg.timestamp}</span>
                 </div>
               </div>

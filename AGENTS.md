@@ -220,9 +220,24 @@ Whenever madrasa status or lifecycle operations are modified:
 - **Dark Mode Contrast for Badges**: The Mohtamim Admin badge under dark mode must maintain high contrast with a black background (`#09090b`), dark border (`#27272a`), and clear white text (`#f4f4f5`).
 - **No Emojis**: All status pills, action buttons, modals, and suspension screens must remain strictly text-only without emojis or decorative icons.
 
-### User-Facing Language Rule
+### User-Facing Language Rule & Contemporary Common Urdu Standard
 
-All messages displayed to the user within the application must be written in **Urdu**, not English.
+All messages displayed to the user within the application and assistant communications must be written in **Urdu**, not English.
+
+- **Contemporary & Common Urdu Terminology Rule (مروجہ و آسان فہم اردو اصطلاحات کا ضابطہ)**:
+  - کوئی بھی اردو جو لکھی یا ترجمہ کی جائے گی، وہ اتنی زیادہ کتابی یا فصیح و بلیغ نہیں ہونی چاہیے کہ موجودہ رواج کے مطابق صارف کے لیے اس لفظ کو سمجھنا ہی مشکل یا مبہم ہو جائے۔
+  - عام تکنیکی اور یوزر انٹرفیس اصطلاحات (Technical & UI terms) کے لیے غیر مانوس، مبہم یا پرانے کلاسیکی الفاظ کے بجائے آج کل مروجہ الفاظ کو **اردو رسم الخط** میں لکھا جائے تاکہ ہر صارف آسانی سے سمجھ سکے:
+    * مثلاً **"طباعت"** کے بجائے **"پرنٹ"** / **"پرنٹ نکالیں"**۔
+    * **"کلید"** / **"کلید دبائیں"** کے بجائے **"بٹن"** / **"بٹن پر کلک کریں"**۔
+    * **"برقی ڈاک"** کے بجائے **"ای میل"**۔
+    * **"خفیہ کلمہ"** کے بجائے **"پاسورڈ"**۔
+    * **"داخلہِ نشست"** کے بجائے **"لاگ ان"** اور **"خروج"** کے بجائے **"لاگ آؤٹ"**۔
+    * **"اجتماعی درآمد و برآمد"** کے بجائے **"بلک امپورٹ اور ایکسپورٹ"**۔
+    * **"محفوظات"** کے بجائے **"ڈیٹا بیس"** / **"ریکارڈز"**۔
+    * **"ہم وقت سازی"** کے بجائے **"آٹو سنک (Auto-Sync)"**۔
+    * **"تاریک منظر"** اور **"روشن منظر"** کے بجائے **"ڈارک موڈ"** اور **"لائٹ موڈ"**۔
+    * **"گراری"** اور **"فہرست نامہ"** کے بجائے **"سیٹنگز مینو"** اور **"ڈراپ ڈاؤن مینو"**۔
+  - بنیادی مقصد یہ ہے کہ تمام پیغامات اور رہنمائی اردو رسم الخط میں ہی رہے لیکن روزمرہ کے سافٹ ویئر استعمال کے لیے زبان واضح، جدید، عام فہم اور فطری ہو، غیر ضروری طور پر ثقیل یا مبہم نہ ہو۔
 
 This includes, without limitation:
 
