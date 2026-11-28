@@ -1618,16 +1618,16 @@ export default function Entry({ initialTab = null }) {
                   <table className="me-table">
                     <thead>
                       <tr>
-                        <th rowSpan="2" style={{ minWidth: "48px" }}>نمبر</th>
-                        <th rowSpan="2" style={{ minWidth: "145px", textAlign: "right", paddingRight: "12px" }}>طالب علم</th>
-                        <th rowSpan="2" style={{ minWidth: "130px", textAlign: "right", paddingRight: "12px" }}>ولدیت</th>
+                        <th rowSpan="2" className="me-th-compact">نمبر</th>
+                        <th rowSpan="2" className="me-th-compact">طالب علم</th>
+                        <th rowSpan="2" className="me-th-compact">ولدیت</th>
                         <th colSpan="2" className="me-literacy-group">خواندگی</th>
-                        {ME_COLS.filter(c => !c.sub).map(c => <th rowSpan="2" key={c.key}>{c.label}<br/><span className="me-max-label">/ {c.max}</span></th>)}
-                        <th rowSpan="2" style={{ minWidth: "74px" }}>کل<br/><span className="me-max-label">/ {ME_MAX_TOTAL}</span></th>
-                        <th rowSpan="2" style={{ minWidth: "220px" }}>کیفیت</th>
+                        {ME_COLS.filter(c => !c.sub).map(c => <th rowSpan="2" className="me-th-score" key={c.key}>{c.label}<br/><span className="me-max-label">/ {c.max}</span></th>)}
+                        <th rowSpan="2" className="me-th-score" style={{ minWidth: "72px" }}>کل<br/><span className="me-max-label">/ {ME_MAX_TOTAL}</span></th>
+                        <th rowSpan="2" className="me-th-remarks">کیفیت</th>
                       </tr>
                       <tr className="me-subhead">
-                        {ME_COLS.filter(c => c.sub).map(c => <th className="me-literacy-sub" key={c.key}>{c.label}</th>)}
+                        {ME_COLS.filter(c => c.sub).map(c => <th className="me-literacy-sub me-th-score" key={c.key}>{c.label}</th>)}
                       </tr>
                     </thead>
                     <tbody>
@@ -1635,18 +1635,17 @@ export default function Entry({ initialTab = null }) {
                         const fatherName = item.student.admFatherName || item.student.fatherName || item.student.father_name || '—';
                         return (
                           <tr key={item.student.admRegNo || idx}>
-                            <td><span className="me-reg">{item.student.admRegNo || '-'}</span></td>
+                            <td className="me-td-compact"><span className="me-reg">{item.student.admRegNo || '-'}</span></td>
                             <td className="me-td-info"><span className="me-name">{item.student.name || '-'}</span></td>
                             <td className="me-td-info"><span className="me-father">{fatherName}</span></td>
                             {ME_COLS.map(c => {
                               const isInvalid = c.max && item[c.key] !== '' && item[c.key] !== null && item[c.key] !== undefined && (Number(item[c.key]) > c.max || Number(item[c.key]) < 0);
                               return (
-                                <td key={c.key}>
+                                <td key={c.key} className="me-td-score">
                                     {c.sub ? (
                                         <input
                                           type="text"
-                                          className="me-input"
-                                          style={{ width: "68px" }}
+                                          className="me-input me-score-input"
                                           value={item[c.key]}
                                           placeholder={c.label.charAt(0)}
                                           data-row={idx}
@@ -1656,7 +1655,7 @@ export default function Entry({ initialTab = null }) {
                                     ) : (
                                         <input
                                           type="number"
-                                          className={`me-input ${isInvalid ? 'me-invalid' : ''}`}
+                                          className={`me-input me-score-input ${isInvalid ? 'me-invalid' : ''}`}
                                           min="0"
                                           max={c.max}
                                           value={item[c.key]}
@@ -1673,7 +1672,7 @@ export default function Entry({ initialTab = null }) {
                                 </td>
                               );
                             })}
-                            <td>
+                            <td className="me-td-score">
                               <span
                                 className={`me-total-cell ${item.gradeObj.cls}`}
                                 title={item.total > ME_MAX_TOTAL ? `مجموعہ 100 سے زیادہ ہے (${item.total}) — غلط اندراج` : `${item.pct.toFixed(1)}% — ${item.gradeObj.g}`}
@@ -2703,8 +2702,8 @@ export default function Entry({ initialTab = null }) {
               <thead>
                 <tr>
                   <th rowSpan="2" style={{ width: '5%' }}>نمبر</th>
-                  <th rowSpan="2" style={{ width: '13%' }}>طالب علم</th>
-                  <th rowSpan="2" style={{ width: '12%' }}>ولدیت</th>
+                  <th rowSpan="2" style={{ width: '11%' }}>طالب علم</th>
+                  <th rowSpan="2" style={{ width: '11%' }}>ولدیت</th>
                   <th colSpan="2" style={{ width: '11%' }}>خواندگی</th>
                   <th rowSpan="2" style={{ width: '5.5%' }}>حاضری<br/><span className="me-print-max">/ 10</span></th>
                   <th rowSpan="2" style={{ width: '5.5%' }}>منزل<br/><span className="me-print-max">/ 60</span></th>
@@ -2712,7 +2711,7 @@ export default function Entry({ initialTab = null }) {
                   <th rowSpan="2" style={{ width: '5.5%' }}>اسلامیات<br/><span className="me-print-max">/ 10</span></th>
                   <th rowSpan="2" style={{ width: '5.5%' }}>اعتماد<br/><span className="me-print-max">/ 10</span></th>
                   <th rowSpan="2" style={{ width: '6.5%' }}>کل<br/><span className="me-print-max">/ {ME_MAX_TOTAL}</span></th>
-                  <th rowSpan="2" style={{ width: '25%' }}>کیفیت</th>
+                  <th rowSpan="2" style={{ width: '28%' }}>کیفیت</th>
                 </tr>
                 <tr>
                   <th style={{ width: '5.5%' }}>پارہ نمبر</th>

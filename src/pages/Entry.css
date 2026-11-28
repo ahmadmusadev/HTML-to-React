@@ -359,7 +359,7 @@
     }
     .me-table {
       width:100%; border-collapse:collapse;
-      min-width:900px; font-size:0.88rem;
+      min-width:1050px; font-size:0.88rem;
     }
 
     /* ہیڈر */
@@ -391,26 +391,57 @@
       padding:8px 6px; text-align:center;
       vertical-align:middle;
     }
-    .me-td-info { text-align:right !important; padding-right:12px !important; }
+    .me-table th.me-th-compact,
+    .me-table td.me-td-compact,
+    .me-table td.me-td-info {
+      width: 1% !important;
+      white-space: nowrap !important;
+      text-align: center !important;
+      padding: 8px 12px !important;
+    }
+    .me-table th.me-th-score,
+    .me-table td.me-td-score {
+      width: 72px !important;
+      min-width: 72px !important;
+      text-align: center !important;
+      padding: 8px 5px !important;
+    }
+    .me-table th.me-th-remarks {
+      min-width: 240px !important;
+      text-align: center !important;
+    }
     .me-reg { font-size:0.78rem; color:var(--muted); font-family:'Alvi Nastaleeq', serif !important; }
     .me-name { font-weight:700; font-size:0.9rem; color:#1e293b; }
     .me-father { font-weight:600; font-size:0.86rem; color:#475569; }
-    .me-td-remarks { min-width: 220px; padding: 6px 8px !important; }
-    .me-remarks-input {
+    .me-td-remarks { min-width: 240px; padding: 6px 8px !important; }
+
+    /* Uniform, readable input boxes overriding global App.css/index.css input[type=number] padding */
+    .me-table input.me-input {
+      width: 60px !important;
+      min-width: 60px !important;
+      min-height: 38px !important;
+      padding: 6px 4px !important;
+      border:1.5px solid #e2e8f0;
+      border-radius:7px; text-align:center;
+      font-family:inherit; font-size:0.92rem;
+      font-weight:700; transition:border-color 0.15s;
+      box-sizing: border-box !important;
+    }
+    .me-table input[type="number"].me-input {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+    .me-table input[type="number"].me-input::-webkit-outer-spin-button,
+    .me-table input[type="number"].me-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .me-table input.me-remarks-input {
       width: 100% !important;
-      min-width: 205px;
+      min-width: 225px !important;
       text-align: right !important;
       padding: 6px 10px !important;
       font-weight: 500 !important;
-    }
-
-    /* input cells */
-    .me-input {
-      width:64px; padding:6px 4px;
-      border:1.5px solid #e2e8f0;
-      border-radius:7px; text-align:center;
-      font-family:inherit; font-size:0.9rem;
-      font-weight:600; transition:border-color 0.15s;
     }
     .me-input:focus {
       outline:none; border-color:var(--accent);
@@ -2675,6 +2706,7 @@
     [data-theme="dark"] .me-father {
       color: var(--muted, #a1a1aa);
     }
+    [data-theme="dark"] .me-table input.me-input,
     [data-theme="dark"] .me-input {
       background: var(--card-bg, #18181b);
       color: var(--text, #f4f4f5);
