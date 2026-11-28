@@ -2655,8 +2655,8 @@ export default function Entry({ initialTab = null }) {
           <div className="monthly-eval-print-sheet" dir="rtl">
             <style>{`
               @page {
-                size: A4 landscape;
-                margin: 8mm 10mm;
+                size: A4 portrait;
+                margin: 7mm 8mm;
               }
             `}</style>
             <div className="me-print-header">
@@ -2701,21 +2701,21 @@ export default function Entry({ initialTab = null }) {
             <table className="me-print-table">
               <thead>
                 <tr>
-                  <th rowSpan="2" style={{ width: '5%' }}>نمبر</th>
-                  <th rowSpan="2" style={{ width: '11%' }}>طالب علم</th>
-                  <th rowSpan="2" style={{ width: '11%' }}>ولدیت</th>
-                  <th colSpan="2" style={{ width: '11%' }}>خواندگی</th>
+                  <th rowSpan="2" style={{ width: '4.5%' }}>نمبر</th>
+                  <th rowSpan="2" style={{ width: '13.5%' }}>طالب علم</th>
+                  <th rowSpan="2" style={{ width: '12.5%' }}>ولدیت</th>
+                  <th colSpan="2" style={{ width: '11.5%' }}>خواندگی</th>
                   <th rowSpan="2" style={{ width: '5.5%' }}>حاضری<br/><span className="me-print-max">/ 10</span></th>
                   <th rowSpan="2" style={{ width: '5.5%' }}>منزل<br/><span className="me-print-max">/ 60</span></th>
                   <th rowSpan="2" style={{ width: '5.5%' }}>تجوید<br/><span className="me-print-max">/ 10</span></th>
-                  <th rowSpan="2" style={{ width: '5.5%' }}>اسلامیات<br/><span className="me-print-max">/ 10</span></th>
+                  <th rowSpan="2" style={{ width: '6%' }}>اسلامیات<br/><span className="me-print-max">/ 10</span></th>
                   <th rowSpan="2" style={{ width: '5.5%' }}>اعتماد<br/><span className="me-print-max">/ 10</span></th>
-                  <th rowSpan="2" style={{ width: '6.5%' }}>کل<br/><span className="me-print-max">/ {ME_MAX_TOTAL}</span></th>
-                  <th rowSpan="2" style={{ width: '28%' }}>کیفیت</th>
+                  <th rowSpan="2" style={{ width: '6%' }}>کل<br/><span className="me-print-max">/ {ME_MAX_TOTAL}</span></th>
+                  <th rowSpan="2" style={{ width: '24%' }}>کیفیت</th>
                 </tr>
                 <tr>
-                  <th style={{ width: '5.5%' }}>پارہ نمبر</th>
-                  <th style={{ width: '5.5%' }}>رکوع نمبر</th>
+                  <th style={{ width: '5.75%' }}>پارہ نمبر</th>
+                  <th style={{ width: '5.75%' }}>رکوع نمبر</th>
                 </tr>
               </thead>
               <tbody>
