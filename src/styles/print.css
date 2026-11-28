@@ -173,11 +173,11 @@
 }
 
 @page monthly-eval-sheet {
-  size: A4 landscape;
-  margin: 8mm 10mm;
+  size: A4 portrait;
+  margin: 7mm 8mm;
 }
 
-/* --- Monthly Evaluation Entry Sheet Print Rules (A4 Landscape, Strict Black & White) --- */
+/* --- Monthly Evaluation Entry Sheet Print Rules (A4 Portrait, Strict Black & White) --- */
 @media print {
   body.printing-monthly-eval {
     display: block !important;
@@ -300,8 +300,8 @@
     min-width: 0 !important;
     border-collapse: collapse !important;
     table-layout: fixed !important;
-    margin-bottom: 16px !important;
-    font-size: 9pt !important;
+    margin-bottom: 12px !important;
+    font-size: 8.5pt !important;
   }
 
   .me-print-table thead {
@@ -316,7 +316,7 @@
   .me-print-table th,
   .me-print-table td {
     border: 1px solid #000000 !important;
-    padding: 5px 4px !important;
+    padding: 3px 3px !important;
     text-align: center !important;
     vertical-align: middle !important;
     word-break: break-word !important;
@@ -325,22 +325,23 @@
 
   .me-print-table th {
     font-weight: 900 !important;
-    font-size: 9pt !important;
+    font-size: 8.2pt !important;
     border-bottom: 1.5px solid #000000 !important;
+    line-height: 1.25 !important;
   }
 
   .me-print-max {
-    font-size: 7.5pt !important;
+    font-size: 7pt !important;
     font-weight: 700 !important;
   }
 
   .me-print-table tbody td {
-    height: 28px !important;
+    height: 24px !important;
   }
 
   .me-print-table td.me-print-text-cell {
-    text-align: right !important;
-    padding-right: 6px !important;
+    text-align: center !important;
+    padding: 3px 4px !important;
   }
 
   .me-print-table td.me-print-remarks-cell {
