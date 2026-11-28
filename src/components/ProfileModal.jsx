@@ -5,7 +5,7 @@ import { validatePasswordChange, formatPasswordChangeError } from '../utils/pass
 import { validateAvatarFile } from '../utils/avatarValidation';
 import './ProfileModal.css';
 
-export default function ProfileModal({ isOpen, onClose, initialSection = null }) {
+export default function ProfileModal({ isOpen, onClose, initialSection = null, planSummary = null }) {
   const { user, profile, role, fetchUserProfile } = useAuth();
   const passwordInputRef = useRef(null);
   const avatarSectionRef = useRef(null);
@@ -355,6 +355,20 @@ export default function ProfileModal({ isOpen, onClose, initialSection = null })
               </div>
             </div>
           </div>
+
+          {planSummary && (
+            <div className={`profile-modal-plan-box ${planSummary.isQuotaFull ? 'plan-full' : (planSummary.isNearQuota ? 'plan-warning' : '')}`}>
+              <div className="profile-modal-plan-header">
+                <span className="profile-modal-plan-title">موجودہ پلان: {planSummary.name}</span>
+                <span className="profile-modal-plan-quota">
+                  طلباء: {planSummary.currentStudentsCount} / {planSummary.maxStudents}
+                </span>
+              </div>
+              <div className="profile-modal-plan-sub">
+                آپ اس وقت {planSummary.name} استعمال کر رہے ہیں
+              </div>
+            </div>
+          )}
 
           {/* Avatar Notifications */}
           {avatarSuccessMsg && (

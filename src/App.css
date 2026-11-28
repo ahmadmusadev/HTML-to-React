@@ -99,6 +99,55 @@ body {
   color: var(--muted, #64748b);
 }
 
+.user-profile-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: right;
+  font-family: inherit;
+  color: inherit;
+}
+
+.user-sub-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.user-plan-pill {
+  display: inline-block;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.user-plan-pill.plan-pill-ok {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.user-plan-pill.plan-pill-warning {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.user-plan-pill.plan-pill-full {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
 /* Settings Cog Icon Button */
 .settings-icon-btn {
   width: 30px;
@@ -594,5 +643,135 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 input[type="date"]::-webkit-calendar-picker-indicator:hover,
 input[type="time"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
+}
+
+/* =========================================================
+   Header Current Plan Card & Dark Mode Styling
+   ========================================================= */
+
+.settings-plan-card {
+  margin-top: 10px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.settings-plan-card.plan-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.settings-plan-card.plan-full {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.settings-plan-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-plan-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.settings-plan-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid currentColor;
+}
+
+.settings-plan-desc {
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.settings-plan-quota-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.settings-plan-progress-track {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.settings-plan-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+
+/* Dark Mode for Header Plan Pill & Dropdown Card */
+[data-theme="dark"] .user-plan-pill.plan-pill-ok {
+  background: #064e3b !important;
+  color: #86efac !important;
+  border-color: #047857 !important;
+}
+
+[data-theme="dark"] .user-plan-pill.plan-pill-warning {
+  background: #451a03 !important;
+  color: #fde68a !important;
+  border-color: #78350f !important;
+}
+
+[data-theme="dark"] .user-plan-pill.plan-pill-full {
+  background: #451a1a !important;
+  color: #fca5a5 !important;
+  border-color: #7f1d1d !important;
+}
+
+[data-theme="dark"] .settings-plan-card {
+  background: #064e3b !important;
+  border-color: #047857 !important;
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .settings-plan-card.plan-warning {
+  background: #451a03 !important;
+  border-color: #78350f !important;
+  color: #fde68a !important;
+}
+
+[data-theme="dark"] .settings-plan-card.plan-full {
+  background: #451a1a !important;
+  border-color: #7f1d1d !important;
+  color: #fca5a5 !important;
+}
+
+[data-theme="dark"] .settings-plan-badge {
+  background: rgba(0, 0, 0, 0.35) !important;
+}
+
+[data-theme="dark"] .settings-plan-progress-track {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+@media (max-width: 520px) {
+  .user-plan-pill {
+    display: none !important;
+  }
 }
 

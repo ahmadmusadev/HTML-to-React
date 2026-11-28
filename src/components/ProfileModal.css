@@ -550,3 +550,69 @@
     justify-content: center;
   }
 }
+
+/* Current Institution Plan Box inside ProfileModal */
+.profile-modal-plan-box {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-modal-plan-box.plan-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.profile-modal-plan-box.plan-full {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.profile-modal-plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-modal-plan-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.profile-modal-plan-quota {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.profile-modal-plan-sub {
+  font-size: 0.78rem;
+  opacity: 0.92;
+}
+
+[data-theme="dark"] .profile-modal-plan-box {
+  background: #064e3b !important;
+  border-color: #047857 !important;
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .profile-modal-plan-box.plan-warning {
+  background: #451a03 !important;
+  border-color: #78350f !important;
+  color: #fde68a !important;
+}
+
+[data-theme="dark"] .profile-modal-plan-box.plan-full {
+  background: #451a1a !important;
+  border-color: #7f1d1d !important;
+  color: #fca5a5 !important;
+}

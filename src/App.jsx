@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, NavLink, useLocation, Navigate 
 import { useState, useEffect, useRef } from 'react';
 import { MadrasaProvider, useMadrasa } from './context/MadrasaContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { getPlanDetails } from './constants/defaults';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import AiChatbot from './components/AiChatbot';
@@ -32,7 +33,15 @@ export function MainHeader({
   toggleMobileNav = () => {},
   hamburgerBtnRef = null
 }) {
-  const { activeMadrasa, activeLogo, uploadLogo, removeLogo } = useMadrasa();
+  const {
+    activeMadrasa,
+    activeLogo,
+    uploadLogo,
+    removeLogo,
+    activeStudentsCount,
+    maxStudents,
+    planName
+  } = useMadrasa();
   const { user, profile, role, signOut } = useAuth();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileModalSection, setProfileModalSection] = useState('password');
@@ -91,6 +100,23 @@ export function MainHeader({
   };
 
   const displayName = activeMadrasa?.name || (role === 'super_admin' ? 'جامعہ حفظ منیجر — پورٹل' : 'جامعہ حفظ منیجر');
+  const showInstitutionPlan = role !== 'super_admin' && Boolean(activeMadrasa);
+  const effectiveMaxStudents = Number(maxStudents || activeMadrasa?.max_students || 50);
+  const resolvedPlanDetails = getPlanDetails(planName || activeMadrasa?.plan_name, effectiveMaxStudents);
+  const currentStudentsCount = Number(activeStudentsCount || 0);
+  const usagePercent = effectiveMaxStudents > 0 ? Math.min(100, Math.round((currentStudentsCount / effectiveMaxStudents) * 100)) : 0;
+  const isQuotaFull = currentStudentsCount >= effectiveMaxStudents;
+  const isNearQuota = !isQuotaFull && usagePercent >= 85;
+  const planSummaryPayload = showInstitutionPlan
+    ? {
+        ...resolvedPlanDetails,
+        currentStudentsCount,
+        maxStudents: effectiveMaxStudents,
+        usagePercent,
+        isQuotaFull,
+        isNearQuota
+      }
+    : null;
 
   return (
     <div className="card-header-top" style={{ position: 'relative', zIndex: 100, overflow: 'visible' }}>
@@ -169,24 +195,38 @@ export function MainHeader({
             {/* Authenticated User Profile & Settings Dropdown */}
             {user ? (
               <div className="user-profile-badge" ref={settingsDropdownRef} style={{ position: 'relative', zIndex: 1000, overflow: 'visible' }}>
-                {/* Profile Picture */}
-                <div className="user-avatar-circle" title={profile?.full_name || user.email}>
-                  {profile?.avatar_url ? (
-                    <img
-                      src={profile.avatar_url}
-                      alt={profile?.full_name || 'Avatar'}
-                      className="user-avatar-img"
-                    />
-                  ) : (
-                    (profile?.full_name || user.email || 'U')[0].toUpperCase()
-                  )}
-                </div>
+                <button
+                  type="button"
+                  className="user-profile-trigger"
+                  onClick={() => setIsSettingsOpen(prev => !prev)}
+                  title={showInstitutionPlan ? `آپ اس وقت ${resolvedPlanDetails.name} استعمال کر رہے ہیں` : (profile?.full_name || user.email)}
+                >
+                  {/* Profile Picture */}
+                  <div className="user-avatar-circle">
+                    {profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt={profile?.full_name || 'Avatar'}
+                        className="user-avatar-img"
+                      />
+                    ) : (
+                      (profile?.full_name || user.email || 'U')[0].toUpperCase()
+                    )}
+                  </div>
 
-                {/* User Identity: Super Admin / Name */}
-                <div className="user-info-text">
-                  <span className="user-name">{profile?.full_name || user.email.split('@')[0]}</span>
-                  <span className="user-role-badge">{getRoleLabel(role)}</span>
-                </div>
+                  {/* User Identity: Name, Role & Current Plan Pill */}
+                  <div className="user-info-text">
+                    <span className="user-name">{profile?.full_name || user.email.split('@')[0]}</span>
+                    <div className="user-sub-badges">
+                      <span className="user-role-badge">{getRoleLabel(role)}</span>
+                      {showInstitutionPlan && (
+                        <span className={`user-plan-pill ${isQuotaFull ? 'plan-pill-full' : (isNearQuota ? 'plan-pill-warning' : 'plan-pill-ok')}`}>
+                          {resolvedPlanDetails.badgeText}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
 
                 {/* Settings Trigger Icon */}
                 <button
@@ -222,6 +262,30 @@ export function MainHeader({
                           <span className="settings-user-sub">{getRoleLabel(role)}</span>
                         </div>
                       </div>
+
+                      {showInstitutionPlan && (
+                        <div className={`settings-plan-card ${isQuotaFull ? 'plan-full' : (isNearQuota ? 'plan-warning' : '')}`}>
+                          <div className="settings-plan-top">
+                            <span className="settings-plan-label">موجودہ پلان</span>
+                            <span className="settings-plan-badge">{resolvedPlanDetails.badgeText}</span>
+                          </div>
+                          <div className="settings-plan-desc">
+                            آپ اس وقت <strong>{resolvedPlanDetails.name}</strong> استعمال کر رہے ہیں
+                          </div>
+                          <div className="settings-plan-quota-row">
+                            <span>طلباء کی گنجائش</span>
+                            <span className="settings-plan-count">
+                              {currentStudentsCount} / {effectiveMaxStudents}
+                            </span>
+                          </div>
+                          <div className="settings-plan-progress-track" aria-hidden="true">
+                            <div
+                              className="settings-plan-progress-fill"
+                              style={{ width: `${usagePercent}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="settings-dropdown-body">
@@ -395,6 +459,7 @@ export function MainHeader({
             isOpen={isProfileModalOpen}
             onClose={() => setIsProfileModalOpen(false)}
             initialSection={profileModalSection}
+            planSummary={planSummaryPayload}
           />
         )}
 

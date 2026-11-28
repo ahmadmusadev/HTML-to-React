@@ -197,3 +197,46 @@ describe('Mobile Hamburger Navigation', () => {
     expect(hamburgerBtn).toHaveAttribute('aria-label', 'مینو بند کریں');
   });
 });
+
+describe('Institution Current Plan Indicator in Profile Header & Dropdown', () => {
+  it('shows current plan badge near profile avatar and full plan card inside dropdown for madrasa admin', () => {
+    const prevRole = mockAuthState.role;
+    const prevProfileRole = mockAuthState.profile.role;
+    const prevMadrasa = { ...mockMadrasaState };
+
+    mockAuthState.role = 'admin';
+    mockAuthState.profile.role = 'admin';
+    mockMadrasaState.activeMadrasa = {
+      id: 'm-10',
+      name: 'جامعہ دارالعلوم',
+      plan_name: 'standard_madrasa',
+      max_students: 150
+    };
+    mockMadrasaState.planName = 'standard_madrasa';
+    mockMadrasaState.maxStudents = 150;
+    mockMadrasaState.activeStudentsCount = 42;
+
+    try {
+      render(<MainHeader theme="light" toggleTheme={vi.fn()} />);
+
+      // Plan badge visible next to profile picture/role
+      expect(screen.getByText('معیاری (150 طلباء)')).toBeInTheDocument();
+
+      // Clicking profile trigger opens dropdown with full plan explanation
+      const profileTrigger = document.querySelector('.user-profile-trigger');
+      fireEvent.click(profileTrigger);
+
+      expect(document.querySelector('.settings-dropdown-menu')).toBeInTheDocument();
+      expect(screen.getByText('موجودہ پلان')).toBeInTheDocument();
+      expect(screen.getByText(/آپ اس وقت/)).toHaveTextContent('آپ اس وقت معیاری مدرسہ پلان استعمال کر رہے ہیں');
+      expect(screen.getByText('42 / 150')).toBeInTheDocument();
+    } finally {
+      mockAuthState.role = prevRole;
+      mockAuthState.profile.role = prevProfileRole;
+      Object.assign(mockMadrasaState, prevMadrasa);
+      delete mockMadrasaState.planName;
+      delete mockMadrasaState.maxStudents;
+      delete mockMadrasaState.activeStudentsCount;
+    }
+  });
+});
