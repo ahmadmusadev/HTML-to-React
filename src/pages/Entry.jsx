@@ -6,18 +6,19 @@ import { DEFAULT_CLASSES } from '../constants/defaults';
 import { isValidUUID } from '../lib/supabaseClient';
 import { mapSupabaseToUi as mapStudentToUi } from './Admissions';
 import SubjectAnalysisModal from '../components/SubjectAnalysisModal';
+import PrintPortal from '../components/PrintPortal';
 import { calculateClassGrading, calculateInstituteGrading, getIndividualStudentGrade, getGradeBadgeClass } from '../utils/classGrading';
 import './Entry.css';
 
 // Constants from edit.html
 const ME_COLS = [
+  { key: 'para', label: 'پارہ نمبر', max: null, icon: '', group: 'literacy', sub: true },
+  { key: 'tarkoo', label: 'رکوع نمبر', max: null, icon: '', group: 'literacy', sub: true },
   { key: 'attendance', label: 'حاضری', max: 10, icon: '' },
   { key: 'manzil', label: 'منزل', max: 60, icon: '' },
   { key: 'tajweed', label: 'تجوید', max: 10, icon: '' },
   { key: 'islamiat', label: 'اسلامیات', max: 10, icon: '' },
   { key: 'itmaad', label: 'اعتماد', max: 10, icon: '' },
-  { key: 'para', label: 'پارہ نمبر', max: null, icon: '', group: 'literacy', sub: true },
-  { key: 'tarkoo', label: 'رکوع نمبر', max: null, icon: '', group: 'literacy', sub: true },
 ];
 const ME_MAX_TOTAL = ME_COLS.filter(c => c.max).reduce((s, c) => s + c.max, 0);
 
@@ -228,6 +229,7 @@ export default function Entry({ initialTab = null }) {
   const {
     activeMadrasa,
     activeMadrasaId,
+    activeLogo,
     loadMadrasaData,
     saveMadrasaData,
     fetchStudentsFromSupabase,
@@ -267,6 +269,9 @@ export default function Entry({ initialTab = null }) {
 
   // Monthly Evaluation input validation error state
   const [meInputError, setMeInputError] = useState(null);
+
+  // Printable Monthly Evaluation Sheet state ('blank' | 'filled')
+  const [printMeConfig, setPrintMeConfig] = useState(null);
 
   // Manzil & Tajweed Analytical Report Modal State
   const [analysisModalConfig, setAnalysisModalConfig] = useState({
@@ -502,6 +507,7 @@ export default function Entry({ initialTab = null }) {
       ME_COLS.forEach(c => { 
         item[c.key] = (prev[c.key] !== undefined && prev[c.key] !== null) ? prev[c.key] : (c.key === 'tarkoo' && prev.ruku !== undefined && prev.ruku !== null ? prev.ruku : ''); 
       });
+      item.remarks = (prev.remarks !== undefined && prev.remarks !== null) ? String(prev.remarks) : (prev.kaifiyat ? String(prev.kaifiyat) : '');
 
       // Automatically calculate attendance marks from previous month's attendance if not already saved
       if (item.attendance === '' || item.attendance === undefined || item.attendance === null) {
@@ -519,7 +525,8 @@ export default function Entry({ initialTab = null }) {
     });
     
     setMeStudents({
-      clsName: cls ? (cls.name || cls.className || meClassSelect) : meClassSelect,
+      clsName: cls ? (cls.name || cls.className || cls.class_name || meClassSelect) : meClassSelect,
+      clsTeacher: cls ? (cls.teacher || cls.teacher_name || cls.teacherName || '') : '',
       data: loadedStudents,
       existing: !!existing,
       prevMonthName: prevMonthInfo.prevName
@@ -644,6 +651,57 @@ export default function Entry({ initialTab = null }) {
 
   const [isSavingExam, setIsSavingExam] = useState(false);
 
+  const handlePrintMonthlyEntryForm = (mode = 'blank') => {
+    if (!meStudents || meStudents === 'empty' || !Array.isArray(meStudents.data) || meStudents.data.length === 0) {
+      alert('پرنٹ نکالنے کے لیے پہلے کلاس کے طلباء لوڈ کریں۔');
+      return;
+    }
+
+    if (mode === 'filled') {
+      for (let i = 0; i < meStudents.data.length; i++) {
+        const item = meStudents.data[i];
+        for (const c of ME_COLS) {
+          if (c.max && item[c.key] !== '' && item[c.key] !== null && item[c.key] !== undefined) {
+            const val = Number(item[c.key]);
+            if (val > c.max || val < 0) {
+              alert(`پرنٹ نہیں ہو سکتا: طالب علم "${item.student?.name || `نمبر ${i + 1}`}" کے "${c.label}" کے نمبرات (${val}) کل نمبر (${c.max}) سے زیادہ ہیں۔ براہ کرم پہلے درست اندراج فرمائیں۔`);
+              const targetInput = document.querySelector(`input[data-row="${i}"][data-col="${c.key}"]`);
+              if (targetInput) {
+                targetInput.focus();
+                targetInput.select();
+              }
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    setPrintMeConfig({
+      mode,
+      clsName: meStudents.clsName,
+      clsTeacher: meStudents.clsTeacher || '',
+      month: meMonth,
+      year: formatAcademicYear(meYear),
+      students: meStudents.data
+    });
+
+    if (typeof document !== 'undefined') {
+      document.body.classList.add('printing-monthly-eval');
+      const cleanup = () => {
+        document.body.classList.remove('printing-monthly-eval');
+        setPrintMeConfig(null);
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      setTimeout(cleanup, 3000);
+    }
+
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
   const meSaveExam = async () => {
     if (!meStudents || meStudents === 'empty') { alert('کوئی طالب علم نہیں۔'); return; }
     
@@ -672,9 +730,11 @@ export default function Entry({ initialTab = null }) {
         const row = {
           student_id: item.student?.id || null,
           regNo: item.student?.admRegNo || '',
-          name: item.student?.name || ''
+          name: item.student?.name || '',
+          fatherName: item.student?.admFatherName || item.student?.fatherName || item.student?.father_name || ''
         };
         ME_COLS.forEach(c => { row[c.key] = c.max ? Number(item[c.key] || 0) : (item[c.key] || ''); });
+        row.remarks = (item.remarks || '').trim();
         const pct = (item.pct !== null && item.pct !== undefined) ? Number(item.pct) : (ME_MAX_TOTAL > 0 ? (Number(item.total || 0) / ME_MAX_TOTAL) * 100 : 0);
         const gradeObj = item.gradeObj || meGrade(pct);
         row.total = Number(item.total) || 0;
@@ -1559,69 +1619,101 @@ export default function Entry({ initialTab = null }) {
                     <thead>
                       <tr>
                         <th rowSpan="2" style={{ minWidth: "48px" }}>نمبر</th>
-                        <th rowSpan="2" style={{ minWidth: "160px", textAlign: "right", paddingRight: "12px" }}>طالب علم</th>
-                        {ME_COLS.filter(c => !c.sub).map(c => <th rowSpan="2" key={c.key}>{c.label}<br/><span className="me-max-label">/ {c.max}</span></th>)}
+                        <th rowSpan="2" style={{ minWidth: "145px", textAlign: "right", paddingRight: "12px" }}>طالب علم</th>
+                        <th rowSpan="2" style={{ minWidth: "130px", textAlign: "right", paddingRight: "12px" }}>ولدیت</th>
                         <th colSpan="2" className="me-literacy-group">خواندگی</th>
-                        <th rowSpan="2" style={{ minWidth: "80px" }}>کل<br/><span className="me-max-label">/ {ME_MAX_TOTAL}</span></th>
+                        {ME_COLS.filter(c => !c.sub).map(c => <th rowSpan="2" key={c.key}>{c.label}<br/><span className="me-max-label">/ {c.max}</span></th>)}
+                        <th rowSpan="2" style={{ minWidth: "74px" }}>کل<br/><span className="me-max-label">/ {ME_MAX_TOTAL}</span></th>
+                        <th rowSpan="2" style={{ minWidth: "220px" }}>کیفیت</th>
                       </tr>
                       <tr className="me-subhead">
                         {ME_COLS.filter(c => c.sub).map(c => <th className="me-literacy-sub" key={c.key}>{c.label}</th>)}
                       </tr>
                     </thead>
                     <tbody>
-                      {meStudents.data.map((item, idx) => (
-                        <tr key={item.student.admRegNo || idx}>
-                          <td><span className="me-reg">{item.student.admRegNo || '-'}</span></td>
-                          <td className="me-td-info"><span className="me-name">{item.student.name || '-'}</span></td>
-                          {ME_COLS.map(c => {
-                            const isInvalid = c.max && item[c.key] !== '' && item[c.key] !== null && item[c.key] !== undefined && (Number(item[c.key]) > c.max || Number(item[c.key]) < 0);
-                            return (
-                              <td key={c.key}>
-                                  {c.sub ? (
-                                      <input
-                                        type="text"
-                                        className="me-input"
-                                        style={{ width: "70px" }}
-                                        value={item[c.key]}
-                                        placeholder={c.label.charAt(0)}
-                                        data-row={idx}
-                                        data-col={c.key}
-                                        onChange={e => meCalcRow(idx, c.key, e.target.value, true)}
-                                      />
-                                  ) : (
-                                      <input
-                                        type="number"
-                                        className={`me-input ${isInvalid ? 'me-invalid' : ''}`}
-                                        min="0"
-                                        max={c.max}
-                                        value={item[c.key]}
-                                        placeholder="0"
-                                        data-row={idx}
-                                        data-col={c.key}
-                                        onChange={e => meCalcRow(idx, c.key, e.target.value, false)}
-                                        onKeyDown={e => handleInputKeyDown(e, idx, c)}
-                                        onBlur={e => handleInputBlur(e, idx, c)}
-                                        onFocus={e => handleInputFocus(e, idx, c)}
-                                        title={isInvalid ? `غلط اندراج: ${c.label} کے نمبرات ${c.max} سے زیادہ نہیں ہو سکتے` : `${c.label} (کل: ${c.max})`}
-                                      />
-                                  )}
-                              </td>
-                            );
-                          })}
-                          <td>
-                            <span
-                              className={`me-total-cell ${item.gradeObj.cls}`}
-                              title={item.total > ME_MAX_TOTAL ? `مجموعہ 100 سے زیادہ ہے (${item.total}) — غلط اندراج` : `${item.pct.toFixed(1)}% — ${item.gradeObj.g}`}
-                            >
-                              {item.total}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {meStudents.data.map((item, idx) => {
+                        const fatherName = item.student.admFatherName || item.student.fatherName || item.student.father_name || '—';
+                        return (
+                          <tr key={item.student.admRegNo || idx}>
+                            <td><span className="me-reg">{item.student.admRegNo || '-'}</span></td>
+                            <td className="me-td-info"><span className="me-name">{item.student.name || '-'}</span></td>
+                            <td className="me-td-info"><span className="me-father">{fatherName}</span></td>
+                            {ME_COLS.map(c => {
+                              const isInvalid = c.max && item[c.key] !== '' && item[c.key] !== null && item[c.key] !== undefined && (Number(item[c.key]) > c.max || Number(item[c.key]) < 0);
+                              return (
+                                <td key={c.key}>
+                                    {c.sub ? (
+                                        <input
+                                          type="text"
+                                          className="me-input"
+                                          style={{ width: "68px" }}
+                                          value={item[c.key]}
+                                          placeholder={c.label.charAt(0)}
+                                          data-row={idx}
+                                          data-col={c.key}
+                                          onChange={e => meCalcRow(idx, c.key, e.target.value, true)}
+                                        />
+                                    ) : (
+                                        <input
+                                          type="number"
+                                          className={`me-input ${isInvalid ? 'me-invalid' : ''}`}
+                                          min="0"
+                                          max={c.max}
+                                          value={item[c.key]}
+                                          placeholder="0"
+                                          data-row={idx}
+                                          data-col={c.key}
+                                          onChange={e => meCalcRow(idx, c.key, e.target.value, false)}
+                                          onKeyDown={e => handleInputKeyDown(e, idx, c)}
+                                          onBlur={e => handleInputBlur(e, idx, c)}
+                                          onFocus={e => handleInputFocus(e, idx, c)}
+                                          title={isInvalid ? `غلط اندراج: ${c.label} کے نمبرات ${c.max} سے زیادہ نہیں ہو سکتے` : `${c.label} (کل: ${c.max})`}
+                                        />
+                                    )}
+                                </td>
+                              );
+                            })}
+                            <td>
+                              <span
+                                className={`me-total-cell ${item.gradeObj.cls}`}
+                                title={item.total > ME_MAX_TOTAL ? `مجموعہ 100 سے زیادہ ہے (${item.total}) — غلط اندراج` : `${item.pct.toFixed(1)}% — ${item.gradeObj.g}`}
+                              >
+                                {item.total}
+                              </span>
+                            </td>
+                            <td className="me-td-remarks">
+                              <input
+                                type="text"
+                                className="me-input me-remarks-input"
+                                value={item.remarks || ''}
+                                placeholder="کیفیت درج کریں..."
+                                data-row={idx}
+                                data-col="remarks"
+                                onChange={e => meCalcRow(idx, 'remarks', e.target.value, true)}
+                                dir="rtl"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
                 <div className="me-report-actions-bar">
+                  <button
+                    type="button"
+                    className="me-report-btn"
+                    onClick={() => handlePrintMonthlyEntryForm('blank')}
+                  >
+                    خالی فارم پرنٹ کریں
+                  </button>
+                  <button
+                    type="button"
+                    className="me-report-btn"
+                    onClick={() => handlePrintMonthlyEntryForm('filled')}
+                  >
+                    اندراج شدہ فارم پرنٹ کریں
+                  </button>
                   <button
                     type="button"
                     className="me-report-btn"
@@ -1689,26 +1781,31 @@ export default function Entry({ initialTab = null }) {
                                   </div>
                                 </div>
                                 <div className="me-table-wrap" style={{ marginBottom: "0" }}>
-                                  <table className="me-table" style={{ minWidth: "700px" }}>
+                                  <table className="me-table" style={{ minWidth: "820px" }}>
                                     <thead>
                                       <tr>
-                                        <th>نمبر</th><th>نام</th>
+                                        <th>نمبر</th><th>نام</th><th>ولدیت</th>
+                                        <th>پارہ</th><th>رکوع</th>
                                         {ME_COLS.filter(c => !c.sub && c.max).map(c => <th key={c.key}>{c.label}</th>)}
-                                        <th>پارہ</th><th>رکوع</th><th>کل</th><th>فیصد</th>
+                                        <th>کل</th><th>فیصد</th><th>کیفیت</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {exam.students.map((s, i) => {
                                           const sg = meGrade(s.pct || 0);
+                                          const matchedStd = records.find(r => r.isAdmissionProfile && ((s.student_id && String(r.id) === String(s.student_id)) || (s.regNo && String(r.admRegNo) === String(s.regNo))));
+                                          const fName = s.fatherName || matchedStd?.admFatherName || matchedStd?.fatherName || '—';
                                           return (
                                               <tr key={i}>
                                                   <td><span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>{s.regNo || '-'}</span></td>
                                                   <td style={{ textAlign: "right", fontWeight: "700", paddingRight: "10px" }}>{s.name || '-'}</td>
-                                                  {ME_COLS.filter(c => !c.sub && c.max).map(c => <td key={c.key} style={{ textAlign: "center" }}>{s[c.key] ?? 0}/{c.max}</td>)}
+                                                  <td style={{ textAlign: "right", paddingRight: "10px", color: "var(--muted)" }}>{fName}</td>
                                                   <td style={{ textAlign: "center" }}>{s.para || '—'}</td>
                                                   <td style={{ textAlign: "center" }}>{s.tarkoo || s.ruku || '—'}</td>
+                                                  {ME_COLS.filter(c => !c.sub && c.max).map(c => <td key={c.key} style={{ textAlign: "center" }}>{s[c.key] ?? 0}/{c.max}</td>)}
                                                   <td style={{ textAlign: "center" }}><span className={`me-total-cell ${sg.cls}`} style={{ fontSize: "0.88rem" }}>{s.total}</span></td>
                                                   <td style={{ textAlign: "center" }}><span style={{ fontSize: "0.8rem", fontWeight: "700", color: sg.color }}>{s.pct}% ({s.grade})</span></td>
+                                                  <td style={{ textAlign: "right", paddingRight: "10px", minWidth: "160px" }}>{s.remarks || s.kaifiyat || '—'}</td>
                                               </tr>
                                           );
                                       })}
@@ -2552,6 +2649,118 @@ export default function Entry({ initialTab = null }) {
         year={meYear}
         madrasaName={activeMadrasa?.name || 'جامعہ حفظ القرآن الکریم'}
       />
+
+      {/* Printable Monthly Evaluation Entry Form (Blank or Filled) */}
+      {printMeConfig && (
+        <PrintPortal>
+          <div className="monthly-eval-print-sheet" dir="rtl">
+            <style>{`
+              @page {
+                size: A4 landscape;
+                margin: 8mm 10mm;
+              }
+            `}</style>
+            <div className="me-print-header">
+              <div className="me-print-brand">
+                {activeLogo ? (
+                  <img src={activeLogo} alt={activeMadrasa?.name || ''} className="me-print-logo" />
+                ) : null}
+                <div className="me-print-title-block">
+                  <h1>{activeMadrasa?.name || 'جامعہ حفظ القرآن الکریم'}</h1>
+                  <p>ماہانہ جائزہ — نمبرات و مقدارِ خواندگی اندراج فارم</p>
+                </div>
+              </div>
+              <div className="me-print-meta-right">
+                <div className="me-print-badge">
+                  {printMeConfig.mode === 'blank' ? 'خالی امتحانی فارم' : 'اندراج شدہ ریکارڈ'}
+                </div>
+                <div className="me-print-date">
+                  تاریخ: {new Date().toLocaleDateString('ur-PK', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+              </div>
+            </div>
+
+            <div className="me-print-info-grid">
+              <div className="me-print-info-item">
+                <span className="me-print-info-label">کلاس / شعبہ:</span>
+                <span className="me-print-info-val">{printMeConfig.clsName}</span>
+              </div>
+              <div className="me-print-info-item">
+                <span className="me-print-info-label">نگران استاد:</span>
+                <span className="me-print-info-val">{printMeConfig.clsTeacher || '—'}</span>
+              </div>
+              <div className="me-print-info-item">
+                <span className="me-print-info-label">ماہ و تعلیمی سال:</span>
+                <span className="me-print-info-val">{printMeConfig.month} {printMeConfig.year}</span>
+              </div>
+              <div className="me-print-info-item">
+                <span className="me-print-info-label">کل طلباء:</span>
+                <span className="me-print-info-val">{printMeConfig.students.length}</span>
+              </div>
+            </div>
+
+            <table className="me-print-table">
+              <thead>
+                <tr>
+                  <th rowSpan="2" style={{ width: '5%' }}>نمبر</th>
+                  <th rowSpan="2" style={{ width: '13%' }}>طالب علم</th>
+                  <th rowSpan="2" style={{ width: '12%' }}>ولدیت</th>
+                  <th colSpan="2" style={{ width: '11%' }}>خواندگی</th>
+                  <th rowSpan="2" style={{ width: '5.5%' }}>حاضری<br/><span className="me-print-max">/ 10</span></th>
+                  <th rowSpan="2" style={{ width: '5.5%' }}>منزل<br/><span className="me-print-max">/ 60</span></th>
+                  <th rowSpan="2" style={{ width: '5.5%' }}>تجوید<br/><span className="me-print-max">/ 10</span></th>
+                  <th rowSpan="2" style={{ width: '5.5%' }}>اسلامیات<br/><span className="me-print-max">/ 10</span></th>
+                  <th rowSpan="2" style={{ width: '5.5%' }}>اعتماد<br/><span className="me-print-max">/ 10</span></th>
+                  <th rowSpan="2" style={{ width: '6.5%' }}>کل<br/><span className="me-print-max">/ {ME_MAX_TOTAL}</span></th>
+                  <th rowSpan="2" style={{ width: '25%' }}>کیفیت</th>
+                </tr>
+                <tr>
+                  <th style={{ width: '5.5%' }}>پارہ نمبر</th>
+                  <th style={{ width: '5.5%' }}>رکوع نمبر</th>
+                </tr>
+              </thead>
+              <tbody>
+                {printMeConfig.students.map((item, idx) => {
+                  const isBlank = printMeConfig.mode === 'blank';
+                  const fatherName = item.student?.admFatherName || item.student?.fatherName || item.student?.father_name || '—';
+                  const showVal = (v) => (!isBlank && v !== '' && v !== null && v !== undefined) ? v : '';
+                  return (
+                    <tr key={item.student?.admRegNo || idx}>
+                      <td>{item.student?.admRegNo || (idx + 1)}</td>
+                      <td className="me-print-text-cell"><strong>{item.student?.name || '—'}</strong></td>
+                      <td className="me-print-text-cell">{fatherName}</td>
+                      <td>{showVal(item.para)}</td>
+                      <td>{showVal(item.tarkoo)}</td>
+                      <td>{showVal(item.attendance)}</td>
+                      <td>{showVal(item.manzil)}</td>
+                      <td>{showVal(item.tajweed)}</td>
+                      <td>{showVal(item.islamiat)}</td>
+                      <td>{showVal(item.itmaad)}</td>
+                      <td><strong>{isBlank ? '' : item.total}</strong></td>
+                      <td className="me-print-remarks-cell">{isBlank ? '' : (item.remarks || '')}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div className="me-print-signatures">
+              <div className="me-print-sig-col">
+                <div className="me-print-sig-line"></div>
+                <div className="me-print-sig-title">نگران استاد</div>
+              </div>
+              <div className="me-print-sig-col">
+                <div className="me-print-sig-line"></div>
+                <div className="me-print-sig-title">ممتحن / ناظمِ تعلیمات</div>
+              </div>
+              <div className="me-print-sig-col">
+                <div className="me-print-sig-line"></div>
+                <div className="me-print-sig-title">مہتمم</div>
+              </div>
+            </div>
+          </div>
+        </PrintPortal>
+      )}
 
     </div>
   );

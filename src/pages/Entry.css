@@ -394,6 +394,15 @@
     .me-td-info { text-align:right !important; padding-right:12px !important; }
     .me-reg { font-size:0.78rem; color:var(--muted); font-family:'Alvi Nastaleeq', serif !important; }
     .me-name { font-weight:700; font-size:0.9rem; color:#1e293b; }
+    .me-father { font-weight:600; font-size:0.86rem; color:#475569; }
+    .me-td-remarks { min-width: 220px; padding: 6px 8px !important; }
+    .me-remarks-input {
+      width: 100% !important;
+      min-width: 205px;
+      text-align: right !important;
+      padding: 6px 10px !important;
+      font-weight: 500 !important;
+    }
 
     /* input cells */
     .me-input {
@@ -2662,6 +2671,9 @@
     }
     [data-theme="dark"] .me-name {
       color: var(--text, #f4f4f5);
+    }
+    [data-theme="dark"] .me-father {
+      color: var(--muted, #a1a1aa);
     }
     [data-theme="dark"] .me-input {
       background: var(--card-bg, #18181b);

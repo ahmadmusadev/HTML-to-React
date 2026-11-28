@@ -53,6 +53,7 @@ describe('MainHeader & Settings Dropdown Menu', () => {
     // Super Admin identity
     expect(screen.getByText('سپر ایڈمنسٹریٹر')).toBeInTheDocument();
     expect(screen.getByText('سپر ایڈمن')).toBeInTheDocument();
+    expect(screen.getByText('سپر ایڈمن (لامحدود)')).toBeInTheDocument();
 
     // Profile picture
     const avatarImg = screen.getByAltText('سپر ایڈمنسٹریٹر');

@@ -43,6 +43,10 @@
   body.printing-class-sheet .wrap,
   body.printing-class-sheet .tab-content,
   body.printing-class-sheet .card,
+  body.printing-monthly-eval #root,
+  body.printing-monthly-eval .wrap,
+  body.printing-monthly-eval .tab-content,
+  body.printing-monthly-eval .card,
   body:has(#print-portal-root > *) #root,
   body:has(#print-portal-root > *) .wrap,
   body:has(#print-portal-root > *) .tab-content,
@@ -166,6 +170,208 @@
 @page payroll-report {
   size: A4 landscape;
   margin: 10mm;
+}
+
+@page monthly-eval-sheet {
+  size: A4 landscape;
+  margin: 8mm 10mm;
+}
+
+/* --- Monthly Evaluation Entry Sheet Print Rules (A4 Landscape, Strict Black & White) --- */
+@media print {
+  body.printing-monthly-eval {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  body.printing-monthly-eval #print-portal-root {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  body.printing-monthly-eval #print-portal-root .monthly-eval-print-sheet,
+  body.printing-monthly-eval #print-portal-root .monthly-eval-print-sheet * {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .monthly-eval-print-sheet {
+    page: monthly-eval-sheet;
+    width: 100% !important;
+    direction: rtl !important;
+    font-family: 'Alvi Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Naskh Arabic', serif !important;
+    box-sizing: border-box !important;
+  }
+
+  .me-print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-bottom: 2px solid #000000 !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .me-print-brand {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .me-print-logo {
+    width: 48px !important;
+    height: 48px !important;
+    object-fit: contain !important;
+    filter: grayscale(100%) !important;
+  }
+
+  .me-print-title-block h1 {
+    margin: 0 0 2px 0 !important;
+    font-size: 16pt !important;
+    font-weight: 900 !important;
+  }
+
+  .me-print-title-block p {
+    margin: 0 !important;
+    font-size: 10.5pt !important;
+    font-weight: 700 !important;
+  }
+
+  .me-print-meta-right {
+    text-align: left !important;
+  }
+
+  .me-print-badge {
+    display: inline-block !important;
+    border: 1.5px solid #000000 !important;
+    padding: 2px 10px !important;
+    font-size: 9.5pt !important;
+    font-weight: 800 !important;
+    margin-bottom: 3px !important;
+  }
+
+  .me-print-date {
+    font-size: 8.5pt !important;
+  }
+
+  .me-print-info-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+    border: 1px solid #000000 !important;
+    padding: 6px 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .me-print-info-item {
+    display: flex !important;
+    gap: 6px !important;
+    font-size: 9.5pt !important;
+  }
+
+  .me-print-info-label {
+    font-weight: 700 !important;
+  }
+
+  .me-print-info-val {
+    font-weight: 800 !important;
+  }
+
+  .me-print-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+    margin-bottom: 16px !important;
+    font-size: 9pt !important;
+  }
+
+  .me-print-table thead {
+    display: table-header-group !important;
+  }
+
+  .me-print-table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .me-print-table th,
+  .me-print-table td {
+    border: 1px solid #000000 !important;
+    padding: 5px 4px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .me-print-table th {
+    font-weight: 900 !important;
+    font-size: 9pt !important;
+    border-bottom: 1.5px solid #000000 !important;
+  }
+
+  .me-print-max {
+    font-size: 7.5pt !important;
+    font-weight: 700 !important;
+  }
+
+  .me-print-table tbody td {
+    height: 28px !important;
+  }
+
+  .me-print-table td.me-print-text-cell {
+    text-align: right !important;
+    padding-right: 6px !important;
+  }
+
+  .me-print-table td.me-print-remarks-cell {
+    text-align: right !important;
+    padding: 5px 7px !important;
+    line-height: 1.35 !important;
+  }
+
+  .me-print-signatures {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 28px !important;
+    margin-top: 22px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .me-print-sig-col {
+    text-align: center !important;
+  }
+
+  .me-print-sig-line {
+    border-bottom: 1.5px solid #000000 !important;
+    height: 26px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .me-print-sig-title {
+    font-size: 9.5pt !important;
+    font-weight: 800 !important;
+  }
 }
 
 @media print {

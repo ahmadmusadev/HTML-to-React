@@ -100,23 +100,45 @@ export function MainHeader({
   };
 
   const displayName = activeMadrasa?.name || (role === 'super_admin' ? 'جامعہ حفظ منیجر — پورٹل' : 'جامعہ حفظ منیجر');
-  const showInstitutionPlan = role !== 'super_admin' && Boolean(activeMadrasa);
+  const isSuperAdminUser = role === 'super_admin';
   const effectiveMaxStudents = Number(maxStudents || activeMadrasa?.max_students || 50);
   const resolvedPlanDetails = getPlanDetails(planName || activeMadrasa?.plan_name, effectiveMaxStudents);
   const currentStudentsCount = Number(activeStudentsCount || 0);
   const usagePercent = effectiveMaxStudents > 0 ? Math.min(100, Math.round((currentStudentsCount / effectiveMaxStudents) * 100)) : 0;
   const isQuotaFull = currentStudentsCount >= effectiveMaxStudents;
   const isNearQuota = !isQuotaFull && usagePercent >= 85;
-  const planSummaryPayload = showInstitutionPlan
+
+  // Compute active plan representation for ALL authenticated users (including Super Admin)
+  const currentActivePlanInfo = isSuperAdminUser
     ? {
+        name: 'سپر ایڈمن پورٹل',
+        badgeText: 'سپر ایڈمن (لامحدود)',
+        planDescription: activeMadrasa
+          ? `آپ اس وقت بطور سپر ایڈمن ${activeMadrasa.name} کی نگرانی کر رہے ہیں (لامحدود کوٹہ)`
+          : 'آپ اس وقت سسٹم سپر ایڈمن (لامحدود کوٹہ و اختیارات) استعمال کر رہے ہیں',
+        quotaText: 'لامحدود گنجائش',
+        currentStudentsCount,
+        maxStudents: 'لامحدود',
+        usagePercent: 100,
+        isQuotaFull: false,
+        isNearQuota: false,
+        isSuperAdmin: true,
+        pillClass: 'plan-pill-super'
+      }
+    : {
         ...resolvedPlanDetails,
+        planDescription: `آپ اس وقت ${resolvedPlanDetails.name} استعمال کر رہے ہیں`,
+        quotaText: `${currentStudentsCount} / ${effectiveMaxStudents}`,
         currentStudentsCount,
         maxStudents: effectiveMaxStudents,
         usagePercent,
         isQuotaFull,
-        isNearQuota
-      }
-    : null;
+        isNearQuota,
+        isSuperAdmin: false,
+        pillClass: isQuotaFull ? 'plan-pill-full' : (isNearQuota ? 'plan-pill-warning' : 'plan-pill-ok')
+      };
+
+  const planSummaryPayload = currentActivePlanInfo;
 
   return (
     <div className="card-header-top" style={{ position: 'relative', zIndex: 100, overflow: 'visible' }}>
@@ -199,7 +221,7 @@ export function MainHeader({
                   type="button"
                   className="user-profile-trigger"
                   onClick={() => setIsSettingsOpen(prev => !prev)}
-                  title={showInstitutionPlan ? `آپ اس وقت ${resolvedPlanDetails.name} استعمال کر رہے ہیں` : (profile?.full_name || user.email)}
+                  title={`آپ اس وقت ${currentActivePlanInfo.name} استعمال کر رہے ہیں`}
                 >
                   {/* Profile Picture */}
                   <div className="user-avatar-circle">
@@ -219,11 +241,9 @@ export function MainHeader({
                     <span className="user-name">{profile?.full_name || user.email.split('@')[0]}</span>
                     <div className="user-sub-badges">
                       <span className="user-role-badge">{getRoleLabel(role)}</span>
-                      {showInstitutionPlan && (
-                        <span className={`user-plan-pill ${isQuotaFull ? 'plan-pill-full' : (isNearQuota ? 'plan-pill-warning' : 'plan-pill-ok')}`}>
-                          {resolvedPlanDetails.badgeText}
-                        </span>
-                      )}
+                      <span className={`user-plan-pill ${currentActivePlanInfo.pillClass}`}>
+                        {currentActivePlanInfo.badgeText}
+                      </span>
                     </div>
                   </div>
                 </button>
@@ -263,29 +283,29 @@ export function MainHeader({
                         </div>
                       </div>
 
-                      {showInstitutionPlan && (
-                        <div className={`settings-plan-card ${isQuotaFull ? 'plan-full' : (isNearQuota ? 'plan-warning' : '')}`}>
-                          <div className="settings-plan-top">
-                            <span className="settings-plan-label">موجودہ پلان</span>
-                            <span className="settings-plan-badge">{resolvedPlanDetails.badgeText}</span>
-                          </div>
-                          <div className="settings-plan-desc">
-                            آپ اس وقت <strong>{resolvedPlanDetails.name}</strong> استعمال کر رہے ہیں
-                          </div>
-                          <div className="settings-plan-quota-row">
-                            <span>طلباء کی گنجائش</span>
-                            <span className="settings-plan-count">
-                              {currentStudentsCount} / {effectiveMaxStudents}
-                            </span>
-                          </div>
+                      <div className={`settings-plan-card ${currentActivePlanInfo.isSuperAdmin ? 'plan-super' : (currentActivePlanInfo.isQuotaFull ? 'plan-full' : (currentActivePlanInfo.isNearQuota ? 'plan-warning' : ''))}`}>
+                        <div className="settings-plan-top">
+                          <span className="settings-plan-label">موجودہ پلان</span>
+                          <span className="settings-plan-badge">{currentActivePlanInfo.badgeText}</span>
+                        </div>
+                        <div className="settings-plan-desc">
+                          {currentActivePlanInfo.planDescription}
+                        </div>
+                        <div className="settings-plan-quota-row">
+                          <span>طلباء کی گنجائش</span>
+                          <span className="settings-plan-count">
+                            {currentActivePlanInfo.quotaText}
+                          </span>
+                        </div>
+                        {!currentActivePlanInfo.isSuperAdmin && (
                           <div className="settings-plan-progress-track" aria-hidden="true">
                             <div
                               className="settings-plan-progress-fill"
-                              style={{ width: `${usagePercent}%` }}
+                              style={{ width: `${currentActivePlanInfo.usagePercent}%` }}
                             />
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
                     <div className="settings-dropdown-body">

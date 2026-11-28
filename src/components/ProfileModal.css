@@ -564,6 +564,12 @@
   gap: 4px;
 }
 
+.profile-modal-plan-box.plan-super {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
 .profile-modal-plan-box.plan-warning {
   background: #fffbeb;
   border-color: #fde68a;
@@ -603,6 +609,12 @@
   background: #064e3b !important;
   border-color: #047857 !important;
   color: #86efac !important;
+}
+
+[data-theme="dark"] .profile-modal-plan-box.plan-super {
+  background: #0f2744 !important;
+  border-color: #1d4ed8 !important;
+  color: #93c5fd !important;
 }
 
 [data-theme="dark"] .profile-modal-plan-box.plan-warning {

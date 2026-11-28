@@ -122,7 +122,7 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 
 [data-theme="dark"] .user-profile-badge {
   background: #18181b !important;
-  border-color: #3f3f46 !important;
+  border-color: #27272a !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
   position: relative !important;
   z-index: 1000 !important;
@@ -133,12 +133,33 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
   border-color: #38bdf8 !important;
 }
 
+[data-theme="dark"] .user-profile-trigger {
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .user-profile-trigger:hover,
+[data-theme="dark"] .user-profile-trigger:focus,
+[data-theme="dark"] .user-profile-trigger:focus-visible {
+  background: transparent !important;
+  outline: none !important;
+}
+
 [data-theme="dark"] .user-name {
   color: #f4f4f5 !important;
 }
 
-[data-theme="dark"] .settings-icon-btn {
+[data-theme="dark"] .user-role-badge {
   color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .settings-icon-btn {
+  background: transparent !important;
+  border: 1px solid #27272a !important;
+  color: #a1a1aa !important;
+  box-shadow: none !important;
 }
 
 [data-theme="dark"] .settings-icon-btn:hover {
@@ -174,7 +195,10 @@ html:not([data-theme="dark"]) .single-theme-toggle .sun-icon {
 }
 
 [data-theme="dark"] .settings-dropdown-item {
+  background: transparent !important;
+  border: none !important;
   color: #f4f4f5 !important;
+  box-shadow: none !important;
 }
 
 [data-theme="dark"] .settings-dropdown-item:hover {
@@ -497,7 +521,7 @@ body.dark .daily-perf-alert-error {
 }
 
 /* --- Primary Action Buttons (Pure White with Jet Black Text) --- */
-[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.payroll-subtab-btn):not(.records-subtab-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn),
+[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.payroll-subtab-btn):not(.records-subtab-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn):not(.user-profile-trigger):not(.settings-icon-btn):not(.settings-dropdown-item):not(.mobile-hamburger-btn):not(.profile-modal-close-btn),
 [data-theme="dark"] .wizard-btn-next,
 [data-theme="dark"] .search-container button,
 [data-theme="dark"] .me-load-btn,
@@ -511,7 +535,7 @@ body.dark .daily-perf-alert-error {
   box-shadow: 0 3px 12px rgba(255, 255, 255, 0.2) !important;
 }
 
-[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.payroll-subtab-btn):not(.records-subtab-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn):hover,
+[data-theme="dark"] button:not(.tab-button):not(.sub-tab-btn):not(.adm-type-btn):not(.fee-report-tab-btn):not(.tab-btn):not(.filter-btn):not(.payroll-subtab-btn):not(.records-subtab-btn):not(.btn-secondary):not(.single-theme-toggle):not(.wizard-btn-prev):not(.pagination button):not(.staff-action-btn):not(.gender-toggle-btn):not(.gender-btn):not(.user-profile-trigger):not(.settings-icon-btn):not(.settings-dropdown-item):not(.mobile-hamburger-btn):not(.profile-modal-close-btn):hover,
 [data-theme="dark"] .wizard-btn-next:hover,
 [data-theme="dark"] .search-container button:hover,
 [data-theme="dark"] .me-load-btn:hover,

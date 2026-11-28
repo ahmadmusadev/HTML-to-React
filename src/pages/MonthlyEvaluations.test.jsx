@@ -313,4 +313,95 @@ describe('Monthly Evaluations (ماہانہ جائزہ) - Local & Supabase Persi
       expect(within(tableArea).getByPlaceholderText('ر')).toBeInTheDocument();
     });
   });
+
+  it('orders columns with name and father name, then para/ruku, then marks, then wide remarks (کیفیت only) and supports blank & filled printing', async () => {
+    window.print = vi.fn();
+
+    const studentsWithFather = [
+      {
+        ...SAMPLE_STUDENTS[0],
+        admFatherName: 'مولانا عبداللہ'
+      }
+    ];
+    mockFetchStudents.mockResolvedValueOnce(studentsWithFather);
+
+    render(<Entry />);
+
+    await waitFor(() => {
+      expect(mockFetchClasses).toHaveBeenCalled();
+    });
+
+    const classSelect = screen.getByRole('combobox', { name: /کلاس منتخب کریں/i });
+    fireEvent.change(classSelect, { target: { value: CLASS_ID } });
+    fireEvent.click(screen.getByText('طلباء لوڈ کریں'));
+
+    await waitFor(() => {
+      expect(screen.getByText('محمد حذیفہ')).toBeInTheDocument();
+      expect(screen.getByText('مولانا عبداللہ')).toBeInTheDocument();
+    });
+
+    const tableArea = document.getElementById('meTableArea');
+    const firstHeaderCells = Array.from(tableArea.querySelectorAll('thead tr:first-child th')).map(th => th.textContent.replace(/\s+/g, ' ').trim());
+    // Expected order: نمبر, طالب علم, ولدیت, خواندگی, حاضری..., منزل..., تجوید..., اسلامیات..., اعتماد..., کل..., کیفیت
+    expect(firstHeaderCells[0]).toBe('نمبر');
+    expect(firstHeaderCells[1]).toBe('طالب علم');
+    expect(firstHeaderCells[2]).toBe('ولدیت');
+    expect(firstHeaderCells[3]).toBe('خواندگی');
+    expect(firstHeaderCells[4]).toContain('حاضری');
+    expect(firstHeaderCells[firstHeaderCells.length - 1]).toBe('کیفیت');
+    expect(firstHeaderCells[firstHeaderCells.length - 1]).not.toContain('دستخط');
+
+    // Fill para, ruku, marks, and remarks
+    const paraInput = tableArea.querySelector('input[data-row="0"][data-col="para"]');
+    const rukuInput = tableArea.querySelector('input[data-row="0"][data-col="tarkoo"]');
+    const remarksInput = tableArea.querySelector('input[data-row="0"][data-col="remarks"]');
+    const spinInputs = within(tableArea).getAllByRole('spinbutton');
+
+    fireEvent.change(paraInput, { target: { value: '14' } });
+    fireEvent.change(rukuInput, { target: { value: '6' } });
+    fireEvent.change(spinInputs[0], { target: { value: '10' } });
+    fireEvent.change(spinInputs[1], { target: { value: '56' } });
+    fireEvent.change(spinInputs[2], { target: { value: '9' } });
+    fireEvent.change(spinInputs[3], { target: { value: '8' } });
+    fireEvent.change(spinInputs[4], { target: { value: '9' } });
+    fireEvent.change(remarksInput, { target: { value: 'طالب علم کی منزل اور تجوید بہت عمدہ ہے۔' } });
+
+    // Save and verify remarks + fatherName are persisted
+    fireEvent.click(screen.getByRole('button', { name: /محفوظ کریں/i }));
+    await waitFor(() => {
+      expect(mockSaveMonthlyEvaluation).toHaveBeenCalledTimes(1);
+    });
+    const savedStudent = mockSaveMonthlyEvaluation.mock.calls[0][0].students[0];
+    expect(savedStudent.fatherName).toBe('مولانا عبداللہ');
+    expect(savedStudent.para).toBe('14');
+    expect(savedStudent.tarkoo).toBe('6');
+    expect(savedStudent.remarks).toBe('طالب علم کی منزل اور تجوید بہت عمدہ ہے۔');
+
+    // Trigger Blank Form Print
+    fireEvent.click(screen.getByRole('button', { name: 'خالی فارم پرنٹ کریں' }));
+    const portalRoot = document.getElementById('print-portal-root');
+    expect(portalRoot).toBeTruthy();
+    expect(document.body.classList.contains('printing-monthly-eval')).toBe(true);
+    expect(portalRoot.textContent).toContain('خالی امتحانی فارم');
+    expect(portalRoot.textContent).toContain('محمد حذیفہ');
+    expect(portalRoot.textContent).toContain('مولانا عبداللہ');
+    expect(portalRoot.textContent).not.toContain('طالب علم کی منزل اور تجوید بہت عمدہ ہے۔');
+
+    const printHeaders = Array.from(portalRoot.querySelectorAll('thead tr:first-child th')).map(th => th.textContent.replace(/\s+/g, ' ').trim());
+    expect(printHeaders[1]).toBe('طالب علم');
+    expect(printHeaders[2]).toBe('ولدیت');
+    expect(printHeaders[3]).toBe('خواندگی');
+    expect(printHeaders[printHeaders.length - 1]).toBe('کیفیت');
+
+    fireEvent(window, new Event('afterprint'));
+    expect(document.body.classList.contains('printing-monthly-eval')).toBe(false);
+
+    // Trigger Filled Form Print
+    fireEvent.click(screen.getByRole('button', { name: 'اندراج شدہ فارم پرنٹ کریں' }));
+    expect(portalRoot.textContent).toContain('اندراج شدہ ریکارڈ');
+    expect(portalRoot.textContent).toContain('طالب علم کی منزل اور تجوید بہت عمدہ ہے۔');
+    expect(portalRoot.textContent).toContain('92');
+
+    fireEvent(window, new Event('afterprint'));
+  });
 });

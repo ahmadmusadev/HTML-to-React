@@ -136,6 +136,12 @@ body {
   border-color: #bbf7d0;
 }
 
+.user-plan-pill.plan-pill-super {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
 .user-plan-pill.plan-pill-warning {
   background: #fffbeb;
   color: #92400e;
@@ -661,6 +667,12 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   gap: 5px;
 }
 
+.settings-plan-card.plan-super {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
 .settings-plan-card.plan-warning {
   background: #fffbeb;
   border-color: #fde68a;
@@ -749,6 +761,12 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   color: #86efac !important;
 }
 
+[data-theme="dark"] .settings-plan-card.plan-super {
+  background: #0f2744 !important;
+  border-color: #1d4ed8 !important;
+  color: #93c5fd !important;
+}
+
 [data-theme="dark"] .settings-plan-card.plan-warning {
   background: #451a03 !important;
   border-color: #78350f !important;
@@ -769,9 +787,20 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   background: rgba(255, 255, 255, 0.16) !important;
 }
 
+[data-theme="dark"] .user-plan-pill.plan-pill-super {
+  background: #0f2744 !important;
+  color: #93c5fd !important;
+  border-color: #1d4ed8 !important;
+}
+
 @media (max-width: 520px) {
   .user-plan-pill {
-    display: none !important;
+    font-size: 0.6rem !important;
+    padding: 1px 5px !important;
+    max-width: 90px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: inline-block !important;
   }
 }
 
