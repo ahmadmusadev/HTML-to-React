@@ -50,6 +50,15 @@ export default function SuperAdmin() {
   const [selectedDistrict, setSelectedDistrict] = useState('all');
   const [sortByDistrict, setSortByDistrict] = useState(false);
 
+  // Inline Quick Plan Change State
+  const [inlineCustomPlanRowId, setInlineCustomPlanRowId] = useState(null);
+  const [inlineCustomLimit, setInlineCustomLimit] = useState(500);
+
+  const getDefaultMaxForPlan = (planId) => {
+    const matched = MADRASA_PLANS.find((p) => p.id === planId);
+    return matched ? matched.maxStudents : 50;
+  };
+
   const handleOpenEdit = (m) => {
     const adminProfile = (m.profiles || []).find(p => p.role === 'admin');
     setEditingMadrasa(m);
@@ -205,14 +214,87 @@ export default function SuperAdmin() {
     }
   };
 
+  // Inline Quick Plan Update Handler
+  const updateMadrasaPlan = async (madrasa, newPlanName, newMaxStudents) => {
+    const numericLimit = Number(newMaxStudents);
+    if (!numericLimit || numericLimit <= 0) {
+      setActionFeedback({
+        type: 'error',
+        message: 'براہِ کرم طلباء کی درست تعداد (1 یا اس سے زیادہ) درج کریں۔'
+      });
+      return;
+    }
+
+    setActionInProgress(madrasa.id);
+    setActionFeedback({ type: '', message: '' });
+    try {
+      const { error } = await supabase
+        .from('madrasas')
+        .update({
+          plan_name: newPlanName,
+          max_students: numericLimit
+        })
+        .eq('id', madrasa.id);
+
+      if (error) throw error;
+
+      const updatedPlanInfo = getPlanDetails(newPlanName, numericLimit);
+      setMadrasas((prev) =>
+        prev.map((item) =>
+          item.id === madrasa.id
+            ? { ...item, plan_name: newPlanName, max_students: numericLimit }
+            : item
+        )
+      );
+      setInlineCustomPlanRowId(null);
+      setActionFeedback({
+        type: 'success',
+        message: `مدرسہ "${madrasa.name}" کا پلان کامیابی سے "${updatedPlanInfo.name}" (حد: ${numericLimit} طلباء) میں تبدیل کر دیا گیا ہے۔`
+      });
+    } catch (err) {
+      console.error('Quick plan update error:', err);
+      setActionFeedback({
+        type: 'error',
+        message: `پلان تبدیل کرنے میں خرابی پیش آئی: ${err.message || 'نامعلوم خرابی'}`
+      });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  const handleInlinePlanSelectChange = (madrasa, selectedPlanId) => {
+    if (selectedPlanId === 'custom_unlimited') {
+      setInlineCustomPlanRowId(madrasa.id);
+      setInlineCustomLimit(
+        madrasa.plan_name === 'custom_unlimited' && Number(madrasa.max_students) > 0
+          ? Number(madrasa.max_students)
+          : 500
+      );
+      return;
+    }
+    setInlineCustomPlanRowId(null);
+    const nextMax = getDefaultMaxForPlan(selectedPlanId);
+    updateMadrasaPlan(madrasa, selectedPlanId, nextMax);
+  };
+
   // Fetch all madrasas and their associated admins and students
   const loadMadrasas = async () => {
     setLoadingList(true);
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('madrasas')
         .select('*, profiles(id, full_name, role, phone), students(id, status)')
         .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Primary madrasas query failed, retrying fallback:', error.message);
+        const fallback = await supabase
+          .from('madrasas')
+          .select('*, profiles(id, full_name, role, phone)')
+          .order('created_at', { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (!error && data) {
         setMadrasas(data);
@@ -739,9 +821,74 @@ export default function SuperAdmin() {
                       <td>{m.district || '—'}</td>
                       <td>{adminProfile?.phone || m.phone || '—'}</td>
                       <td>
-                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{planInfo.name}</div>
-                        <div className={`quota-pill ${isFull ? 'quota-full' : (isNearLimit ? 'quota-warning' : 'quota-ok')}`}>
-                          طلباء: {activeCount} / {maxLimit}
+                        <div className="inline-plan-cell">
+                          <div className="inline-plan-header">
+                            <span className="inline-plan-name">{planInfo.name}</span>
+                            <span className={`quota-pill ${isFull ? 'quota-full' : (isNearLimit ? 'quota-warning' : 'quota-ok')}`}>
+                              طلباء: {activeCount} / {maxLimit}
+                            </span>
+                          </div>
+
+                          <div className="inline-plan-controls">
+                            <select
+                              aria-label={`پلان تبدیل کریں برائے ${m.name}`}
+                              className="inline-plan-select"
+                              value={inlineCustomPlanRowId === m.id ? 'custom_unlimited' : (m.plan_name || 'free_maktab')}
+                              onChange={(e) => handleInlinePlanSelectChange(m, e.target.value)}
+                              disabled={actionInProgress === m.id || isDeleting}
+                            >
+                              {MADRASA_PLANS.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.id === 'custom_unlimited' ? p.name : `${p.name} (${p.maxStudents})`}
+                                </option>
+                              ))}
+                            </select>
+
+                            {m.plan_name === 'custom_unlimited' && inlineCustomPlanRowId !== m.id && (
+                              <button
+                                type="button"
+                                className="inline-custom-edit-btn"
+                                onClick={() => {
+                                  setInlineCustomPlanRowId(m.id);
+                                  setInlineCustomLimit(maxLimit);
+                                }}
+                                disabled={actionInProgress === m.id || isDeleting}
+                              >
+                                حد بدلیں
+                              </button>
+                            )}
+                          </div>
+
+                          {inlineCustomPlanRowId === m.id && (
+                            <div className="inline-custom-quota-box">
+                              <input
+                                type="number"
+                                min="1"
+                                aria-label={`طلباء کی مخصوص حد برائے ${m.name}`}
+                                className="inline-custom-limit-input"
+                                value={inlineCustomLimit}
+                                onChange={(e) => setInlineCustomLimit(e.target.value)}
+                                disabled={actionInProgress === m.id}
+                                placeholder="تعداد"
+                              />
+                              <button
+                                type="button"
+                                className="inline-custom-save-btn"
+                                onClick={() => updateMadrasaPlan(m, 'custom_unlimited', inlineCustomLimit)}
+                                disabled={actionInProgress === m.id}
+                              >
+                                {actionInProgress === m.id ? '...' : 'محفوظ'}
+                              </button>
+                              <button
+                                type="button"
+                                className="inline-custom-cancel-btn"
+                                onClick={() => setInlineCustomPlanRowId(null)}
+                                disabled={actionInProgress === m.id}
+                              >
+                                منسوخ
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td>

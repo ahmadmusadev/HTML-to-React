@@ -345,6 +345,112 @@ describe('SuperAdmin Component', () => {
     expect(heading.closest('.super-admin-title-area')).toBeInTheDocument();
     expect(screen.getByText('تمام رجسٹرڈ مدارس اور منتظمین کی مرکزی نگرانی و نیا اندراج')).toBeInTheDocument();
   });
+
+  it('displays current plan and allows changing plan directly from the madrasa list', async () => {
+    const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+    const madrasasWithQuota = [
+      {
+        ...mockMadrasas[0],
+        plan_name: 'free_maktab',
+        max_students: 50,
+        students: [
+          { id: 's-1', status: 'active' },
+          { id: 's-2', status: 'active' },
+          { id: 's-3', status: 'left' }
+        ]
+      }
+    ];
+
+    supabase.from.mockImplementation((tableName) => {
+      if (tableName === 'madrasas') {
+        return {
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: madrasasWithQuota, error: null })
+          }),
+          update: mockUpdate
+        };
+      }
+      return {};
+    });
+
+    render(<SuperAdmin />);
+
+    await waitFor(() => {
+      expect(screen.getByText('جامعہ دارالعلوم')).toBeInTheDocument();
+    });
+
+    // Current plan and active student count / limit should be displayed
+    expect(screen.getByText('ابتدائی / مکتب پلان (مفت)')).toBeInTheDocument();
+    expect(screen.getByText('طلباء: 2 / 50')).toBeInTheDocument();
+
+    // Change plan inline via select dropdown
+    const inlinePlanSelect = screen.getByLabelText('پلان تبدیل کریں برائے جامعہ دارالعلوم');
+    fireEvent.change(inlinePlanSelect, { target: { value: 'standard_madrasa' } });
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith({
+        plan_name: 'standard_madrasa',
+        max_students: 150
+      });
+      expect(mockEq).toHaveBeenCalledWith('id', 'm-1');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('معیاری مدرسہ پلان')).toBeInTheDocument();
+      expect(screen.getByText('طلباء: 2 / 150')).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(/معیاری مدرسہ پلان/);
+    });
+  });
+
+  it('supports inline custom student quota update when custom_unlimited is selected', async () => {
+    const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+    const madrasasWithQuota = [
+      {
+        ...mockMadrasas[0],
+        plan_name: 'free_maktab',
+        max_students: 50,
+        students: []
+      }
+    ];
+
+    supabase.from.mockImplementation((tableName) => {
+      if (tableName === 'madrasas') {
+        return {
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: madrasasWithQuota, error: null })
+          }),
+          update: mockUpdate
+        };
+      }
+      return {};
+    });
+
+    render(<SuperAdmin />);
+
+    await waitFor(() => {
+      expect(screen.getByText('جامعہ دارالعلوم')).toBeInTheDocument();
+    });
+
+    const inlinePlanSelect = screen.getByLabelText('پلان تبدیل کریں برائے جامعہ دارالعلوم');
+    fireEvent.change(inlinePlanSelect, { target: { value: 'custom_unlimited' } });
+
+    const limitInput = screen.getByLabelText('طلباء کی مخصوص حد برائے جامعہ دارالعلوم');
+    fireEvent.change(limitInput, { target: { value: '750' } });
+
+    const saveBtn = screen.getByRole('button', { name: 'محفوظ' });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith({
+        plan_name: 'custom_unlimited',
+        max_students: 750
+      });
+      expect(mockEq).toHaveBeenCalledWith('id', 'm-1');
+      expect(screen.getByText('طلباء: 0 / 750')).toBeInTheDocument();
+    });
+  });
 });
 
 

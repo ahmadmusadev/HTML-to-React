@@ -840,3 +840,144 @@
   color: #fca5a5 !important;
   border-color: #7f1d1d !important;
 }
+
+/* Inline Plan Display & Direct Selector inside Madrasas List */
+.inline-plan-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 195px;
+}
+
+.inline-plan-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.inline-plan-name {
+  font-weight: 700;
+  font-size: 0.83rem;
+  color: var(--text, #1e293b);
+}
+
+.inline-plan-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.inline-plan-select {
+  width: 100%;
+  max-width: 220px;
+  padding: 5px 8px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border, #cbd5e1);
+  background: var(--card, #ffffff);
+  color: var(--text, #1e293b);
+  cursor: pointer;
+}
+
+.inline-plan-select:focus {
+  outline: none;
+  border-color: var(--accent, #0d3b66);
+}
+
+.inline-plan-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.inline-custom-edit-btn {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+}
+
+.inline-custom-edit-btn:hover:not(:disabled) {
+  background: #e0f2fe;
+}
+
+.inline-custom-quota-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.inline-custom-limit-input {
+  width: 78px;
+  padding: 4px 7px;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  border: 1px solid var(--border, #cbd5e1);
+  background: var(--card, #ffffff);
+  color: var(--text, #1e293b);
+}
+
+.inline-custom-save-btn {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #065f46;
+  color: #ffffff;
+  border: 1px solid #047857;
+}
+
+.inline-custom-save-btn:hover:not(:disabled) {
+  background: #047857;
+}
+
+.inline-custom-cancel-btn {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+/* Dark Mode for Inline Plan Controls */
+[data-theme="dark"] .inline-plan-name {
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .inline-plan-select,
+[data-theme="dark"] .inline-custom-limit-input {
+  background: #09090b !important;
+  color: #f4f4f5 !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme="dark"] .inline-custom-edit-btn {
+  background: #082f49 !important;
+  color: #7dd3fc !important;
+  border-color: #0369a1 !important;
+}
+
+[data-theme="dark"] .inline-custom-save-btn {
+  background: #064e3b !important;
+  color: #86efac !important;
+  border-color: #047857 !important;
+}
+
+[data-theme="dark"] .inline-custom-cancel-btn {
+  background: #27272a !important;
+  color: #e4e4e7 !important;
+  border-color: #3f3f46 !important;
+}
